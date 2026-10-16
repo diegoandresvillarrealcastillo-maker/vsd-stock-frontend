@@ -13,5 +13,11 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "test/architecture"]
+  "include": [
+    "vite.config.ts",
+    "test/architecture",
+    "test/design",
+    "test/support/contrast.ts",
+    "test/support/contrast.spec.ts"
+  ]
 }
