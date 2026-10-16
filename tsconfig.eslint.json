@@ -1,0 +1,11 @@
+{
+  // Lo que ESLint necesita para analizar con tipos todos los archivos: la
+  // aplicacion, las pruebas y la configuracion de Vite.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "types": ["vite/client", "node"]
+  },
+  "include": ["src", "test", "vite.config.ts"]
+}

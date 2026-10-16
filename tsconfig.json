@@ -1,0 +1,33 @@
+{
+  // TypeScript de la aplicacion (lo que se empaqueta para el navegador).
+  // Vite compila; tsc solo comprueba los tipos, por eso `noEmit`.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Obliga a escribir `import type` para los tipos: asi se ve cual import
+    // desaparece al compilar y cual llega al navegador, y las fronteras de
+    // ESLint (ADR 0002) distinguen una dependencia de ejecucion de una de tipos.
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "types": ["vite/client"]
+  },
+  // `test/architecture` no esta aqui: es una herramienta que corre en Node y su
+  // TypeScript es el de tsconfig.node.json.
+  "include": ["src", "test/setup.ts"]
+}
