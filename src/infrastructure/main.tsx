@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '../presentation/App';
+import '../presentation/styles/index.css';
 
 // Punto de arranque: monta la interfaz en el documento. Con el tiempo, aqui
 // tambien se cablearan los adaptadores y los casos de uso (ADR 0002).
