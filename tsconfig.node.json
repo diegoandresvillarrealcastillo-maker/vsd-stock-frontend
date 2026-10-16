@@ -1,0 +1,17 @@
+{
+  // TypeScript de las herramientas que corren en Node (la configuracion de
+  // Vite y de las pruebas), no del codigo que va al navegador.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts"]
+}
