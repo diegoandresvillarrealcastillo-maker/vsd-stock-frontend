@@ -5,6 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>VSD Stock</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <!--
+      Pinta el tema antes de que arranque React: si esperara a React, se veria un
+      destello del tema equivocado. Decide igual que ThemePreferenceUseCase
+      (lo guardado, y si no hay, la preferencia del sistema); la prueba
+      test/design/theme-bootstrap.spec.ts lo comprueba.
+    -->
+    <script>
+      (function () {
+        var mode = null;
+        try {
+          mode = window.localStorage.getItem('vsd-stock-theme');
+        } catch (_) {
+          // Almacenamiento bloqueado: se sigue al sistema.
+        }
+        if (mode !== 'light' && mode !== 'dark') {
+          mode =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        }
+        document.documentElement.dataset.theme = mode;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

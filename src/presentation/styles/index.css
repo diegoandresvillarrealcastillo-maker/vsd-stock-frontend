@@ -60,43 +60,64 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
-  /* ---------- Color: modo claro ----------
-   * Fondos limpios y acento verde. Cada par de texto sobre fondo cumple
-   * contraste AA (4.5:1) y cada borde o foco, 3:1; las pruebas lo comprueban. */
+  /* ---------- Color: tema claro ----------
+   * Azul oscuro y blanco como base; el naranja del logo de VSD Stock solo como
+   * acento. Los valores salen del archivo de Figma "VSD Stock - Sistema de
+   * diseno". Cada par de texto sobre fondo cumple contraste AA (4.5:1) y cada
+   * borde o foco, 3:1; las pruebas lo comprueban.
+   *
+   * `band` es la banda de marca (la del logo): es azul oscuro en los dos temas,
+   * porque las letras blancas del logo no se leen sobre fondo blanco. */
   --color-surface: #ffffff;
-  --color-surface-raised: #f4f7f5;
-  --color-fg: #14211b;
-  --color-fg-muted: #4a5a52;
-  --color-accent: #0b6e3a;
-  --color-accent-hover: #095c30;
-  --color-on-accent: #ffffff;
-  --color-border: #7c8a83;
-  --color-focus: #0b6e3a;
-  --color-skeleton: #e3e9e6;
+  --color-surface-raised: #f1f5fc;
+  --color-fg: #0a1a3f;
+  --color-fg-muted: #44547a;
+  --color-primary: #123a8c;
+  --color-primary-hover: #0d2e73;
+  --color-on-primary: #ffffff;
+  --color-accent: #f97801;
+  --color-accent-hover: #e36c00;
+  --color-on-accent: #0a1a3f;
+  --color-accent-text: #b04a00;
+  --color-border: #7384a8;
+  --color-focus: #0868f8;
+  --color-skeleton: #e2e9f5;
+  --color-band: #0a1a3f;
+  --color-on-band: #ffffff;
 }
 
-/* ---------- Color: modo oscuro ----------
- * Sigue la preferencia del sistema. Reemplaza los mismos tokens, asi que las
- * clases (bg-surface, text-fg...) no cambian entre un modo y otro. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-surface: #0e1512;
-    --color-surface-raised: #16211c;
-    --color-fg: #e9f1ed;
-    --color-fg-muted: #a6b8ae;
-    --color-accent: #4ade80;
-    --color-accent-hover: #86efac;
-    --color-on-accent: #052e16;
-    --color-border: #6f8478;
-    --color-focus: #4ade80;
-    --color-skeleton: #223029;
-  }
+/* ---------- Color: tema oscuro ----------
+ * Se activa con data-theme="dark" en la raiz: lo pone el script de index.html
+ * antes del primer pintado y el boton de tema despues. Reemplaza los mismos
+ * tokens, asi que las clases (bg-surface, text-fg...) no cambian de un tema al
+ * otro. El naranja del acento no cambia: es la marca. */
+:root[data-theme='dark'] {
+  --color-surface: #07122b;
+  --color-surface-raised: #0e1f44;
+  --color-fg: #f3f6ff;
+  --color-fg-muted: #a8b7d9;
+  --color-primary: #ffffff;
+  --color-primary-hover: #dbe6ff;
+  --color-on-primary: #0a1a3f;
+  --color-accent: #f97801;
+  --color-accent-hover: #e36c00;
+  --color-on-accent: #0a1a3f;
+  --color-accent-text: #ff9a3d;
+  --color-border: #7d90bb;
+  --color-focus: #ff9a3d;
+  --color-skeleton: #1a2d5a;
+  --color-band: #0e1f44;
+  --color-on-band: #ffffff;
 }
 
 @layer base {
   html {
     /* Los controles del navegador (barras de desplazamiento, formularios) siguen el tema. */
-    color-scheme: light dark;
+    color-scheme: light;
+  }
+
+  html[data-theme='dark'] {
+    color-scheme: dark;
   }
 
   body {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { LocalStorageThemeStorage, THEME_STORAGE_KEY } from './local-storage-theme-storage';
+import { LocalStorageThemeStorage } from './local-storage-theme-storage';
+import { THEME_STORAGE_KEY } from './theme-storage-key';
 
 describe('LocalStorageThemeStorage', () => {
   beforeEach(() => {

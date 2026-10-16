@@ -1,12 +1,6 @@
 import { isThemeMode, type ThemeMode } from '../../../domain/model/theme';
 import type { ThemeStorage } from '../../../domain/ports/out/theme-storage';
-
-/**
- * Clave con la que se guarda el tema. El script de index.html la lee ANTES de
- * que arranque React para pintar el tema correcto sin parpadeo; la prueba
- * test/design/theme-bootstrap.spec.ts comprueba que ambos usen la misma.
- */
-export const THEME_STORAGE_KEY = 'vsd-stock-theme';
+import { THEME_STORAGE_KEY } from './theme-storage-key';
 
 /** Recuerda el tema en el almacenamiento local del navegador. */
 export class LocalStorageThemeStorage implements ThemeStorage {

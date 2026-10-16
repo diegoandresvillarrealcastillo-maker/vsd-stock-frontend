@@ -39,9 +39,9 @@ function declarations(source: string): Map<string, string> {
 }
 
 const theme = declarations(block(css, '@theme static'));
-const darkOverrides = declarations(
-  block(block(css, '@media (prefers-color-scheme: dark)'), ':root'),
-);
+// El tema oscuro se activa con data-theme="dark" en la raiz: lo pone el script de
+// index.html antes de pintar y el boton de tema despues (ADR 0008).
+const darkOverrides = declarations(block(css, ":root[data-theme='dark']"));
 
 function palette(mode: 'light' | 'dark'): Map<string, string> {
   return mode === 'light' ? theme : new Map([...theme, ...darkOverrides]);
@@ -65,20 +65,25 @@ describe('design tokens', () => {
     expect(names.length).toBeGreaterThan(0);
   });
 
-  it('defines at least one color to flip, so the dark mode is not an empty block', () => {
+  it('defines at least one color to flip, so the dark theme is not an empty block', () => {
     expect(colorNames.length).toBeGreaterThan(0);
   });
 
-  it('gives every color a dark value, so no color is left light in the dark mode', () => {
+  it('gives every color a dark value, so no color is left light in the dark theme', () => {
     const missing = colorNames.filter((name) => !darkOverrides.has(name));
 
     expect(missing).toEqual([]);
   });
 
-  it('only overrides in the dark mode colors that exist in @theme', () => {
+  it('only overrides in the dark theme colors that exist in @theme', () => {
     const unknown = [...darkOverrides.keys()].filter((name) => !theme.has(name));
 
     expect(unknown).toEqual([]);
+  });
+
+  it('tells the browser the color scheme of each theme, so scrollbars and form controls follow it', () => {
+    expect(css).toMatch(/html\s*\{[^}]*color-scheme:\s*light/);
+    expect(css).toMatch(/html\[data-theme='dark'\]\s*\{[^}]*color-scheme:\s*dark/);
   });
 
   it('uses a system font stack, so the first paint does not wait for a font download', () => {
@@ -94,11 +99,62 @@ describe('design tokens', () => {
   });
 });
 
-describe.each(['light', 'dark'] as const)('contrast in %s mode', (mode) => {
+// Identidad de marca (pedido del Product Owner, 2026-10-16): azul oscuro y blanco como
+// base, y el naranja del logo de VSD Stock como acento.
+describe('brand palette', () => {
+  const channels = (hex: string) => {
+    const n = parseInt(hex.slice(1), 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  };
+  const light = palette('light');
+  const dark = palette('dark');
+  const get = (colors: Map<string, string>, name: string): string =>
+    colors.get(`--color-${name}`) ?? '';
+
+  it('is white in the light theme', () => {
+    expect(get(light, 'surface').toLowerCase()).toBe('#ffffff');
+  });
+
+  it('is dark blue in the dark theme: blue leads and it is dark, not black or gray', () => {
+    const { r, g, b } = channels(get(dark, 'surface'));
+
+    expect(b).toBeGreaterThan(r + 15);
+    expect(b).toBeGreaterThan(g);
+    expect(contrastRatio(get(dark, 'surface'), '#000000')).toBeLessThan(1.5);
+  });
+
+  it('makes the text dark blue in the light theme', () => {
+    const { r, b } = channels(get(light, 'fg'));
+
+    expect(b).toBeGreaterThan(r);
+    expect(contrastRatio(get(light, 'fg'), '#000000')).toBeLessThan(2);
+  });
+
+  it('makes the text white in the dark theme', () => {
+    expect(contrastRatio(get(dark, 'fg'), '#ffffff')).toBeLessThan(1.2);
+  });
+
+  it('makes the main button dark blue in the light theme and white in the dark theme', () => {
+    const { r, b } = channels(get(light, 'primary'));
+
+    expect(b).toBeGreaterThan(r + 40);
+    expect(contrastRatio(get(light, 'primary'), '#000000')).toBeLessThan(3);
+    expect(get(dark, 'primary').toLowerCase()).toBe('#ffffff');
+  });
+
+  it.each(['light', 'dark'] as const)(
+    'uses the orange of the VSD Stock logo as the accent (%s)',
+    (mode) => {
+      expect(get(mode === 'light' ? light : dark, 'accent').toLowerCase()).toBe('#f97801');
+    },
+  );
+});
+
+describe.each(['light', 'dark'] as const)('contrast in the %s theme', (mode) => {
   const colors = palette(mode);
   const color = (name: string): string => {
     const value = colors.get(`--color-${name}`);
-    if (value === undefined) throw new Error(`Falta --color-${name} en el modo ${mode}`);
+    if (value === undefined) throw new Error(`Falta --color-${name} en el tema ${mode}`);
     return value;
   };
 
@@ -107,10 +163,13 @@ describe.each(['light', 'dark'] as const)('contrast in %s mode', (mode) => {
     ['fg', 'surface-raised'],
     ['fg-muted', 'surface'],
     ['fg-muted', 'surface-raised'],
-    ['accent', 'surface'],
-    ['accent', 'surface-raised'],
+    ['on-primary', 'primary'],
+    ['on-primary', 'primary-hover'],
     ['on-accent', 'accent'],
     ['on-accent', 'accent-hover'],
+    ['accent-text', 'surface'],
+    ['accent-text', 'surface-raised'],
+    ['on-band', 'band'],
   ])('text %s on %s reaches 4.5:1 (AA for normal text)', (foreground, background) => {
     expect(contrastRatio(color(foreground), color(background))).toBeGreaterThanOrEqual(4.5);
   });
@@ -120,6 +179,7 @@ describe.each(['light', 'dark'] as const)('contrast in %s mode', (mode) => {
     ['border', 'surface-raised'],
     ['focus', 'surface'],
     ['focus', 'surface-raised'],
+    ['focus', 'band'],
   ])('interface part %s on %s reaches 3:1 (AA for components)', (foreground, background) => {
     expect(contrastRatio(color(foreground), color(background))).toBeGreaterThanOrEqual(3);
   });
