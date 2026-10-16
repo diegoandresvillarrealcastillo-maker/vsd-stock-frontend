@@ -27,5 +27,7 @@
     "skipLibCheck": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "test"]
+  // `test/architecture` no esta aqui: es una herramienta que corre en Node y su
+  // TypeScript es el de tsconfig.node.json.
+  "include": ["src", "test/setup.ts"]
 }

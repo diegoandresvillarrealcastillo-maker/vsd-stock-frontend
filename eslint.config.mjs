@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
+import { boundaries } from './eslint/boundaries.mjs';
 
 /**
  * Configuracion de ESLint para vsd-stock-frontend.
@@ -27,6 +28,9 @@ export default tseslint.config(
       },
     },
   },
+
+  // ---------- Fronteras de la arquitectura hexagonal (ADR 0002) ----------
+  ...boundaries,
 
   // ---------- Reglas de los hooks de React ----------
   {
