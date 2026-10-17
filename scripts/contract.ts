@@ -1,11 +1,12 @@
-// Herramienta de linea de comandos que mantiene al dia la copia del contrato
-// OpenAPI del backend (ADR 0001). Corre directamente en Node 24, que ejecuta
-// TypeScript quitando los tipos: por eso este archivo no usa sintaxis que
+// Herramienta de linea de comandos que mantiene al dia las copias de lo que el
+// backend publica para el frontend: el contrato OpenAPI (ADR 0001) y los
+// vectores de calculo compartidos (ADR 0014). Corre directamente en Node 24, que
+// ejecuta TypeScript quitando los tipos: por eso este archivo no usa sintaxis que
 // necesite compilarse (enums, propiedades de parametro) ni importa otros
 // archivos del proyecto.
 //
-//   node scripts/contract.ts sync    copia el contrato del backend a contract/openapi.json
-//   node scripts/contract.ts check   falla si esa copia ya no coincide con el backend
+//   node scripts/contract.ts sync    copia los dos archivos del backend a contract/
+//   node scripts/contract.ts check   falla si alguna copia ya no coincide con el backend
 //
 // La rama del backend se elige con CONTRACT_REF (por omision, desarrollo). Si
 // hay GITHUB_TOKEN se envia, para no depender del limite de consultas anonimas.
@@ -16,6 +17,7 @@ import { pathToFileURL } from 'node:url';
 
 export const BACKEND_REPOSITORY = 'diegoandresvillarrealcastillo-maker/vsd-stock-backend';
 export const CONTRACT_PATH = 'contract/openapi.json';
+export const VECTORS_PATH = 'contract/calculation-vectors.json';
 const DEFAULT_REF = 'desarrollo';
 const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'];
 
@@ -34,13 +36,19 @@ export interface ContractComparison {
   differences: string[];
 }
 
-/** Direccion del contrato en la rama pedida del backend, por la API de GitHub (sin cache de CDN). */
-export function contractUrl(ref: string): string {
-  return `https://api.github.com/repos/${BACKEND_REPOSITORY}/contents/openapi.json?ref=${encodeURIComponent(ref)}`;
+/** Direccion de un archivo del backend en la rama pedida, por la API de GitHub (sin cache de CDN). */
+export function backendFileUrl(path: string, ref: string): string {
+  return `https://api.github.com/repos/${BACKEND_REPOSITORY}/contents/${path}?ref=${encodeURIComponent(ref)}`;
 }
 
-/** Pide el contrato al backend. Falla con un mensaje que dice que rama y que respondio GitHub. */
-export async function fetchBackendContract(
+/** Direccion del contrato en la rama pedida del backend. */
+export function contractUrl(ref: string): string {
+  return backendFileUrl('openapi.json', ref);
+}
+
+/** Pide un archivo al backend. Falla con un mensaje que dice que archivo, que rama y que respondio GitHub. */
+async function fetchBackendFile(
+  file: { path: string; label: string },
   ref: string,
   { fetch, token }: { fetch: FetchFunction; token?: string },
 ): Promise<string> {
@@ -54,19 +62,27 @@ export async function fetchBackendContract(
 
   let response: Response;
   try {
-    response = await fetch(contractUrl(ref), { headers });
+    response = await fetch(backendFileUrl(file.path, ref), { headers });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(`No se pudo consultar el contrato del backend (rama ${ref}): ${reason}`, {
+    throw new Error(`No se pudo consultar ${file.label} del backend (rama ${ref}): ${reason}`, {
       cause: error,
     });
   }
   if (!response.ok) {
     throw new Error(
-      `GitHub respondió ${response.status} al pedir el contrato del backend en la rama ${ref}`,
+      `GitHub respondió ${response.status} al pedir ${file.label} (${file.path}) del backend en la rama ${ref}`,
     );
   }
   return response.text();
+}
+
+/** Pide el contrato al backend. Falla con un mensaje que dice que rama y que respondio GitHub. */
+export function fetchBackendContract(
+  ref: string,
+  deps: { fetch: FetchFunction; token?: string },
+): Promise<string> {
+  return fetchBackendFile({ path: 'openapi.json', label: 'el contrato' }, ref, deps);
 }
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -146,12 +162,69 @@ export function compareContracts(local: string, remote: string): ContractCompari
   return { same: false, differences };
 }
 
+/**
+ * Compara la copia local de los vectores de calculo con la del backend (ADR 0014) e indica que
+ * secciones cambiaron. Dos documentos iguales con otro orden de claves o de espacios son iguales.
+ */
+export function compareVectors(local: string, remote: string): ContractComparison {
+  const mine = asRecord(parse(local, 'La copia local de los vectores'));
+  const theirs = asRecord(parse(remote, 'Los vectores del backend'));
+  const differences: string[] = [];
+  for (const key of [...new Set([...Object.keys(theirs), ...Object.keys(mine)])]) {
+    const here = mine[key];
+    const there = theirs[key];
+    if (here === undefined) {
+      differences.push(`La sección «${key}» solo existe en el backend`);
+    } else if (there === undefined) {
+      differences.push(`La sección «${key}» solo existe aquí`);
+    } else if (canonical(here) !== canonical(there)) {
+      differences.push(
+        Array.isArray(here) && Array.isArray(there) && here.length !== there.length
+          ? `La sección «${key}» cambió: ${here.length} aquí y ${there.length} en el backend`
+          : `La sección «${key}» cambió`,
+      );
+    }
+  }
+  return { same: differences.length === 0, differences };
+}
+
 const USAGE = [
   'Uso: node scripts/contract.ts <comando>',
-  '  sync    copia el contrato del backend a contract/openapi.json (npm run contract:sync)',
-  '  check   comprueba que la copia coincide con el backend (npm run contract:check)',
+  '  sync    copia el contrato y los vectores de cálculo del backend a contract/ (npm run contract:sync)',
+  '  check   comprueba que las copias coinciden con el backend (npm run contract:check)',
   'La rama del backend se elige con CONTRACT_REF (por omisión, desarrollo).',
 ].join('\n');
+
+interface SharedFile {
+  /** Como se nombra en los mensajes: «el contrato», «los vectores de cálculo». */
+  label: string;
+  /** Donde vive la copia en este repositorio. */
+  local: string;
+  /** Donde vive el original en el backend. */
+  remote: string;
+  compare: (local: string, remote: string) => ContractComparison;
+  /** Las dos frases del mensaje: «coincide con» y «ya no coincide con». */
+  verb: { same: string; different: string };
+}
+
+const SHARED_FILES: readonly SharedFile[] = [
+  {
+    label: 'el contrato',
+    local: CONTRACT_PATH,
+    remote: 'openapi.json',
+    compare: compareContracts,
+    verb: { same: 'coincide con el del', different: 'ya no coincide con el del' },
+  },
+  {
+    label: 'los vectores de cálculo',
+    local: VECTORS_PATH,
+    remote: 'contract/calculation-vectors.json',
+    compare: compareVectors,
+    verb: { same: 'coinciden con los del', different: 'ya no coinciden con los del' },
+  },
+];
+
+const capitalize = (text: string): string => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 
 /** Ejecuta un comando y devuelve el codigo de salida. Todo lo externo llega por `io`. */
 export async function run(
@@ -167,34 +240,57 @@ export async function run(
 
   const ref = env['CONTRACT_REF']?.trim() || DEFAULT_REF;
   const token = env['GITHUB_TOKEN'];
-  let remote: string;
+  const deps = token === undefined ? { fetch: io.fetch } : { fetch: io.fetch, token };
+
+  // Se piden todos antes de escribir o comparar nada: si falta uno, no se toca ninguno.
+  const remotes: string[] = [];
   try {
-    remote = await fetchBackendContract(
-      ref,
-      token === undefined ? { fetch: io.fetch } : { fetch: io.fetch, token },
-    );
+    for (const file of SHARED_FILES) {
+      remotes.push(await fetchBackendFile({ path: file.remote, label: file.label }, ref, deps));
+    }
   } catch (error) {
     io.error(error instanceof Error ? error.message : String(error));
     return 1;
   }
 
   if (command === 'sync') {
-    io.writeFile(CONTRACT_PATH, remote);
-    io.log(`Copiado el contrato del backend (rama ${ref}) en ${CONTRACT_PATH}.`);
+    SHARED_FILES.forEach((file, index) => {
+      io.writeFile(file.local, remotes[index] ?? '');
+      io.log(`Copiado ${file.label} del backend (rama ${ref}) en ${file.local}.`);
+    });
     return 0;
   }
 
-  const result = compareContracts(io.readFile(CONTRACT_PATH), remote);
-  if (result.same) {
-    io.log(`El contrato coincide con el del backend (rama ${ref}).`);
-    return 0;
+  let failed = false;
+  SHARED_FILES.forEach((file, index) => {
+    let local: string;
+    try {
+      local = io.readFile(file.local);
+    } catch {
+      io.error(
+        `No existe la copia local ${file.local}: ejecuta \`npm run contract:sync\` para crearla.`,
+      );
+      failed = true;
+      return;
+    }
+    const result = file.compare(local, remotes[index] ?? '');
+    if (result.same) {
+      io.log(`${capitalize(file.label)} ${file.verb.same} backend (rama ${ref}).`);
+      return;
+    }
+    failed = true;
+    io.error(
+      `${capitalize(file.label)} de ${file.local} ${file.verb.different} backend (rama ${ref}):`,
+    );
+    for (const line of result.differences) io.error(`  - ${line}`);
+  });
+  if (failed) {
+    io.error(
+      'Ejecuta `npm run contract:sync`, revisa la diferencia, adapta el código que la use y sube el resultado.',
+    );
+    return 1;
   }
-  io.error(`El contrato de ${CONTRACT_PATH} ya no coincide con el del backend (rama ${ref}):`);
-  for (const line of result.differences) io.error(`  - ${line}`);
-  io.error(
-    'Ejecuta `npm run contract:sync`, revisa la diferencia, adapta el código que la use y sube el resultado.',
-  );
-  return 1;
+  return 0;
 }
 
 const realIo: Io = {

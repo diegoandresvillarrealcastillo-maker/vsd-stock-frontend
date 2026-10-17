@@ -25,20 +25,20 @@ el backend en marcha: ver [Conexión con el backend](#conexión-con-el-backend).
 
 ## Scripts
 
-| Script                      | Qué hace                                                                                   |
-| --------------------------- | ------------------------------------------------------------------------------------------ |
-| `npm run dev`               | Servidor de desarrollo de Vite.                                                            |
-| `npm run build`             | Revisa los tipos y genera la versión de producción en `dist/`.                             |
-| `npm run preview`           | Sirve `dist/` para probar la versión de producción.                                        |
-| `npm test`                  | Ejecuta las pruebas (Vitest, jsdom y Testing Library).                                     |
-| `npm run test:coverage`     | Pruebas con cobertura; falla si `domain/` o `application/` bajan del 80 %.                 |
-| `npm run lint`              | ESLint, incluidas las **fronteras de la arquitectura**.                                    |
-| `npm run format:check`      | Comprueba el formato con Prettier (`npm run format` lo corrige).                           |
-| `npm run typecheck`         | Revisa los tipos de la aplicación y de las herramientas.                                   |
-| `npm run contract:sync`     | Copia el contrato OpenAPI del backend y regenera los tipos. Necesita red.                  |
-| `npm run contract:check`    | Comprueba que la copia del contrato coincide con la del backend (lo mismo que hace el CI). |
-| `npm run contract:generate` | Regenera los tipos a partir de la copia del contrato, sin red.                             |
-| `npm run lighthouse`        | Audita `dist/` con Lighthouse (necesita Chrome y `npm run build` antes).                   |
+| Script                      | Qué hace                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------ |
+| `npm run dev`               | Servidor de desarrollo de Vite.                                                      |
+| `npm run build`             | Revisa los tipos y genera la versión de producción en `dist/`.                       |
+| `npm run preview`           | Sirve `dist/` para probar la versión de producción.                                  |
+| `npm test`                  | Ejecuta las pruebas (Vitest, jsdom y Testing Library).                               |
+| `npm run test:coverage`     | Pruebas con cobertura; falla si `domain/` o `application/` bajan del 80 %.           |
+| `npm run lint`              | ESLint, incluidas las **fronteras de la arquitectura**.                              |
+| `npm run format:check`      | Comprueba el formato con Prettier (`npm run format` lo corrige).                     |
+| `npm run typecheck`         | Revisa los tipos de la aplicación y de las herramientas.                             |
+| `npm run contract:sync`     | Copia el contrato OpenAPI y los vectores de cálculo del backend; regenera los tipos. |
+| `npm run contract:check`    | Comprueba que ambas copias coinciden con las del backend (lo mismo que hace el CI).  |
+| `npm run contract:generate` | Regenera los tipos a partir de la copia del contrato, sin red.                       |
+| `npm run lighthouse`        | Audita `dist/` con Lighthouse (necesita Chrome y `npm run build` antes).             |
 
 ## Arquitectura
 
@@ -115,16 +115,18 @@ así que un lector de pantalla anuncia los cambios.
 
 ## Contrato OpenAPI
 
-El único acoplamiento con el backend es su contrato (ADR 0001). Aquí vive de tres formas:
+El único acoplamiento con el backend es su contrato (ADR 0001). Aquí vive de cuatro formas:
 
 - [`contract/openapi.json`](contract/openapi.json): una copia **exacta** del contrato del backend. No se edita
   a mano.
+- [`contract/calculation-vectors.json`](contract/calculation-vectors.json): una copia **exacta** de los vectores de
+  cálculo del backend (ver abajo). Tampoco se edita a mano.
 - [`src/adapters/out/api/schema.d.ts`](src/adapters/out/api/schema.d.ts): los tipos que `openapi-typescript`
   (solo de desarrollo) genera de esa copia. Solo tienen tipos: no pesan nada en el navegador, y tampoco entra una
   biblioteca de cliente HTTP, el adaptador usa `fetch`.
-- [`scripts/contract.ts`](scripts/contract.ts): `npm run contract:sync` trae el contrato de la rama `desarrollo`
-  del backend (o la de `CONTRACT_REF`) y regenera los tipos; `npm run contract:check` comprueba que la copia
-  sigue coincidiendo.
+- [`scripts/contract.ts`](scripts/contract.ts): `npm run contract:sync` trae el contrato y los vectores de la rama
+  `desarrollo` del backend (o la de `CONTRACT_REF`) y regenera los tipos; `npm run contract:check` comprueba que
+  las copias siguen coincidiendo.
 
 **Qué comprueba el CI.** El trabajo _Calidad del codigo_ incluye una prueba de que `schema.d.ts` es exactamente
 lo que se genera de la copia. El trabajo _Contrato con el backend_ compara la copia con el contrato de la rama
@@ -135,6 +137,16 @@ diferencia y se adapta el código. El backend se fusiona antes que el frontend q
 **Los datos de la red no son de fiar aunque el contrato diga otra cosa.** El adaptador `HttpHealthApi` comprueba
 la forma de lo que recibe (y su compilación depende de los tipos generados: si el contrato cambia, deja de
 compilar hasta que se adapte).
+
+### El dinero se calcula igual que en el servidor
+
+El punto de venta cobra cuando no hay red, así que el cálculo del dinero, del IVA y del redondeo vive aquí también
+(ADR 0014): `Money`, `splitTaxIncluded`, `summarizeSale` y compañía, en `src/domain/model/`, sin React ni
+navegador. Es el **mismo cálculo que el del backend, escrito dos veces a propósito**, y lo que impide que diverjan
+son los vectores: [`test/contract/calculation-vectors.spec.ts`](test/contract/calculation-vectors.spec.ts) ejecuta
+cada caso de `contract/calculation-vectors.json` contra el dominio, y el trabajo _Contrato con el backend_ del CI
+comprueba que la copia es idéntica a la del backend. Si el backend cambia una regla, su CI regenera los vectores y
+este falla hasta que se ejecute `npm run contract:sync` y se adapte el cálculo.
 
 ## Sistema de diseño
 
@@ -227,7 +239,8 @@ naranja del logo (`#f97801`) solo como acento.**
   - convención de commits;
   - calidad del código (estilo y fronteras, formato, tipos, pruebas con cobertura —incluidos los tipos
     generados del contrato— y compilación);
-  - contrato con el backend (la copia de `contract/openapi.json` coincide con la del backend);
+  - contrato con el backend (las copias de `contract/openapi.json` y de `contract/calculation-vectors.json`
+    coinciden con las del backend);
   - accesibilidad y rendimiento con Lighthouse (accesibilidad 100; la emulación es un Moto G Power con la CPU 4
     veces más lenta y red 4G lenta, ver [`docs/rendimiento.md`](docs/rendimiento.md));
   - análisis de código con CodeQL;
