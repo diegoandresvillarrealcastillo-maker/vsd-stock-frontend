@@ -3,10 +3,10 @@
 PWA de **VSD Stock**: inventario, punto de venta, caja y reportes para MiPymes. Está pensada para
 seguir vendiendo aunque se caiga el internet.
 
-> **Estado: Ciclo 0 (fundaciones).** Hoy muestra una página de inicio con la muestra del sistema de diseño.
-> Es el esqueleto con las capas, las fronteras impuestas por ESLint, el CI y los tokens de diseño; la
-> pantalla que consume la API llega con el ticket C0-08 y la funcionalidad de negocio, en los ciclos
-> siguientes.
+> **Estado: Ciclo 0 (fundaciones).** Hoy muestra una página de inicio con la identidad de marca (azul oscuro,
+> blanco y naranja), un botón de tema claro/oscuro y la muestra del sistema de diseño. Es el esqueleto con
+> las capas, las fronteras impuestas por ESLint, el CI y los tokens de diseño; la pantalla que consume la
+> API llega con el ticket C0-08 y la funcionalidad de negocio, en los ciclos siguientes.
 
 ## Requisitos
 
@@ -45,10 +45,10 @@ presentation, adapters, infrastructure  →  application  →  domain
 ```
 src/
 ├── domain/           model/  ports/{in,out}/        ← el núcleo: sin framework, sin React, sin navegador
-├── application/      casos de uso y motor de sincronización
+├── application/      usecases/                      ← casos de uso y, después, el motor de sincronización
 ├── adapters/         in/  out/                      ← conexión, API, almacén local cifrado, cámara…
 ├── infrastructure/   cableado y arranque (main.tsx)
-└── presentation/     pages/  components/  motion/  styles/   ← lo único que conoce React
+└── presentation/     pages/  components/  theme/  motion/  styles/  assets/   ← lo único que conoce React
 ```
 
 Dos reglas que conviene recordar:
@@ -64,27 +64,63 @@ Cruzar una frontera **rompe el build**: `npm run lint` falla con un mensaje que 
 ## Sistema de diseño
 
 Estilo con **Tailwind CSS 4** y movimiento con **Framer Motion** (ADR 0008). La página de inicio es la
-muestra: tokens, un skeleton animado y una entrada con movimiento.
+muestra: marca, botón de tema, tokens, un skeleton animado y entradas con movimiento.
+
+**Diseño en Figma:** [VSD Stock — Sistema de diseño](https://www.figma.com/design/BDeOxwJeQ3AfUThABfmC3L).
+Tiene la paleta en los dos temas con sus contrastes calculados, los componentes (botón, botón de tema, fila
+de producto) y las pantallas de inicio en claro y oscuro, con contenido y en estado de carga. Las variables
+de Figma tienen los mismos nombres que los tokens del CSS (`color/surface` ↔ `--color-surface`): si cambia
+una, cambia la otra en el mismo PR.
 
 **Los tokens se definen una sola vez**, en [`src/presentation/styles/index.css`](src/presentation/styles/index.css)
 (`@theme static`), y se usan como utilidades de Tailwind (`bg-surface`, `text-fg-muted`, `rounded-lg`,
 `px-gutter`, `min-h-touch`…):
 
-| Familia       | Tokens                                                                                                                            |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Color         | `surface`, `surface-raised`, `fg`, `fg-muted`, `accent`, `accent-hover`, `on-accent`, `border`, `focus`, `skeleton`               |
-| Tipografía    | `font-sans` (fuentes del sistema: la primera pantalla no espera ninguna descarga), `font-mono` y la escala `text-xs` a `text-3xl` |
-| Espacio       | base de 4 px, `gutter` (margen lateral) y `touch` (44 px, el objetivo táctil mínimo)                                              |
-| Radio, sombra | `rounded-sm` a `rounded-xl`, `shadow-sm` a `shadow-lg`                                                                            |
-| Movimiento    | duraciones `fast`, `base`, `slow` y `pulse`; curvas `standard` y `exit`                                                           |
+| Familia       | Tokens                                                                                                                                                                                          |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Color         | `surface`, `surface-raised`, `fg`, `fg-muted`, `primary`, `primary-hover`, `on-primary`, `accent`, `accent-hover`, `on-accent`, `accent-text`, `border`, `focus`, `skeleton`, `band`, `on-band` |
+| Tipografía    | `font-sans` (fuentes del sistema: la primera pantalla no espera ninguna descarga), `font-mono` y la escala `text-xs` a `text-3xl`                                                               |
+| Espacio       | base de 4 px, `gutter` (margen lateral) y `touch` (44 px, el objetivo táctil mínimo)                                                                                                            |
+| Radio, sombra | `rounded-sm` a `rounded-xl`, `shadow-sm` a `shadow-lg`                                                                                                                                          |
+| Movimiento    | duraciones `fast`, `base`, `slow` y `pulse`; curvas `standard` y `exit`                                                                                                                         |
 
-- **Claro y oscuro** siguen la preferencia del sistema (`prefers-color-scheme`). El modo oscuro reemplaza los
-  mismos tokens de color, así que las clases no cambian de un modo al otro.
 - **Contraste AA comprobado por pruebas:** `test/design/tokens.spec.ts` lee el CSS y exige 4,5:1 al texto y
-  3:1 a bordes y foco, en los dos modos. Un color nuevo debe declararse también en el modo oscuro.
+  3:1 a bordes y foco, en los dos temas. Un color nuevo debe declararse también en el tema oscuro.
 - **Las duraciones y curvas existen también en TypeScript**
   ([`motion/tokens.ts`](src/presentation/motion/tokens.ts)) porque Framer las necesita ahí. La misma prueba
   comprueba que ambos lados digan lo mismo.
+
+### Paleta de marca y tema claro/oscuro
+
+La identidad sale del logo de VSD Stock de la landing de VSD Company: **azul oscuro y blanco como base, y el
+naranja del logo (`#f97801`) solo como acento.**
+
+| Token         | Tema claro               | Tema oscuro              |
+| ------------- | ------------------------ | ------------------------ |
+| `surface`     | blanco                   | azul oscuro `#07122b`    |
+| `fg`          | azul oscuro `#0a1a3f`    | blanco azulado `#f3f6ff` |
+| `primary`     | azul oscuro `#123a8c`    | blanco                   |
+| `accent`      | naranja `#f97801`        | naranja `#f97801`        |
+| `accent-text` | naranja oscuro `#b04a00` | naranja claro `#ff9a3d`  |
+| `band`        | azul oscuro `#0a1a3f`    | azul oscuro `#0e1f44`    |
+
+- **El naranja puro no sirve para texto sobre blanco** (contraste 2,7:1): como relleno lleva texto azul oscuro, y
+  para texto suelto existe `accent-text`.
+- **La banda de marca** (`band`) es azul oscuro en los dos temas: las letras blancas del logo no se leen sobre
+  fondo blanco. El logo (`presentation/assets/logo-stock.webp`, 27 KB) siempre va sobre ella.
+- **El tema se marca con `data-theme` en la raíz** (`<html data-theme="dark">`). Los tokens oscuros viven en
+  `:root[data-theme='dark']` y reemplazan a los claros, así que las clases no cambian de un tema al otro.
+- **Quién decide el tema.** El botón de tema (`ThemeToggle`, 44 px, con el nombre «Cambiar a tema oscuro» o
+  «Cambiar a tema claro») llama a `ThemePreference`. Esa preferencia es un caso de uso de `application/`:
+  arranca con lo que la persona eligió la última vez y, si nunca eligió, con la preferencia del sistema; solo
+  guarda una elección hecha a propósito. Detrás hay tres puertos de `domain/ports/out/`: `ThemeStorage`,
+  `SystemTheme` y `ThemeApplier`, que implementan los adaptadores de `adapters/out/theme/` (almacenamiento
+  local, `prefers-color-scheme` y `data-theme`). `infrastructure/create-theme-preference.ts` los cablea.
+- **Sin destello al cargar.** `index.html` tiene un script en línea que pone `data-theme` antes de que arranque
+  React. No pasa por el caso de uso, así que `test/design/theme-bootstrap.spec.ts` lo ejecuta de verdad y
+  comprueba que decida igual que el resto (misma clave de almacenamiento y misma consulta de medios).
+- **Si el navegador bloquea el almacenamiento** (ventana privada, datos del sitio bloqueados), el tema cambia
+  igual durante la visita y simplemente no se recuerda.
 
 ### Reglas del movimiento
 
@@ -93,7 +129,8 @@ muestra: tokens, un skeleton animado y una entrada con movimiento.
 - **`useReducedMotion` se respeta siempre.** Las variantes y los gestos salen de
   [`motion/presets.ts`](src/presentation/motion/presets.ts) y se piden con los hooks de
   [`motion/use-motion.ts`](src/presentation/motion/use-motion.ts), que ya consultan la preferencia: con
-  movimiento reducido la entrada es un fundido, el skeleton queda quieto y el gesto de presionar no hace nada.
+  movimiento reducido la entrada es un fundido, el skeleton queda quieto, las filas entran todas a la vez, el
+  icono del botón de tema solo se desvanece y el gesto de presionar no hace nada.
 - **Se usa `m`, no `motion`**, dentro de `MotionProvider` (`LazyMotion` en modo `strict`): usar `motion` por
   descuido lanza un error. Las cifras de peso están en [`docs/rendimiento.md`](docs/rendimiento.md).
 - **Los objetivos táctiles miden al menos 44 px** (`min-h-touch min-w-touch`), y el foco del teclado se ve
