@@ -147,6 +147,7 @@ describe('HttpApiGateway', () => {
       '//evil.example.com/steal',
       'https://evil.example.com/v1/me',
       '/v1/../x',
+      '/v1/x/https://evil.example.com',
       '',
     ])('refuses the path %j, so the token can never be sent anywhere else', async (path) => {
       const { gateway, seen } = setup(json(200, {}));
@@ -198,6 +199,14 @@ describe('HttpApiGateway', () => {
       const response = await gateway.send({ method: 'DELETE', path: '/v1/categories/x' });
 
       expect(response).toEqual({ status: 204, body: undefined, replayed: false });
+    });
+
+    it('hands back an empty body for a 200 with nothing in it, instead of failing to read it', async () => {
+      const { gateway } = setup(new Response('', { status: 200 }));
+
+      const response = await gateway.send({ method: 'POST', path: '/v1/x' });
+
+      expect(response).toEqual({ status: 200, body: undefined, replayed: false });
     });
 
     it('does not trust an answer that is not JSON: a hosting fallback page is not our API', async () => {
@@ -304,6 +313,20 @@ describe('HttpApiGateway', () => {
       const error = await gateway.send({ method: 'GET', path: '/v1/x' }).catch((e: unknown) => e);
 
       expect((error as ApiError).failure.problem).toBeNull();
+    });
+
+    it('does not take a redirect that was not followed for an error of the person', async () => {
+      const { gateway } = setup(
+        new Response(null, { status: 302, headers: { Location: '/otra' } }),
+      );
+
+      const error = await gateway.send({ method: 'GET', path: '/v1/x' }).catch((e: unknown) => e);
+
+      expect((error as ApiError).failure).toMatchObject({
+        class: 'transient',
+        status: 302,
+        problem: null,
+      });
     });
 
     it('calls the lack of an answer a network failure', async () => {

@@ -99,6 +99,27 @@ describe('HttpIdentityService', () => {
       expect(session.expiresAt).toEqual(new Date(unix * 1000));
     });
 
+    it('does not believe an answer with an empty access token, or a person without an id', async () => {
+      for (const odd of [{ access_token: '' }, { user: { id: '' } }, { user: { id: 3 } }]) {
+        const { service } = setup(tokenResponse(odd));
+
+        await expect(service.signIn('ana@example.com', 'x')).rejects.toMatchObject({
+          kind: 'unknown',
+        });
+      }
+    });
+
+    it('treats an empty renewal token or an empty email as if the service had given none', async () => {
+      const { service } = setup(
+        tokenResponse({ refresh_token: '', user: { id: USER_ID, email: '' } }),
+      );
+
+      const session = await service.signIn('ana@example.com', 'x');
+
+      expect(session.refreshToken).toBeNull();
+      expect(session.user.email).toBeNull();
+    });
+
     it('accepts a person without email and an answer without a renewal token', async () => {
       const { service } = setup(tokenResponse({ refresh_token: undefined, user: { id: USER_ID } }));
 
