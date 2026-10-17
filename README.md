@@ -138,6 +138,21 @@ diferencia y se adapta el código. El backend se fusiona antes que el frontend q
 la forma de lo que recibe (y su compilación depende de los tipos generados: si el contrato cambia, deja de
 compilar hasta que se adapte).
 
+### Cómo se lee un error de la API
+
+Todo error del backend es un `application/problem+json` con un `code` estable, el estado HTTP y un `traceId`
+(ADR 0019). El dominio ([`src/domain/model/problem.ts`](src/domain/model/problem.ts)) tiene tres funciones puras,
+sin red ni React:
+
+- `parseProblem` lee el cuerpo (devuelve `null` si no tiene la forma del contrato y **nunca lanza**): el cliente
+  decide por `code` y por el estado, nunca por el texto.
+- `classifyFailure` da la clase de un fallo del ADR 0009 a partir del estado: **red** (sin respuesta), **sesión**
+  (401), **pasajero** (408, 425, 429 y 5xx), **conflicto** (409) o **permanente** (el resto de los 4xx).
+- `parseRetryAfter` convierte el encabezado `Retry-After` en milisegundos de espera, con tope de una hora.
+
+Una prueba (`test/contract/problem-shape.spec.ts`) comprueba que lo que lee el dominio sigue siendo lo que declara
+el contrato. Todavía ninguna pantalla los usa: los consume el motor sin conexión (Ciclo 3).
+
 ### El dinero se calcula igual que en el servidor
 
 El punto de venta cobra cuando no hay red, así que el cálculo del dinero, del IVA y del redondeo vive aquí también
