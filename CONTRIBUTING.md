@@ -51,18 +51,23 @@ Esta guía resume el flujo. Las decisiones y su porqué están en el
 
 El único acoplamiento con el backend es su contrato OpenAPI (ADR 0001). Este repositorio guarda una copia en
 [`contract/openapi.json`](contract/openapi.json) y de ella genera los tipos que usa el adaptador de la API
-(`src/adapters/out/api/schema.d.ts`).
+(`src/adapters/out/api/schema.d.ts`). Guarda además una copia de los **vectores de cálculo** del dinero
+([`contract/calculation-vectors.json`](contract/calculation-vectors.json), ADR 0014), que el dominio ejecuta en sus
+pruebas.
 
 ```bash
-npm run contract:sync     # copia el contrato de la rama desarrollo del backend y regenera los tipos
-npm run contract:check    # comprueba que la copia coincide con el backend (lo mismo que hace el CI)
+npm run contract:sync     # copia el contrato y los vectores de la rama desarrollo del backend y regenera los tipos
+npm run contract:check    # comprueba que las copias coinciden con el backend (lo mismo que hace el CI)
 npm run contract:generate # solo regenera los tipos a partir de la copia
 ```
 
 - Con `CONTRACT_REF=otra-rama` apuntas a otra rama del backend (por ejemplo, la de un PR que todavía no se
   fusiona).
-- **No edites `contract/openapi.json` ni `schema.d.ts` a mano.** Una prueba compara los tipos con lo que genera la
-  herramienta y dice qué comando ejecutar. El CI compara la copia con el backend y lista lo que cambió.
+- **No edites `contract/openapi.json`, `contract/calculation-vectors.json` ni `schema.d.ts` a mano.** Una prueba
+  compara los tipos con lo que genera la herramienta y dice qué comando ejecutar. El CI compara las copias con el
+  backend y lista lo que cambió (en los vectores, qué secciones).
+- **Si cambias una regla de dinero, IVA o redondeo**, el cambio nace en el backend (ADR 0014): allí se regeneran
+  los vectores y aquí se copian con `npm run contract:sync`. Nunca se adapta un vector para que pase la prueba.
 - Los datos que llegan de la red **no son de fiar aunque el contrato diga otra cosa**: el adaptador comprueba la
   forma de lo que recibe y rechaza lo demás.
 
