@@ -1,6 +1,6 @@
 import { useReducedMotion } from 'framer-motion';
 import { useMemo } from 'react';
-import { createPulse, createReveal, createTap } from './presets';
+import { createIconSwap, createPulse, createReveal, createStagger, createTap } from './presets';
 
 // Hooks que unen la preferencia de movimiento de la persona con los presets.
 // Toda animacion de la interfaz pasa por aqui, por eso `useReducedMotion` se
@@ -31,4 +31,16 @@ export function usePulse() {
 export function useTap() {
   const reducedMotion = usePrefersReducedMotion();
   return useMemo(() => createTap(reducedMotion), [reducedMotion]);
+}
+
+/** Variantes del cambio de icono del boton de tema, ya adaptadas a la preferencia de movimiento. */
+export function useIconSwap() {
+  const reducedMotion = usePrefersReducedMotion();
+  return useMemo(() => createIconSwap(reducedMotion), [reducedMotion]);
+}
+
+/** Variantes del contenedor de una lista que hace entrar a sus filas una tras otra. */
+export function useStagger() {
+  const reducedMotion = usePrefersReducedMotion();
+  return useMemo(() => createStagger(reducedMotion), [reducedMotion]);
 }

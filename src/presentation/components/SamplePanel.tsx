@@ -1,5 +1,5 @@
 import { AnimatePresence, m } from 'framer-motion';
-import { useReveal } from '../motion/use-motion';
+import { useReveal, useStagger } from '../motion/use-motion';
 import { Skeleton } from './Skeleton';
 
 export interface SampleItem {
@@ -15,7 +15,7 @@ interface SamplePanelProps {
   loading: boolean;
 }
 
-const PANEL = 'rounded-lg border border-border bg-surface-raised p-4 shadow-sm';
+const PANEL = 'rounded-lg border border-border/45 bg-surface-raised p-4 shadow-sm';
 const ROW = 'flex items-center justify-between gap-4 py-3';
 
 // Alto de cada linea de texto de la fila. El skeleton usa las mismas alturas que
@@ -40,6 +40,7 @@ function unitsLabel(units: number): string {
  */
 export function SamplePanel({ items, loading }: SamplePanelProps) {
   const reveal = useReveal();
+  const stagger = useStagger();
 
   return (
     <AnimatePresence mode="wait">
@@ -81,9 +82,9 @@ export function SamplePanel({ items, loading }: SamplePanelProps) {
           animate="visible"
           exit="exit"
         >
-          <ul className="divide-y divide-border/40">
+          <m.ul variants={stagger} className="divide-y divide-border/40">
             {items.map((item) => (
-              <li key={item.id} className={ROW}>
+              <m.li key={item.id} variants={reveal} className={ROW}>
                 <div className="flex flex-col">
                   <span className={`${NAME_LINE} text-base font-medium text-fg`}>{item.name}</span>
                   {item.units === 0 ? (
@@ -101,9 +102,9 @@ export function SamplePanel({ items, loading }: SamplePanelProps) {
                 <span className="text-base font-medium text-fg tabular-nums">
                   {pesos.format(item.price)}
                 </span>
-              </li>
+              </m.li>
             ))}
-          </ul>
+          </m.ul>
         </m.section>
       )}
     </AnimatePresence>

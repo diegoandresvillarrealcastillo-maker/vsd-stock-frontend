@@ -48,3 +48,48 @@ export function createTap(reducedMotion: boolean): TargetAndTransition | undefin
   if (reducedMotion) return undefined;
   return { scale: 0.97 };
 }
+
+/**
+ * Cambio de icono del boton de tema: el que sale se achica y gira, y el que
+ * entra llega girando desde el otro lado. Sin movimiento, es un fundido.
+ */
+export function createIconSwap(reducedMotion: boolean): Variants {
+  if (reducedMotion) {
+    return {
+      hidden: { opacity: 0 },
+      visible: { opacity: 1, transition: { duration: durations.fast, ease: [...eases.standard] } },
+      exit: { opacity: 0, transition: { duration: durations.fast, ease: [...eases.exit] } },
+    };
+  }
+  return {
+    hidden: { opacity: 0, rotate: -90, scale: 0.6 },
+    visible: {
+      opacity: 1,
+      rotate: 0,
+      scale: 1,
+      transition: { duration: durations.base, ease: [...eases.standard] },
+    },
+    exit: {
+      opacity: 0,
+      rotate: 90,
+      scale: 0.6,
+      transition: { duration: durations.fast, ease: [...eases.exit] },
+    },
+  };
+}
+
+/** Lo que espera cada hijo antes de entrar. Tres filas tardan 0,15 s en empezar: menos que `base`. */
+const STAGGER = 0.05;
+
+/**
+ * Para una lista: el contenedor hace entrar a sus hijos uno tras otro. No anima
+ * nada por si mismo; cada hijo usa su propia variante (por ejemplo `createReveal`).
+ * Sin movimiento, todos entran a la vez.
+ */
+export function createStagger(reducedMotion: boolean): Variants {
+  return {
+    hidden: {},
+    visible: { transition: { staggerChildren: reducedMotion ? 0 : STAGGER } },
+    exit: {},
+  };
+}

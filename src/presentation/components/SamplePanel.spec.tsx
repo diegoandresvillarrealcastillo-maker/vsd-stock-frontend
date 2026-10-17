@@ -57,6 +57,29 @@ describe('SamplePanel', () => {
     });
   });
 
+  describe('rows entering', () => {
+    const rowsOf = () => [...screen.getByRole('list').querySelectorAll('li')];
+
+    it('start hidden and lowered, so each one can rise in after the previous one', () => {
+      renderWithMotion(<SamplePanel items={items} loading={false} />);
+
+      for (const row of rowsOf()) {
+        expect(row.style.opacity).toBe('0');
+        expect(row.style.transform).toMatch(/translateY/);
+      }
+    });
+
+    it('only fade, without moving, when the person asked for reduced motion', () => {
+      setPrefersReducedMotion(true);
+      renderWithMotion(<SamplePanel items={items} loading={false} />);
+
+      for (const row of rowsOf()) {
+        expect(row.style.opacity).toBe('0');
+        expect(row.style.transform).not.toMatch(/translate/);
+      }
+    });
+  });
+
   describe('while loading', () => {
     it('announces the loading state to screen readers with a status message', () => {
       renderWithMotion(<SamplePanel items={items} loading />);
