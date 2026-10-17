@@ -61,12 +61,15 @@ export interface TestAuth {
 }
 
 /** Una sesion de verdad con un servicio de identidad que acepta a cualquiera, y una API que contesta lo que se prepare. */
-export function createTestAuth(options: { stored?: Session } = {}): TestAuth {
+export function createTestAuth(
+  options: { stored?: Session; signUpGivesSession?: boolean } = {},
+): TestAuth {
   const store = new MemorySessionStore();
   if (options.stored) store.set(options.stored);
   const identity: IdentityService = {
     signIn: (email) => Promise.resolve(testSession(email.split('@')[0] ?? 'x')),
-    signUp: () => Promise.resolve(null),
+    signUp: () =>
+      Promise.resolve(options.signUpGivesSession === true ? testSession('nueva') : null),
     refresh: () => Promise.reject(new AuthError('network')),
     signOut: () => Promise.resolve(),
   };

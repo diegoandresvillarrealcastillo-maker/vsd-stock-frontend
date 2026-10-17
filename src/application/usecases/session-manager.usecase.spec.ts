@@ -51,6 +51,8 @@ function setup(options: { stored?: Session | null } = {}) {
     signUp: sessionFor('up', HOUR) as Session | null | AuthFailureKind,
     refresh: sessionFor('renovado', HOUR) as Session | AuthFailureKind,
     signOut: 'ok' as 'ok' | AuthFailureKind,
+    /** Un fallo que no es del servicio de identidad: un defecto nuestro. */
+    defect: null as Error | null,
   };
   let refreshGate: Promise<void> | null = null;
   const identity: IdentityService = {
@@ -69,11 +71,13 @@ function setup(options: { stored?: Session | null } = {}) {
     refresh: async (refreshToken) => {
       calls.push(`refresh ${refreshToken}`);
       if (refreshGate) await refreshGate;
+      if (plan.defect !== null) throw plan.defect;
       if (typeof plan.refresh === 'string') throw new AuthError(plan.refresh);
       return plan.refresh;
     },
     signOut: (accessToken) => {
       calls.push(`signOut ${accessToken}`);
+      if (plan.defect !== null) return Promise.reject(plan.defect);
       return plan.signOut === 'ok'
         ? Promise.resolve()
         : Promise.reject(new AuthError(plan.signOut));
@@ -176,6 +180,14 @@ describe('SessionManagerUseCase', () => {
       expect(manager.current()).toBeNull();
     });
 
+    it('does not hide a failure that is not the identity service: that is a defect', async () => {
+      const { manager, plan } = setup({ stored: sessionFor('abierto', HOUR) });
+      plan.defect = new TypeError('se rompio algo nuestro');
+
+      await expect(manager.signOut()).rejects.toThrow('se rompio algo nuestro');
+      expect(manager.current()).toBeNull();
+    });
+
     it('does nothing when there is no session', async () => {
       const { manager, calls, changes } = setup();
 
@@ -257,6 +269,14 @@ describe('SessionManagerUseCase', () => {
       expect(manager.current()).toBeNull();
     });
 
+    it('does not hide a failure that is not the identity service: that is a defect', async () => {
+      const { manager, plan } = setup({ stored: sessionFor('por-vencer', 1_000) });
+      plan.defect = new TypeError('se rompio algo nuestro');
+
+      await expect(manager.accessToken()).rejects.toThrow('se rompio algo nuestro');
+      expect(manager.current()?.accessToken).toBe('por-vencer');
+    });
+
     it.each(['network', 'unavailable', 'rate-limited'] as const)(
       'keeps the session when the renewal fails with %s, and still serves a token that has not expired',
       async (kind) => {
@@ -313,6 +333,19 @@ describe('SessionManagerUseCase', () => {
 
       await expect(pending).resolves.toBeNull();
       expect(manager.current()).toBeNull();
+    });
+
+    it('does not forget a session that began meanwhile when the old one is rejected', async () => {
+      const { manager, plan, gateRefresh } = setup({ stored: sessionFor('por-vencer', 1_000) });
+      plan.refresh = 'invalid-credentials';
+      const open = gateRefresh();
+
+      const pending = manager.accessToken();
+      await manager.signIn('otra@example.com', 'x');
+      open();
+
+      await expect(pending).resolves.toBeNull();
+      expect(manager.current()?.accessToken).toBe('in');
     });
 
     it('does not step on a session that began meanwhile', async () => {
