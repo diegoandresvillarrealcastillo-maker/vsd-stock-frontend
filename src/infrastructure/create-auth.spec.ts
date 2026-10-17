@@ -54,7 +54,7 @@ describe('createAuth', () => {
 
   it('asks the API who the person is with the token of the session, and nowhere else', async () => {
     const { fetch, calls } = fakeFetch((url) =>
-      url.startsWith('http://api.test')
+      new URL(url).origin === 'http://api.test'
         ? json({ identity: { id: 'ana', email: 'ana@example.com' }, membership: null })
         : json(session),
     );
@@ -71,7 +71,7 @@ describe('createAuth', () => {
 
   it('does not send the token to the identity service when asking the API', async () => {
     const { fetch, calls } = fakeFetch((url) =>
-      url.startsWith('http://api.test')
+      new URL(url).origin === 'http://api.test'
         ? json({ identity: { id: 'ana', email: 'ana@example.com' }, membership: null })
         : json(session),
     );
