@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { Role } from '../domain/model/permissions';
 import { createTestAuth, testMe, testSession, type TestAuth } from '../../test/support/auth';
 import { createTestConnection } from '../../test/support/connection';
+import { createFakeCatalog } from '../../test/support/catalog';
 import { createFakePeople } from '../../test/support/people';
 import { createTestThemePreference } from '../../test/support/theme';
 import { App } from './App';
@@ -21,7 +22,13 @@ function renderApp({
 } = {}) {
   render(
     <MemoryRouter initialEntries={[path]}>
-      <App theme={theme} connection={connection.monitor} auth={auth} people={createFakePeople()} />
+      <App
+        theme={theme}
+        connection={connection.monitor}
+        auth={auth}
+        people={createFakePeople()}
+        catalog={createFakeCatalog()}
+      />
     </MemoryRouter>,
   );
   return connection;
