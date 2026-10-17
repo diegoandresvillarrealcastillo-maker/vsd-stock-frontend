@@ -15,7 +15,9 @@
   },
   "include": [
     "vite.config.ts",
+    "scripts",
     "test/architecture",
+    "test/contract",
     "test/design",
     "test/support/contrast.ts",
     "test/support/contrast.spec.ts"

@@ -14,7 +14,15 @@ export default tseslint.config(
   {
     // Los archivos de configuracion en .mjs quedan fuera del analisis con
     // tipos: no forman parte del codigo del proyecto y no estan en tsconfig.
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', '*.config.mjs', 'eslint/**'],
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'node_modules/**',
+      '*.config.mjs',
+      'eslint/**',
+      // Lo escribe openapi-typescript: no es codigo del proyecto.
+      'src/adapters/out/api/schema.d.ts',
+    ],
   },
 
   js.configs.recommended,

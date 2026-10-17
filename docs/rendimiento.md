@@ -38,7 +38,8 @@ Cargar las funciones de animación en un archivo aparte (`features={() => import
 inicial a 269,6 KB, pero el total sube un poco (316,2 KB) y añade una segunda petición y un momento en que los
 componentes `m` todavía no animan. No probamos cómo se comportan las salidas animadas en ese intervalo. Como la
 aplicación se instala como PWA y guarda todo para funcionar sin conexión, el peso importa sobre todo en la
-primera instalación. **Se reconsidera si Lighthouse (C0-08) o un dispositivo real lo piden.**
+primera instalación. **Se reconsidera si Lighthouse o un dispositivo real lo piden.** Lighthouse (C0-08) da
+rendimiento 99 con la carga sincrónica, así que hoy no hace falta.
 
 ### Después de C0-10 (marca, botón de tema y logo)
 
@@ -56,6 +57,51 @@ El logo original de la landing es un WebP de 124 KB a 700 px; para la banda se r
 arranque de React, y el `<img>` lleva `width` y `height` para que el navegador reserve el espacio y la página
 no salte cuando llega. El favicon (el cubo del logo) pesa 10 KB.
 
+### Después de C0-08 (conexión, contrato y tipos)
+
+| Pieza                 | Antes (C0-10) | Ahora (C0-08) | Diferencia |
+| --------------------- | ------------: | ------------: | ---------: |
+| JavaScript            |      316,5 KB |      324,0 KB |    +7,5 KB |
+| JavaScript comprimido |      101,0 KB |      103,3 KB |    +2,3 KB |
+| CSS                   |       15,1 KB |       16,2 KB |    +1,1 KB |
+
+Es el caso de uso de conexión, sus tres adaptadores, el panel y su proveedor. **El contrato y los tipos
+generados no pesan nada en el navegador**: `schema.d.ts` solo tiene tipos y desaparece al compilar, y
+`openapi-typescript` es una herramienta de desarrollo. Tampoco entra ninguna biblioteca de cliente HTTP: el
+adaptador usa `fetch`.
+
+## Lighthouse: lo más cercano a un teléfono de gama baja
+
+**Decisión (2026-10-16):** el equipo no tiene un teléfono de gama baja, así que la comprobación en un
+dispositivo real se sustituye por Lighthouse en cada PR. Lighthouse audita `dist/` con la emulación de un
+**Moto G Power (2022)**, la **CPU 4 veces más lenta** y una **red 4G lenta simulada** (1,6 Mbps de bajada y
+150 ms de latencia), y se ejecuta 3 veces. Mediana de las tres, con el código de C0-08:
+
+| Medida                                  | Resultado                          |
+| --------------------------------------- | ---------------------------------- |
+| Accesibilidad                           | **100** (el CI exige 100)          |
+| Rendimiento                             | **99** (el CI avisa si baja de 90) |
+| Mejores prácticas                       | 96 (el CI avisa si baja de 90)     |
+| Primer contenido pintado (FCP)          | 1,5 s                              |
+| Mayor contenido pintado (LCP)           | 1,8 s                              |
+| Tiempo de bloqueo total (TBT)           | 16 ms                              |
+| Desplazamiento acumulado de diseño      | 0,026                              |
+| Peso transferido (con el logo de 27 KB) | 145,6 KB                           |
+
+Lo que se ve en esas cifras y lo que no:
+
+- **El 0,026 de desplazamiento y el punto que pierde «Mejores prácticas» tienen la misma causa**, y no es un
+  defecto: la compilación que se audita no tiene una API detrás, así que `GET /health` responde 404 (el error de
+  consola), el panel pasa a «Sin conexión» y su botón «Reintentar» empuja 60 px hacia abajo la sección de
+  abajo. Con la API en pie el panel mide lo mismo en «Comprobando» y en «En línea» (102 px) y no hay
+  desplazamiento. Que el panel crezca al perderse la conexión es el comportamiento diseñado.
+- **Es una simulación, no un teléfono.** Lighthouse mide la carga (cuándo aparece el contenido y cuánto se
+  bloquea el hilo principal). **No mide lo que fija el ADR 0008 para el punto de venta**: que el toque responda
+  en menos de 100 ms y que la animación no se entrecorte a 60 fps. Para eso solo tenemos la medición de
+  escritorio de más abajo.
+- **Audita el tema claro.** El oscuro lo cubren las pruebas de contraste de `test/design/tokens.spec.ts`, que
+  leen el CSS y exigen AA en los dos temas.
+
 ## Tiempos medidos
 
 Chromium automatizado, en un computador de escritorio, contra `vite preview` en `localhost`, **sin limitar la
@@ -72,15 +118,20 @@ presupuesto: un escritorio no es un teléfono de gama baja.
 
 ## Lo que falta
 
-- **Un dispositivo real de gama baja.** No tenemos uno disponible en este entorno. Es un paso manual: abrir la
-  versión de producción en el teléfono más modesto del equipo, activar «Mostrar toques» y comprobar que el
-  botón responde al instante y la animación no se entrecorta. **Queda pendiente para Diego.**
-- **Lighthouse en el CI** (rendimiento y accesibilidad), que llega con C0-08.
+- **La respuesta al toque y los 60 fps en un teléfono de gama baja.** Es lo que fija el ADR 0008 y nada de lo
+  anterior lo mide en un dispositivo lento. El equipo no tiene uno (ver arriba), así que el riesgo queda
+  **aceptado y a la vista**: la primera pantalla donde importa de verdad es el punto de venta (Ciclo 3), y ahí
+  hay que medirlo con un teléfono prestado o con la CPU limitada en las herramientas del navegador. Si alguien
+  consigue uno antes: abrir la versión de producción, activar «Mostrar toques» y comprobar que el botón responde
+  al instante y la animación no se entrecorta.
 - **Un presupuesto en bytes** que rompa el build si el JavaScript crece: se define cuando haya más pantallas y
-  se sepa qué es razonable. Hoy lo único que impone el CI es que compile.
+  se sepa qué es razonable. Hoy lo único que impone el CI es que compile y que Lighthouse no baje de 90 en
+  rendimiento (solo avisa).
 
 ## Cómo repetir la medición
 
 1. `npm run build` y sumar los archivos de `dist/assets/*.js`, con el tamaño comprimido a gzip nivel 9.
 2. Para la línea base, compilar el commit anterior en una copia aparte y comparar.
 3. Para los tiempos, `npm run preview` y leer `performance.getEntriesByType('paint')` en la consola.
+4. Para Lighthouse, `npm run build` y `npm run lighthouse` (necesita Chrome; en Windows, la variable
+   `CHROME_PATH` con la ruta de `chrome.exe`). Los informes quedan en `.lighthouseci/`, que no se sube.
