@@ -18,6 +18,8 @@ interface FormFieldProps {
   /** `characters` para un codigo que se dicta en mayusculas. */
   autoCapitalize?: 'off' | 'none' | 'sentences' | 'words' | 'characters';
   spellCheck?: boolean;
+  /** Un ejemplo de lo que se escribe. No reemplaza a la etiqueta. */
+  placeholder?: string;
   /** Una ayuda corta bajo el campo. Si hay un error, se muestra el error en su lugar. */
   hint?: string;
   /** Lo que esta mal en este campo, dicho en una frase. */
@@ -48,6 +50,7 @@ export function FormField({
   inputMode,
   autoCapitalize,
   spellCheck,
+  placeholder,
   hint,
   error,
   disabled = false,
@@ -81,6 +84,7 @@ export function FormField({
           {...(inputMode === undefined ? {} : { inputMode })}
           {...(autoCapitalize === undefined ? {} : { autoCapitalize })}
           {...(spellCheck === undefined ? {} : { spellCheck })}
+          {...(placeholder === undefined ? {} : { placeholder })}
         />
       ) : (
         <select {...common} value={value} onChange={(event) => onChange(event.target.value)}>
