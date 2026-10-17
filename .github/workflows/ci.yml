@@ -1,15 +1,19 @@
 # ============================================================
 #  VSD Stock (frontend) - Integracion continua
 # ============================================================
-#  Primera barrera automatica del proyecto. Cubre tres cosas:
+#  Barrera automatica del proyecto. Este archivo cubre cinco cosas:
 #
 #    1. que no entre ningun secreto al repositorio;
 #    2. que todo commit siga Conventional Commits y cite su Issue;
 #    3. que el codigo pase estilo, fronteras de la arquitectura, formato,
-#       tipos, pruebas con cobertura y compilacion.
+#       tipos, pruebas con cobertura (incluidos los tipos generados del
+#       contrato) y compilacion;
+#    4. que la copia del contrato OpenAPI coincida con la del backend;
+#    5. que la compilacion pase Lighthouse: accesibilidad perfecta y buen
+#       rendimiento en un movil de gama media con red lenta (simulado).
 #
-#  Los trabajos de CodeQL, auditoria de dependencias y Lighthouse se anaden
-#  en C0-08, junto con la pantalla que consume la API.
+#  CodeQL (codeql.yml) y las vulnerabilidades de las dependencias
+#  (dependencias.yml) van en archivos aparte para poder programarlos.
 #
 #  Los nombres de los trabajos coinciden con los del backend a proposito:
 #  asi se exigen igual en el conjunto de reglas de las ramas.
@@ -138,3 +142,62 @@ jobs:
 
       - name: Compilar
         run: npm run build
+
+  contrato:
+    name: Contrato con el backend
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # Sin `npm ci`: el script solo usa lo que trae Node 24, que ejecuta
+      # TypeScript quitando los tipos. Asi tambien se comprueba que corre asi.
+      - name: Comparar la copia del contrato con la del backend
+        env:
+          # La rama del backend que corresponde: la base del Pull Request o, en un
+          # push, la rama que lo recibe. Se pasan por variable de entorno y no
+          # interpoladas dentro del script, para no inyectar contenido en la shell.
+          CONTRACT_REF: ${{ github.base_ref || github.ref_name }}
+          # Evita el limite de consultas anonimas de la API de GitHub.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/contract.ts check
+
+  accesibilidad:
+    name: Accesibilidad y rendimiento (Lighthouse)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar
+        run: npm run build
+
+      # Lighthouse sirve dist/ y lo audita con la emulacion de un movil de gama
+      # media (Moto G Power), la CPU 4 veces mas lenta y una red 4G lenta
+      # simulada. La accesibilidad tiene que ser perfecta; el rendimiento y las
+      # buenas practicas solo avisan si bajan de 0,9.
+      - name: Auditar la compilacion
+        run: npm run lighthouse
+
+      - name: Guardar los informes
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informes-lighthouse
+          path: .lighthouseci/
+          if-no-files-found: ignore
+          retention-days: 14

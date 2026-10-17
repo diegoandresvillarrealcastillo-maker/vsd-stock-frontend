@@ -33,6 +33,8 @@ node_modules/
 coverage/
 .nyc_output/
 test-results/
+# Informes de Lighthouse (npm run lighthouse); el CI los guarda como artefacto.
+.lighthouseci/
 
 # ---------- Cache de herramientas ----------
 .cache/

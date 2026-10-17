@@ -2,6 +2,7 @@ dist/
 coverage/
 node_modules/
 package-lock.json
+.lighthouseci/
 
 # Generados o copiados tal cual: darles formato los separaria de su origen.
 # contract/openapi.json es el del backend, byte por byte; schema.d.ts lo escribe

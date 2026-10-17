@@ -22,6 +22,7 @@
     "contract:generate": "openapi-typescript contract/openapi.json --output src/adapters/out/api/schema.d.ts",
     "contract:sync": "node scripts/contract.ts sync && npm run contract:generate",
     "contract:check": "node scripts/contract.ts check",
+    "lighthouse": "npx --yes @lhci/cli@0.15.1 autorun --config=lighthouserc.json",
     "prepare": "husky"
   },
   "overrides": {
