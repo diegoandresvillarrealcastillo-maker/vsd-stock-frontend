@@ -2,7 +2,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   CONTRACT_PATH,
+  VECTORS_PATH,
+  backendFileUrl,
   compareContracts,
+  compareVectors,
   contractUrl,
   fetchBackendContract,
   run,
@@ -15,6 +18,13 @@ const CONTRACT = {
     '/health': { get: { operationId: 'HealthController_check' } },
   },
   components: { schemas: { HealthReportDto: { type: 'object' } } },
+};
+
+const VECTORS = {
+  version: 1,
+  currency: 'COP',
+  breakdown: [{ total: 1000, rateBp: 1900, base: 840, tax: 160 }],
+  gross: [{ unitPrice: 2500, quantityMilli: 1500, total: 3750 }],
 };
 
 function text(document: unknown): string {
@@ -104,6 +114,79 @@ describe('compareContracts', () => {
   });
 });
 
+describe('backendFileUrl', () => {
+  it('points at any file of the backend repository, on the given branch, through the GitHub API', () => {
+    expect(backendFileUrl('contract/calculation-vectors.json', 'desarrollo')).toBe(
+      'https://api.github.com/repos/diegoandresvillarrealcastillo-maker/vsd-stock-backend/contents/contract/calculation-vectors.json?ref=desarrollo',
+    );
+  });
+
+  it('keeps contractUrl as the address of openapi.json', () => {
+    expect(contractUrl('desarrollo')).toBe(backendFileUrl('openapi.json', 'desarrollo'));
+  });
+
+  it('encodes a branch name that has a slash', () => {
+    expect(backendFileUrl('openapi.json', 'feat/c1-02-dinero')).toContain(
+      '?ref=feat%2Fc1-02-dinero',
+    );
+  });
+});
+
+describe('compareVectors', () => {
+  it('treats identical vectors as equal even when whitespace and line endings differ', () => {
+    const windows = text(VECTORS).replaceAll('\n', '\r\n');
+
+    expect(compareVectors(JSON.stringify(VECTORS), windows)).toEqual({
+      same: true,
+      differences: [],
+    });
+  });
+
+  it('treats identical vectors as equal when their keys come in another order', () => {
+    const reordered = {
+      gross: [{ total: 3750, quantityMilli: 1500, unitPrice: 2500 }],
+      currency: VECTORS.currency,
+      version: VECTORS.version,
+      breakdown: [{ tax: 160, base: 840, rateBp: 1900, total: 1000 }],
+    };
+
+    expect(compareVectors(text(VECTORS), text(reordered)).same).toBe(true);
+  });
+
+  it('names the sections that changed and how many cases each one has on each side', () => {
+    const backend = {
+      ...VECTORS,
+      breakdown: [...VECTORS.breakdown, { total: 119, rateBp: 1900, base: 100, tax: 19 }],
+    };
+
+    const result = compareVectors(text(VECTORS), text(backend));
+
+    expect(result.same).toBe(false);
+    expect(result.differences).toEqual(['La sección «breakdown» cambió: 1 aquí y 2 en el backend']);
+  });
+
+  it('reports a changed value inside a section that keeps its size', () => {
+    const backend = { ...VECTORS, gross: [{ unitPrice: 2500, quantityMilli: 1500, total: 3751 }] };
+
+    const result = compareVectors(text(VECTORS), text(backend));
+
+    expect(result.differences).toEqual(['La sección «gross» cambió']);
+  });
+
+  it('reports a section that only one side has', () => {
+    const backend = { ...VECTORS, percent: [] };
+
+    const result = compareVectors(text(VECTORS), text(backend));
+
+    expect(result.differences).toEqual(['La sección «percent» solo existe en el backend']);
+  });
+
+  it('says which side is broken when a document is not JSON', () => {
+    expect(() => compareVectors('<html>', text(VECTORS))).toThrow(/copia local/);
+    expect(() => compareVectors(text(VECTORS), '<html>')).toThrow(/backend/);
+  });
+});
+
 describe('fetchBackendContract', () => {
   function fakeFetch(answer: Response | Error) {
     const requests: { url: string; headers: Headers }[] = [];
@@ -153,12 +236,27 @@ describe('fetchBackendContract', () => {
 });
 
 describe('run', () => {
-  function fakeIo(files: Record<string, string>, remote: Response | Error) {
+  type Answer = Response | Error;
+  interface Backend {
+    openapi: Answer;
+    vectors: Answer;
+  }
+
+  // Cada archivo del backend tiene su propia respuesta; una Response solo se lee una vez, por eso se clona.
+  function fakeIo(files: Record<string, string>, backend: Backend) {
     const logs: string[] = [];
     const errors: string[] = [];
     const written: Record<string, string> = {};
+    const urls: string[] = [];
+    const answer = (value: Answer) =>
+      value instanceof Error ? Promise.reject(value) : Promise.resolve(value.clone());
     const io: Io = {
-      fetch: () => (remote instanceof Error ? Promise.reject(remote) : Promise.resolve(remote)),
+      fetch: (input) => {
+        urls.push(input);
+        return input.includes('/contents/openapi.json')
+          ? answer(backend.openapi)
+          : answer(backend.vectors);
+      },
       readFile: (path) => {
         const content = files[path];
         if (content === undefined) throw new Error(`no existe ${path}`);
@@ -170,21 +268,44 @@ describe('run', () => {
       log: (line) => logs.push(line),
       error: (line) => errors.push(line),
     };
-    return { io, logs, errors, written };
+    return { io, logs, errors, written, urls };
   }
 
-  it('check passes when the local copy is the contract of the backend', async () => {
-    const { io, logs } = fakeIo({ [CONTRACT_PATH]: text(CONTRACT) }, new Response(text(CONTRACT)));
+  const bothLocal = { [CONTRACT_PATH]: text(CONTRACT), [VECTORS_PATH]: text(VECTORS) };
+  const bothRemote = (): Backend => ({
+    openapi: new Response(text(CONTRACT)),
+    vectors: new Response(text(VECTORS)),
+  });
+
+  it('check passes when both local copies are the ones of the backend', async () => {
+    const { io, logs } = fakeIo(bothLocal, bothRemote());
 
     const code = await run(['check'], { CONTRACT_REF: 'preproduccion' }, io);
 
     expect(code).toBe(0);
     expect(logs.join('\n')).toContain('preproduccion');
+    expect(logs.join('\n')).toContain('vectores');
+  });
+
+  it('check asks the backend for both files on the same branch', async () => {
+    const { io, urls } = fakeIo(bothLocal, bothRemote());
+
+    await run(['check'], { CONTRACT_REF: 'preproduccion' }, io);
+
+    expect(urls.sort()).toEqual(
+      [
+        contractUrl('preproduccion'),
+        backendFileUrl('contract/calculation-vectors.json', 'preproduccion'),
+      ].sort(),
+    );
   });
 
   it('check fails, lists what changed and says how to fix it', async () => {
     const backend = { ...CONTRACT, paths: { ...CONTRACT.paths, '/products': { get: {} } } };
-    const { io, errors } = fakeIo({ [CONTRACT_PATH]: text(CONTRACT) }, new Response(text(backend)));
+    const { io, errors } = fakeIo(bothLocal, {
+      ...bothRemote(),
+      openapi: new Response(text(backend)),
+    });
 
     const code = await run(['check'], {}, io);
 
@@ -193,8 +314,55 @@ describe('run', () => {
     expect(errors.join('\n')).toContain('npm run contract:sync');
   });
 
+  it('check fails when the calculation vectors of the backend changed, and names the section', async () => {
+    const backend = { ...VECTORS, gross: [] };
+    const { io, errors } = fakeIo(bothLocal, {
+      ...bothRemote(),
+      vectors: new Response(text(backend)),
+    });
+
+    const code = await run(['check'], {}, io);
+
+    expect(code).toBe(1);
+    expect(errors.join('\n')).toContain('vectores de cálculo');
+    expect(errors.join('\n')).toContain('La sección «gross» cambió');
+    expect(errors.join('\n')).toContain('npm run contract:sync');
+  });
+
+  it('check reports both files when both changed', async () => {
+    const backendContract = { ...CONTRACT, paths: {} };
+    const backendVectors = { ...VECTORS, gross: [] };
+    const { io, errors } = fakeIo(bothLocal, {
+      openapi: new Response(text(backendContract)),
+      vectors: new Response(text(backendVectors)),
+    });
+
+    const code = await run(['check'], {}, io);
+
+    expect(code).toBe(1);
+    expect(errors.join('\n')).toContain('El backend quitó GET /health');
+    expect(errors.join('\n')).toContain('La sección «gross» cambió');
+  });
+
+  it('check fails and names the file when the backend branch does not have the vectors yet', async () => {
+    const { io, errors } = fakeIo(bothLocal, {
+      ...bothRemote(),
+      vectors: new Response('Not Found', { status: 404 }),
+    });
+
+    const code = await run(['check'], { CONTRACT_REF: 'desarrollo' }, io);
+
+    expect(code).toBe(1);
+    expect(errors.join('\n')).toContain('calculation-vectors.json');
+    expect(errors.join('\n')).toContain('404');
+    expect(errors.join('\n')).toContain('desarrollo');
+  });
+
   it('check fails when it cannot reach the backend: an unverified contract is not a verified one', async () => {
-    const { io, errors } = fakeIo({ [CONTRACT_PATH]: text(CONTRACT) }, new TypeError('offline'));
+    const { io, errors } = fakeIo(bothLocal, {
+      openapi: new TypeError('offline'),
+      vectors: new TypeError('offline'),
+    });
 
     const code = await run(['check'], {}, io);
 
@@ -202,18 +370,51 @@ describe('run', () => {
     expect(errors.join('\n')).toContain('No se pudo consultar');
   });
 
-  it('sync writes the contract of the backend exactly as it is', async () => {
-    const backend = text({ ...CONTRACT, info: { title: 'VSD Stock API' } });
-    const { io, written } = fakeIo({}, new Response(backend));
+  it('check fails and says how to create the copy when a local file does not exist', async () => {
+    const { io, errors } = fakeIo({ [CONTRACT_PATH]: text(CONTRACT) }, bothRemote());
+
+    const code = await run(['check'], {}, io);
+
+    expect(code).toBe(1);
+    expect(errors.join('\n')).toContain(VECTORS_PATH);
+    expect(errors.join('\n')).toContain('npm run contract:sync');
+  });
+
+  it('sync writes both files of the backend exactly as they are', async () => {
+    const openapi = text({ ...CONTRACT, info: { title: 'VSD Stock API' } });
+    const vectors = text({ ...VECTORS, version: 2 });
+    const { io, written } = fakeIo(
+      {},
+      { openapi: new Response(openapi), vectors: new Response(vectors) },
+    );
 
     const code = await run(['sync'], {}, io);
 
     expect(code).toBe(0);
-    expect(written[CONTRACT_PATH]).toBe(backend);
+    expect(written[CONTRACT_PATH]).toBe(openapi);
+    expect(written[VECTORS_PATH]).toBe(vectors);
   });
 
   it('sync does not write anything when the backend does not answer', async () => {
-    const { io, written } = fakeIo({}, new Response('Not Found', { status: 404 }));
+    const { io, written } = fakeIo(
+      {},
+      {
+        openapi: new Response('Not Found', { status: 404 }),
+        vectors: new Response('Not Found', { status: 404 }),
+      },
+    );
+
+    const code = await run(['sync'], {}, io);
+
+    expect(code).toBe(1);
+    expect(written).toEqual({});
+  });
+
+  it('sync does not write the contract either when only the vectors are missing in the backend', async () => {
+    const { io, written } = fakeIo(
+      {},
+      { ...bothRemote(), vectors: new Response('Not Found', { status: 404 }) },
+    );
 
     const code = await run(['sync'], {}, io);
 
@@ -222,25 +423,24 @@ describe('run', () => {
   });
 
   it('uses desarrollo when CONTRACT_REF is not set and passes the token along', async () => {
-    const urls: string[] = [];
+    const { io, urls } = fakeIo(bothLocal, bothRemote());
     const tokens: (string | null)[] = [];
-    const { io } = fakeIo({ [CONTRACT_PATH]: text(CONTRACT) }, new Response(text(CONTRACT)));
+    const original = io.fetch;
     io.fetch = (input, init) => {
-      urls.push(input);
       tokens.push(new Headers(init?.headers).get('authorization'));
-      return Promise.resolve(new Response(text(CONTRACT)));
+      return original(input, init);
     };
 
     await run(['check'], { GITHUB_TOKEN: 'secreto' }, io);
 
-    expect(urls[0]).toBe(contractUrl('desarrollo'));
-    expect(tokens[0]).toBe('Bearer secreto');
+    expect(urls).toContain(contractUrl('desarrollo'));
+    expect(tokens).toEqual(['Bearer secreto', 'Bearer secreto']);
   });
 
   it.each([[[]], [['otra-cosa']]])(
     'prints the usage and fails for the command %j',
     async (args) => {
-      const { io, errors } = fakeIo({}, new Response(''));
+      const { io, errors } = fakeIo({}, bothRemote());
 
       const code = await run(args, {}, io);
 
