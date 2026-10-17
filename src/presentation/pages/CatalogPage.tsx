@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import type { Product } from '../../domain/model/catalog';
 import { can } from '../../domain/model/permissions';
@@ -15,9 +15,7 @@ import { SubmitButton } from '../components/SubmitButton';
 import { useCatalog } from '../catalog/CatalogProvider';
 import { useLoad } from '../forms/use-load';
 import { usePagedLoad } from '../forms/use-paged-load';
-
-/** Cuanto espera la pantalla despues de la ultima tecla para pedir la busqueda. */
-const SEARCH_DELAY_MS = 300;
+import { useSearchTerm } from '../forms/use-search-term';
 
 type Status = 'all' | 'active' | 'archived';
 
@@ -77,15 +75,8 @@ export function CatalogPage() {
   const membership = useMembership();
   const location = useLocation();
   const notice = (location.state as { notice?: unknown } | null)?.notice;
-  const [term, setTerm] = useState('');
-  const [search, setSearch] = useState('');
+  const { term, setTerm, search, submit: searchNow } = useSearchTerm();
   const [status, setStatus] = useState<Status>('active');
-
-  // La busqueda se pide sola cuando la persona deja de escribir; Enter la pide de inmediato.
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(term.trim()), SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [term]);
 
   const active = status === 'all' ? undefined : status === 'active';
   const filter: ProductFilter = {
@@ -127,7 +118,7 @@ export function CatalogPage() {
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          setSearch(term.trim());
+          searchNow();
         }}
       >
         <FormField
