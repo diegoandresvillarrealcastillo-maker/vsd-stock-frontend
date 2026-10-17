@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 import type { Me } from '../../domain/model/me';
 import {
@@ -13,8 +14,19 @@ import { AuthProvider, useAccount } from './AuthProvider';
 function Probe() {
   const account = useAccount();
   const state = account.state;
+  const [confirm, setConfirm] = useState('');
   return (
     <div>
+      <p data-testid="confirmar">{confirm}</p>
+      <button
+        onClick={() =>
+          void account
+            .signUp('nueva@example.com', 'x')
+            .then((created) => setConfirm(created.confirmEmail ? 'si' : 'no'))
+        }
+      >
+        registrar
+      </button>
       <p data-testid="status">{state.status}</p>
       <p data-testid="role">
         {state.status === 'ready' ? (state.me.membership?.role ?? 'sin-negocio') : ''}
@@ -150,6 +162,28 @@ describe('AuthProvider', () => {
     });
 
     expect(status()).toBe('signed-out');
+  });
+
+  it('says the email has to be confirmed when signing up does not let the person in yet', async () => {
+    const env = createTestAuth();
+    mount(env);
+
+    fireEvent.click(screen.getByText('registrar'));
+
+    await waitFor(() => expect(screen.getByTestId('confirmar').textContent).toBe('si'));
+    expect(status()).toBe('signed-out');
+  });
+
+  it('says nothing has to be confirmed when signing up already let the person in, and loads who they are', async () => {
+    const env = createTestAuth({ signUpGivesSession: true });
+    env.answer({ identity: { id: 'nueva', email: 'nueva@example.com' }, membership: null });
+    mount(env);
+
+    fireEvent.click(screen.getByText('registrar'));
+
+    await waitFor(() => expect(screen.getByTestId('confirmar').textContent).toBe('no'));
+    await waitFor(() => expect(screen.getByTestId('role').textContent).toBe('sin-negocio'));
+    expect(env.loads).toEqual(['nueva']);
   });
 
   it('refuses to be used outside the provider', () => {

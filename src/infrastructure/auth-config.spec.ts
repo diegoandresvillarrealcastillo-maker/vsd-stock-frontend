@@ -30,10 +30,10 @@ describe('resolveAuthConfig', () => {
 
   it('refuses to start with only one of the two, naming the one that is missing', () => {
     expect(() => resolveAuthConfig({ DEV: false, VITE_AUTH_URL: URL_OK })).toThrow(
-      /VITE_AUTH_PUBLISHABLE_KEY/,
+      /Falta VITE_AUTH_PUBLISHABLE_KEY/,
     );
     expect(() => resolveAuthConfig({ DEV: false, VITE_AUTH_PUBLISHABLE_KEY: KEY_OK })).toThrow(
-      /VITE_AUTH_URL/,
+      /Falta VITE_AUTH_URL/,
     );
   });
 
@@ -77,6 +77,16 @@ describe('resolveAuthConfig', () => {
         VITE_AUTH_PUBLISHABLE_KEY: KEY_OK,
       })?.authUrl,
     ).toBe('http://localhost:9999');
+  });
+
+  it('refuses plain http even to this machine in a compiled version: the development switch is what allows it', () => {
+    expect(() =>
+      resolveAuthConfig({
+        DEV: false,
+        VITE_AUTH_URL: 'http://127.0.0.1:54321/auth/v1',
+        VITE_AUTH_PUBLISHABLE_KEY: KEY_OK,
+      }),
+    ).toThrow(/https/);
   });
 
   it('refuses plain http to another machine even in development', () => {

@@ -61,6 +61,10 @@ describe('parseMe', () => {
       'a membership without business name',
       { ...full, membership: { ...full.membership, businessName: undefined } },
     ],
+    [
+      'a membership without the name of the person',
+      { ...full, membership: { ...full.membership, fullName: undefined } },
+    ],
     ['a membership without user id', { ...full, membership: { ...full.membership, userId: 7 } }],
   ])('refuses %s, because the server said something that is not the contract', (_name, body) => {
     expect(parseMe(body)).toBeNull();
