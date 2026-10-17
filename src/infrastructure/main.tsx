@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
+import { BusinessPeopleUseCase } from '../application/usecases/business-people.usecase';
 import { App } from '../presentation/App';
 import '../presentation/styles/index.css';
 import { resolveApiBaseUrl } from './api-base-url';
@@ -40,10 +41,12 @@ const auth = createAuth({
   now: () => new Date(),
 });
 
+const people = new BusinessPeopleUseCase(auth.api);
+
 createRoot(container).render(
   <StrictMode>
     <BrowserRouter>
-      <App theme={theme} connection={connection} auth={auth} />
+      <App theme={theme} connection={connection} auth={auth} people={people} />
     </BrowserRouter>
   </StrictMode>,
 );

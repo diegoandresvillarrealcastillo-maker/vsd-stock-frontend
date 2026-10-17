@@ -1,8 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
+import type { Role } from '../domain/model/permissions';
 import { createTestAuth, testMe, testSession, type TestAuth } from '../../test/support/auth';
 import { createTestConnection } from '../../test/support/connection';
+import { createFakePeople } from '../../test/support/people';
 import { createTestThemePreference } from '../../test/support/theme';
 import { App } from './App';
 
@@ -19,25 +21,29 @@ function renderApp({
 } = {}) {
   render(
     <MemoryRouter initialEntries={[path]}>
-      <App theme={theme} connection={connection.monitor} auth={auth} />
+      <App theme={theme} connection={connection.monitor} auth={auth} people={createFakePeople()} />
     </MemoryRouter>,
   );
   return connection;
 }
 
+/** Una cuenta que ya entro y tiene negocio. */
+function signedIn(role: Role) {
+  const auth = createTestAuth({ stored: testSession('ana') });
+  auth.answer(testMe('ana', role));
+  return auth;
+}
+
 describe('App', () => {
   it('opens a person who signed in before straight into the application', async () => {
-    const auth = createTestAuth({ stored: testSession('ana') });
-    auth.answer(testMe('ana', 'cashier'));
-    renderApp({ auth, path: '/' });
+    renderApp({ auth: signedIn('cashier'), path: '/' });
 
     expect(await screen.findByText('Tienda La Esquina')).toBeDefined();
     expect(screen.getByRole('navigation', { name: 'Principal' })).toBeDefined();
   });
 
   it('keeps the account of the person for every screen, so none has to ask who they are', async () => {
-    const auth = createTestAuth({ stored: testSession('ana') });
-    auth.answer(testMe('ana', 'owner'));
+    const auth = signedIn('owner');
     renderApp({ auth, path: '/' });
     await screen.findByText('Tienda La Esquina');
 
@@ -47,20 +53,28 @@ describe('App', () => {
     expect(auth.loads).toEqual(['ana']);
   });
 
-  it('shows the home page', () => {
+  it('asks whoever has not signed in to sign in', () => {
     renderApp();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'VSD Stock' })).toBeDefined();
+    expect(screen.getByRole('heading', { level: 1, name: 'Ingresar' })).toBeDefined();
+  });
+
+  it('gives every screen the people of the business, so none has to build the use case', async () => {
+    renderApp({ auth: signedIn('owner'), path: '/personas' });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Personas' })).toBeDefined();
+    expect(await screen.findByText('Ana Gómez')).toBeDefined();
   });
 
   it('gives the whole interface the motion provider, so no screen has to set it up', async () => {
-    renderApp();
+    renderApp({ auth: signedIn('owner'), path: '/' });
+    await screen.findByText('Tienda La Esquina');
 
-    // Sin el proveedor de movimiento, el contenido nunca termina de salir y el
-    // estado de carga no llega a mostrarse: es lo que esta prueba vigila.
-    fireEvent.click(screen.getByRole('button', { name: 'Ver estado de carga' }));
+    // Sin el proveedor de movimiento, el contenido nunca termina de salir y la
+    // pagina nueva nunca entra: es lo que esta prueba vigila.
+    fireEvent.click(screen.getByRole('link', { name: 'Catálogo' }));
 
-    expect(await screen.findByText(/cargando el resumen/i)).toBeDefined();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Catálogo' })).toBeDefined();
   });
 
   it('gives the whole interface the theme: pressing the button applies the new theme', () => {
@@ -75,7 +89,7 @@ describe('App', () => {
   });
 
   it('starts watching the connection when it opens, and shows what the server answers', async () => {
-    const connection = renderApp();
+    const connection = renderApp({ auth: signedIn('owner'), path: '/' });
     expect(connection.health.requests).toBe(1);
 
     await act(async () => {
@@ -86,7 +100,7 @@ describe('App', () => {
   });
 
   it('shows that there is no connection when the server does not answer', async () => {
-    const connection = renderApp();
+    const connection = renderApp({ auth: signedIn('owner'), path: '/' });
 
     await act(async () => {
       await connection.health.fail();

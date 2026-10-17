@@ -6,6 +6,7 @@ import { LoadMeUseCase } from '../application/usecases/load-me.usecase';
 import { SessionManagerUseCase } from '../application/usecases/session-manager.usecase';
 import type { LoadMe } from '../domain/ports/in/load-me';
 import type { SessionManager } from '../domain/ports/in/session-manager';
+import type { ApiGateway } from '../domain/ports/out/api-gateway';
 import type { Clock } from '../domain/ports/out/clock';
 import type { AuthConfig } from './auth-config';
 
@@ -21,6 +22,8 @@ interface Environment {
 export interface Auth {
   readonly sessions: SessionManager;
   readonly loadMe: LoadMe;
+  /** La API con el token de la sesion puesto: de aqui salen los demas casos de uso que hablan con ella. */
+  readonly api: ApiGateway;
 }
 
 /**
@@ -46,5 +49,5 @@ export function createAuth(env: Environment): Auth {
     fetch: env.fetch,
     now: () => env.now().getTime(),
   });
-  return { sessions, loadMe: new LoadMeUseCase(api) };
+  return { sessions, loadMe: new LoadMeUseCase(api), api };
 }
