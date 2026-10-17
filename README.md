@@ -54,7 +54,7 @@ src/
 ├── application/      usecases/                      ← casos de uso y, después, el motor de sincronización
 ├── adapters/         in/  out/{api,network,scheduler,theme}/  ← API (HTTP), pistas de red, temporizador, tema… (después, almacén local y cámara)
 ├── infrastructure/   cableado y arranque (main.tsx)
-└── presentation/     pages/  components/  theme/  motion/  styles/  assets/   ← lo único que conoce React
+└── presentation/     pages/  components/  forms/  auth/  people/  routes/  theme/  motion/  styles/   ← lo único que conoce React
 ```
 
 Dos reglas que conviene recordar:
@@ -146,6 +146,33 @@ Cómo entra una persona y qué ve según su rol (ADR 0017, 0022 y 0024). Todo es
   pantallas se construyen una a una; hasta entonces cada ruta tiene su guarda y su título.
 - **Sin conexión:** una pantalla que lista o cambia algo necesita al servidor y lo dice («Esta pantalla necesita
   conexión») en vez de mostrarse vacía. La base local del Ciclo 3 es lo que lo cambiará.
+
+### Pantallas de acceso y personas
+
+| Ruta              | Pantalla             | Quién la ve                                                                |
+| ----------------- | -------------------- | -------------------------------------------------------------------------- |
+| `/ingresar`       | Ingresar             | Quien no tiene sesión                                                      |
+| `/registrarse`    | Crear cuenta         | Quien no tiene sesión                                                      |
+| `/empezar`        | Crea tu negocio      | Quien tiene sesión y todavía no tiene negocio; queda como dueño            |
+| `/invitacion`     | Unirme a un negocio  | Quien tiene sesión y todavía no tiene negocio; usa el código que le dieron |
+| `/personas`       | Personas del negocio | Quien puede gestionar personas (`user:manage-cashiers`)                    |
+| `/personas/nueva` | Invitar a alguien    | Igual; muestra el código **una sola vez** para copiarlo                    |
+| `/personas/:id`   | Una persona          | Igual; cambia nombre, rol y si está activa, o renueva su invitación        |
+
+- **Cómo se construyen.** Las tres piezas que todas las pantallas con formulario reutilizan están en
+  `presentation/forms/` y `presentation/components/`: `useSubmit` (un envío a la vez, traduce el error de la API a
+  mensaje y campos con `problemOf`, y cierra la sesión si la API dice que ya no sirve), `useLoad` (carga con estado de
+  carga, de fallo con «Reintentar» y de datos) y `FormField` (etiqueta, ayuda y error unidos al campo por `aria-*`).
+- **Qué dice cuando algo sale mal.** Cada error del servidor tiene un mensaje en español en `domain/model/messages.ts`
+  (correo ya registrado, código vencido, último dueño…). Si se envía con un campo vacío, el foco va a ese campo. Ninguna pantalla muestra el texto crudo de la API ni un código.
+- **La contraseña** viaja del formulario directo al servicio de identidad y no pasa por la API ni se guarda en ningún
+  lado (ADR 0022). El código de invitación se muestra una vez, con un botón para copiarlo, y no se vuelve a pedir al
+  servidor: si se pierde, se renueva.
+- **Qué falta.** El ingreso con una cuenta nueva exige confirmar el correo si el proyecto de Supabase lo pide: la
+  pantalla lo dice («Revisa tu correo»). Recuperar la contraseña no está en el Ciclo 2.
+
+**Diseño:** las pantallas, en claro y oscuro, y sus estados (cargando, error, vacío, sin permiso) están en la
+[página de Ciclo 2 de Figma](https://www.figma.com/design/BDeOxwJeQ3AfUThABfmC3L?node-id=3-181).
 
 ## Contrato OpenAPI
 
