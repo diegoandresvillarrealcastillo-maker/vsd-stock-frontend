@@ -5,7 +5,9 @@ import type { Role } from '../domain/model/permissions';
 import { createTestAuth, testMe, testSession, type TestAuth } from '../../test/support/auth';
 import { createTestConnection } from '../../test/support/connection';
 import { createFakeCatalog } from '../../test/support/catalog';
+import { createFakeInventory } from '../../test/support/inventory';
 import { createFakePeople } from '../../test/support/people';
+import { createFakePurchasing } from '../../test/support/purchasing';
 import { createTestThemePreference } from '../../test/support/theme';
 import { App } from './App';
 
@@ -28,6 +30,8 @@ function renderApp({
         auth={auth}
         people={createFakePeople()}
         catalog={createFakeCatalog()}
+        inventory={createFakeInventory()}
+        purchasing={createFakePurchasing()}
       />
     </MemoryRouter>,
   );
