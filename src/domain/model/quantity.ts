@@ -26,6 +26,12 @@ export function formatQuantity(milli: number): string {
   return milli < 0 ? `-${text}` : text;
 }
 
+/** Un movimiento de existencias con su signo: `+ 24` si suma, `− 2` si resta (con el signo menos de verdad, no un guion). */
+export function formatSignedQuantity(milli: number): string {
+  if (milli === 0) return '0';
+  return milli > 0 ? `+ ${formatQuantity(milli)}` : `− ${formatQuantity(-milli)}`;
+}
+
 /** Una cantidad en milesimas escrita como la lee `parseQuantityMilli`: sin puntos de miles, con coma para los decimales. */
 export function quantityToInput(milli: number): string {
   return formatQuantity(milli).replaceAll('.', '');
