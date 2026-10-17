@@ -20,7 +20,7 @@ export function Button({ children, onClick }: ButtonProps) {
       type="button"
       onClick={onClick}
       {...(tap ? { whileTap: tap } : {})}
-      className="inline-flex min-h-touch min-w-touch items-center justify-center rounded-md bg-accent px-5 text-base font-medium text-on-accent shadow-sm hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="inline-flex min-h-touch min-w-touch items-center justify-center rounded-md bg-primary px-5 text-base font-medium text-on-primary shadow-sm hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       {children}
     </m.button>

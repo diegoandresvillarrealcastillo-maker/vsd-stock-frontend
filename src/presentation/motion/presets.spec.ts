@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createPulse, createReveal, createTap } from './presets';
+import { createIconSwap, createPulse, createReveal, createStagger, createTap } from './presets';
 import { durations, eases } from './tokens';
 
 // ADR 0008: solo se anima transform y opacity (x, y, scale y rotate son
@@ -89,4 +89,86 @@ describe('createTap', () => {
   it('does nothing with reduced motion', () => {
     expect(createTap(true)).toBeUndefined();
   });
+});
+
+describe('createIconSwap', () => {
+  describe('with full motion', () => {
+    const swap = createIconSwap(false);
+
+    it('enters turning and growing while it fades in, and leaves turning the other way', () => {
+      const hidden = swap.hidden as { opacity: number; rotate: number; scale: number };
+      const visible = swap.visible as { opacity: number; rotate: number; scale: number };
+      const exit = swap.exit as { opacity: number; rotate: number; scale: number };
+
+      expect(hidden.opacity).toBe(0);
+      expect(hidden.rotate).toBeLessThan(0);
+      expect(hidden.scale).toBeLessThan(1);
+      expect(visible).toMatchObject({ opacity: 1, rotate: 0, scale: 1 });
+      expect(exit.opacity).toBe(0);
+      expect(exit.rotate).toBeGreaterThan(0);
+    });
+
+    it('is quick: the base duration at most, so the toggle never feels slow', () => {
+      const transition = (swap.visible as { transition: { duration: number } }).transition;
+
+      expect(transition.duration).toBeLessThanOrEqual(durations.base);
+    });
+  });
+
+  it('only fades with reduced motion: no turning, no scaling', () => {
+    const swap = createIconSwap(true);
+
+    for (const state of [swap.hidden, swap.visible, swap.exit]) {
+      expect(animatedProperties(state as object)).toEqual(['opacity']);
+    }
+  });
+
+  it.each([false, true])(
+    'only animates transform and opacity (reduced motion: %s)',
+    (reducedMotion) => {
+      const swap = createIconSwap(reducedMotion);
+
+      for (const state of [swap.hidden, swap.visible, swap.exit]) {
+        const outsideTheRule = animatedProperties(state as object).filter(
+          (property) => !ANIMATABLE.has(property),
+        );
+        expect(outsideTheRule).toEqual([]);
+      }
+    },
+  );
+});
+
+describe('createStagger', () => {
+  it('delays each child a little after the previous one with full motion', () => {
+    const stagger = createStagger(false);
+    const transition = (stagger.visible as { transition: { staggerChildren: number } }).transition;
+
+    expect(transition.staggerChildren).toBeGreaterThan(0);
+  });
+
+  it('keeps the whole list quick: three rows must not take more than a base duration to start', () => {
+    const stagger = createStagger(false);
+    const { staggerChildren } = (stagger.visible as { transition: { staggerChildren: number } })
+      .transition;
+
+    expect(staggerChildren * 3).toBeLessThanOrEqual(durations.base);
+  });
+
+  it('does not stagger with reduced motion: everything fades together', () => {
+    const stagger = createStagger(true);
+    const transition = (stagger.visible as { transition: { staggerChildren: number } }).transition;
+
+    expect(transition.staggerChildren).toBe(0);
+  });
+
+  it.each([false, true])(
+    'does not animate any property by itself (reduced motion: %s)',
+    (reducedMotion) => {
+      const stagger = createStagger(reducedMotion);
+
+      for (const state of [stagger.hidden, stagger.visible, stagger.exit]) {
+        expect(animatedProperties(state as object)).toEqual([]);
+      }
+    },
+  );
 });

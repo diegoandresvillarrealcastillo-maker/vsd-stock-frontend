@@ -40,6 +40,22 @@ componentes `m` todavía no animan. No probamos cómo se comportan las salidas a
 aplicación se instala como PWA y guarda todo para funcionar sin conexión, el peso importa sobre todo en la
 primera instalación. **Se reconsidera si Lighthouse (C0-08) o un dispositivo real lo piden.**
 
+### Después de C0-10 (marca, botón de tema y logo)
+
+Misma medición (gzip al nivel 9) sobre la compilación de C0-10:
+
+| Pieza                                          | Antes (C0-07) | Ahora (C0-10) | Diferencia |
+| ---------------------------------------------- | ------------: | ------------: | ---------: |
+| JavaScript                                     |      312,5 KB |      316,5 KB |    +4,1 KB |
+| JavaScript comprimido                          |       99,8 KB |      101,0 KB |    +1,2 KB |
+| CSS                                            |       14,2 KB |       15,1 KB |    +0,9 KB |
+| Logo (`logo-stock.webp`, aparte, una sola vez) |             — |       27,1 KB |   +27,1 KB |
+
+El logo original de la landing es un WebP de 124 KB a 700 px; para la banda se recortó, se redujo a 420 px
+(el doble de lo que se muestra, 208 px) y se comprimió a **27 KB**. Es una imagen, no JavaScript: no bloquea el
+arranque de React, y el `<img>` lleva `width` y `height` para que el navegador reserve el espacio y la página
+no salte cuando llega. El favicon (el cubo del logo) pesa 10 KB.
+
 ## Tiempos medidos
 
 Chromium automatizado, en un computador de escritorio, contra `vite preview` en `localhost`, **sin limitar la
