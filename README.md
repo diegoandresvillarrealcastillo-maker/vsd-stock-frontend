@@ -174,6 +174,36 @@ Cómo entra una persona y qué ve según su rol (ADR 0017, 0022 y 0024). Todo es
 **Diseño:** las pantallas, en claro y oscuro, y sus estados (cargando, error, vacío, sin permiso) están en la
 [página de Ciclo 2 de Figma](https://www.figma.com/design/BDeOxwJeQ3AfUThABfmC3L?node-id=3-181).
 
+### Catálogo
+
+| Ruta                   | Pantalla       | Quién la ve                                                                   |
+| ---------------------- | -------------- | ----------------------------------------------------------------------------- |
+| `/catalogo`            | Catálogo       | Todos los roles (`product:view`); solo quien administra abre y crea productos |
+| `/catalogo/nuevo`      | Nuevo producto | Quien administra (`product:manage`: dueño y administrador)                    |
+| `/catalogo/:id`        | Un producto    | Igual; cambia, archiva o reactiva el producto                                 |
+| `/catalogo/categorias` | Categorías     | Igual; agrega, renombra y borra categorías                                    |
+
+- **Buscar y filtrar.** La búsqueda (nombre, SKU o código de barras) se pide al servidor cuando la persona deja de escribir
+  o pulsa Enter, y se combina con el filtro de estado (activos por omisión, archivados o todos). La lista carga de 50 en
+  50 con «Cargar más» (`usePagedLoad`, `presentation/forms/`): lo que se sumó se olvida cuando cambia la pregunta, así no
+  se mezclan resultados de dos búsquedas distintas.
+- **Los números se escriben sin ambigüedad** (`domain/model/quantity.ts`). El precio son solo dígitos: un punto o una coma
+  no se adivina (¿miles o centavos?), se pide quitarlos. Una cantidad usa la **coma** para los decimales y rechaza el
+  punto: «1.500» podría ser uno y medio o mil quinientos, y adivinar mal descuadra el inventario. Lo que se cuenta de a
+  uno (la unidad) no acepta fracciones. El IVA que va dentro del precio se separa con la misma regla del servidor
+  (ADR 0014, `splitTaxIncluded`) y se muestra mientras se escribe.
+- **Cuando el SKU o el código de barras ya es de otro producto**, el servidor solo dice `sku-taken` o `barcode-taken`. La
+  pantalla busca quién lo tiene (`findProductByCode`, con la misma búsqueda del catálogo) y lo dice: «ARR-500 es de «Arroz
+  Diana 500 g», que está archivado», con un enlace al producto. Si no puede saberlo, dice lo general.
+- **Un producto no se borra, se archiva**: deja de venderse y conserva su historia. La unidad no se cambia si el producto
+  ya tiene movimientos de existencias (`unit-locked`), y la pantalla lo dice en el campo.
+- **Una diferencia con el diseño:** la lista de categorías del Figma muestra cuántos productos tiene cada una, pero la
+  API no entrega ese dato (`CategoryDto` trae solo el nombre). No lo calculamos con una petición por categoría; si hace
+  falta se agrega al contrato.
+
+**Diseño:** el catálogo, el formulario del producto (también el caso del SKU repetido) y las categorías están en la
+[página de Ciclo 2 de Figma](https://www.figma.com/design/BDeOxwJeQ3AfUThABfmC3L?node-id=3-181).
+
 ## Contrato OpenAPI
 
 El único acoplamiento con el backend es su contrato (ADR 0001). Aquí vive de cinco formas:
