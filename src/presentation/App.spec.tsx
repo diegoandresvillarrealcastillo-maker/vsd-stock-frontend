@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
+import { createTestAuth, testMe, testSession, type TestAuth } from '../../test/support/auth';
 import { createTestConnection } from '../../test/support/connection';
 import { createTestThemePreference } from '../../test/support/theme';
 import { App } from './App';
@@ -7,12 +9,44 @@ import { App } from './App';
 function renderApp({
   theme = createTestThemePreference().preference,
   connection = createTestConnection(),
+  auth = createTestAuth(),
+  path = '/ingresar',
+}: {
+  theme?: ReturnType<typeof createTestThemePreference>['preference'];
+  connection?: ReturnType<typeof createTestConnection>;
+  auth?: TestAuth;
+  path?: string;
 } = {}) {
-  render(<App theme={theme} connection={connection.monitor} />);
+  render(
+    <MemoryRouter initialEntries={[path]}>
+      <App theme={theme} connection={connection.monitor} auth={auth} />
+    </MemoryRouter>,
+  );
   return connection;
 }
 
 describe('App', () => {
+  it('opens a person who signed in before straight into the application', async () => {
+    const auth = createTestAuth({ stored: testSession('ana') });
+    auth.answer(testMe('ana', 'cashier'));
+    renderApp({ auth, path: '/' });
+
+    expect(await screen.findByText('Tienda La Esquina')).toBeDefined();
+    expect(screen.getByRole('navigation', { name: 'Principal' })).toBeDefined();
+  });
+
+  it('keeps the account of the person for every screen, so none has to ask who they are', async () => {
+    const auth = createTestAuth({ stored: testSession('ana') });
+    auth.answer(testMe('ana', 'owner'));
+    renderApp({ auth, path: '/' });
+    await screen.findByText('Tienda La Esquina');
+
+    fireEvent.click(screen.getByRole('link', { name: 'Catálogo' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Inicio' }));
+
+    expect(auth.loads).toEqual(['ana']);
+  });
+
   it('shows the home page', () => {
     renderApp();
 

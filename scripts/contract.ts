@@ -18,6 +18,7 @@ import { pathToFileURL } from 'node:url';
 export const BACKEND_REPOSITORY = 'diegoandresvillarrealcastillo-maker/vsd-stock-backend';
 export const CONTRACT_PATH = 'contract/openapi.json';
 export const VECTORS_PATH = 'contract/calculation-vectors.json';
+export const PERMISSIONS_PATH = 'contract/permissions.json';
 const DEFAULT_REF = 'desarrollo';
 const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'];
 
@@ -188,9 +189,52 @@ export function compareVectors(local: string, remote: string): ContractCompariso
   return { same: differences.length === 0, differences };
 }
 
+function rolesOf(action: Json | undefined): string {
+  const roles = asRecord(action)['roles'];
+  return Array.isArray(roles) ? [...roles].map(String).sort().join(',') : '';
+}
+
+/**
+ * Compara la copia local de la tabla de permisos con la del backend (ADR 0017 y 0022) e indica que acciones cambiaron
+ * de roles o de disponibilidad sin conexion. Dos documentos iguales con otro orden de claves o de espacios son iguales.
+ */
+export function comparePermissions(local: string, remote: string): ContractComparison {
+  const mine = asRecord(parse(local, 'La copia local de la tabla de permisos'));
+  const theirs = asRecord(parse(remote, 'La tabla de permisos del backend'));
+  if (canonical(mine) === canonical(theirs)) return { same: true, differences: [] };
+
+  const here = asRecord(mine['actions']);
+  const there = asRecord(theirs['actions']);
+  const differences: string[] = [];
+  for (const name of Object.keys(there).sort()) {
+    if (here[name] === undefined) differences.push(`El backend agregó la acción «${name}»`);
+  }
+  for (const name of Object.keys(here).sort()) {
+    if (there[name] === undefined) differences.push(`El backend quitó la acción «${name}»`);
+  }
+  for (const name of Object.keys(here).sort()) {
+    const mineAction = here[name];
+    const theirAction = there[name];
+    if (mineAction === undefined || theirAction === undefined) continue;
+    if (rolesOf(mineAction) !== rolesOf(theirAction)) {
+      differences.push(`La acción «${name}» cambió de roles`);
+    }
+    if (asRecord(mineAction)['offline'] !== asRecord(theirAction)['offline']) {
+      differences.push(`La acción «${name}» cambió si funciona sin conexión`);
+    }
+  }
+  if (canonical(mine['roles'] ?? null) !== canonical(theirs['roles'] ?? null)) {
+    differences.push('La lista de roles cambió');
+  }
+  if (differences.length === 0) {
+    differences.push('El contenido cambió sin que cambie ninguna acción ni la lista de roles');
+  }
+  return { same: false, differences };
+}
+
 const USAGE = [
   'Uso: node scripts/contract.ts <comando>',
-  '  sync    copia el contrato y los vectores de cálculo del backend a contract/ (npm run contract:sync)',
+  '  sync    copia el contrato, los vectores de cálculo y la tabla de permisos del backend a contract/ (npm run contract:sync)',
   '  check   comprueba que las copias coinciden con el backend (npm run contract:check)',
   'La rama del backend se elige con CONTRACT_REF (por omisión, desarrollo).',
 ].join('\n');
@@ -221,6 +265,13 @@ const SHARED_FILES: readonly SharedFile[] = [
     remote: 'contract/calculation-vectors.json',
     compare: compareVectors,
     verb: { same: 'coinciden con los del', different: 'ya no coinciden con los del' },
+  },
+  {
+    label: 'la tabla de permisos',
+    local: PERMISSIONS_PATH,
+    remote: 'contract/permissions.json',
+    compare: comparePermissions,
+    verb: { same: 'coincide con la del', different: 'ya no coincide con la del' },
   },
 ];
 

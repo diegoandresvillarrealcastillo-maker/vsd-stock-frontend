@@ -9,3 +9,11 @@
 
 [extend]
 useDefault = true
+
+# Valores FALSOS de las pruebas del cliente de identidad: la contrasena con la que se comprueba que el cuerpo de "crear cuenta"
+# lleva lo que se escribio y viaja solo al servicio de identidad, y la clave publicable de ejemplo con la que se prueba la
+# lectura de la configuracion. No son de ninguna cuenta ni de ningun proyecto. La regla de claves genericas los toma por una
+# clave porque se escriben junto a un nombre como `password` o `KEY`. Se nombra cada valor exacto; no se perdona ninguna regla.
+[[allowlists]]
+description = "Valores falsos de las pruebas del cliente de identidad"
+regexes = ['''^(S3cretoLargo123|sb_publishable_FALSA1234567890)$''']

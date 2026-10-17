@@ -24,6 +24,166 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comprueba que el servicio puede atender peticiones de negocio
+         * @description No requiere sesión. Comprueba lo que el servicio necesita para trabajar: hoy, la base de datos. Responde 503 con `database-unavailable` si la base no responde y con `database-not-configured` si nunca se configuró.
+         */
+        get: operations["ReadinessController_ready"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quién soy
+         * @description Devuelve a la persona que demuestra el token y, si ya tiene negocio, el suyo y su rol. El negocio y el rol salen de la base de datos, nunca del token. Una persona que se registró pero aún no tiene negocio recibe `membership: null`. Responde 401 si el token falta o no sirve (`token-expired` si solo venció) y 403 `user-inactive` si fue dada de baja.
+         */
+        get: operations["MeController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/businesses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abrir un negocio
+         * @description Lo hace quien se registró y aún no pertenece a ningún negocio: queda como su dueño. El negocio nace con una sucursal y una bodega, ambas «Principal». Responde 409 `already-member` si la persona ya trabaja en un negocio.
+         */
+        post: operations["BusinessesController_open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invitar a alguien al negocio
+         * @description Crea la invitación y devuelve su código **una sola vez**. El servidor solo guarda su hash. La invitación vale siete días. Un administrador invita cajeros; invitar administradores es del dueño.
+         */
+        post: operations["InvitationsController_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invitations/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Canjear una invitación
+         * @description Une a quien llama al negocio del código, con el rol con que lo invitaron. Un código sirve una sola vez. Responde 404 `invitation-not-found` si no existe, ya se usó o se dio de baja (el mismo mensaje para todo), 410 `invitation-expired` si venció y 409 `already-member` si la persona ya trabaja en un negocio.
+         */
+        post: operations["InvitationsController_redeem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las personas del negocio
+         * @description Ordenadas por nombre. Las ve la gerencia (dueño y administradores). Pagina por cursor (ADR 0019).
+         */
+        get: operations["UsersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar a una persona
+         * @description Cambia el nombre, el rol o el alta (`active`). Al cajero lo administra la gerencia; a un administrador o a un dueño, solo el dueño. Nunca deja al negocio sin un dueño activo (409 `last-owner`). Una persona dada de baja pierde el acceso en su siguiente petición.
+         */
+        patch: operations["UsersController_update"];
+        trace?: never;
+    };
+    "/v1/users/{userId}/invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Renovar una invitación
+         * @description Da un código nuevo a una invitación pendiente (se perdió o venció); el anterior deja de servir. Responde 409 `invitation-not-pending` si la persona ya canjeó la suya o está dada de baja.
+         */
+        post: operations["UsersController_renew"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -41,6 +201,137 @@ export interface components {
              * @example 2026-10-16T15:30:00.000Z
              */
             timestamp: string;
+        };
+        ReadinessReportDto: {
+            /**
+             * @description Siempre «ok» en una respuesta 200: si el servicio no está listo, responde 503.
+             * @example ok
+             * @enum {string}
+             */
+            status: "ok";
+            /**
+             * @description La base de datos responde.
+             * @example up
+             * @enum {string}
+             */
+            database: "up";
+            /**
+             * Format: date-time
+             * @description Instante en que se comprobó, en ISO 8601 y en UTC.
+             * @example 2026-10-17T15:30:00.000Z
+             */
+            timestamp: string;
+        };
+        MeIdentityDto: {
+            /**
+             * Format: uuid
+             * @description El identificador de la persona en el servicio de identidad (el `sub` del token).
+             */
+            id: string;
+            /** @description El correo con que se registró, si lo tiene. */
+            email: string | null;
+        };
+        MeMembershipDto: {
+            /**
+             * Format: uuid
+             * @description La persona dentro del negocio.
+             */
+            userId: string;
+            /** Format: uuid */
+            businessId: string;
+            /** @example Tienda La Esquina */
+            businessName: string;
+            /**
+             * @description Su rol en este negocio. Sale de la base de datos, nunca del token.
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "cashier";
+            /** @example Ana Gómez */
+            fullName: string;
+        };
+        MeDto: {
+            identity: components["schemas"]["MeIdentityDto"];
+            /** @description Su lugar en un negocio. `null` si se registró pero aún no creó un negocio ni canjeó una invitación. */
+            membership: components["schemas"]["MeMembershipDto"] | null;
+        };
+        CreateBusinessRequestDto: {
+            /** @example Tienda La Esquina */
+            businessName: string;
+            /**
+             * @description Cómo se llama quien lo abre.
+             * @example Ana Gómez
+             */
+            ownerName: string;
+        };
+        InviteUserRequestDto: {
+            /** @example Luis Pérez */
+            fullName: string;
+            /**
+             * @description Administrador o cajero. Un administrador solo puede invitar cajeros; invitar administradores es del dueño. No se invita a un dueño: se nombra cambiando el rol de una persona que ya está.
+             * @enum {string}
+             */
+            role: "admin" | "cashier";
+            /**
+             * @description Opcional. Se guarda en minúsculas. No se envía ningún correo.
+             * @example luis@ejemplo.co
+             */
+            email?: string;
+        };
+        PersonDto: {
+            /** Format: uuid */
+            id: string;
+            /** @example Luis Pérez */
+            fullName: string;
+            email: string | null;
+            /** @enum {string} */
+            role: "owner" | "admin" | "cashier";
+            /**
+             * @description `pending` es una invitación que nadie canjeó; `inactive`, una persona (o invitación) dada de baja.
+             * @enum {string}
+             */
+            status: "active" | "pending" | "inactive";
+            /**
+             * Format: date-time
+             * @description Hasta cuándo vale su invitación, mientras esté pendiente.
+             */
+            invitationExpiresAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        InvitationCodeDto: {
+            /**
+             * @description El código de la invitación, de cuatro en cuatro para dictarlo. **Se muestra una sola vez**: el servidor solo guarda su hash. Si se pierde, se renueva.
+             * @example 0123-4567-89AB-CDEF
+             */
+            code: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        InvitationDto: {
+            person: components["schemas"]["PersonDto"];
+            invitation: components["schemas"]["InvitationCodeDto"];
+        };
+        RedeemInvitationRequestDto: {
+            /**
+             * @description El código que dieron a la persona. Se acepta en mayúsculas o minúsculas, con o sin guiones y espacios.
+             * @example 0123-4567-89AB-CDEF
+             */
+            code: string;
+        };
+        PersonPageDto: {
+            items: components["schemas"]["PersonDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. Es opaco: no se interpreta. */
+            nextCursor: string | null;
+        };
+        UpdateUserRequestDto: {
+            fullName?: string;
+            /**
+             * @description Cambiar el rol de un cajero a administrador, o de cualquiera a dueño, es del dueño.
+             * @enum {string}
+             */
+            role?: "owner" | "admin" | "cashier";
+            /** @description `false` da de baja a la persona (o revoca su invitación); `true` la reactiva. No se puede dar de baja al último dueño. */
+            active?: boolean;
         };
         ProblemErrorDto: {
             /**
@@ -117,6 +408,258 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthReportDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ReadinessController_ready: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El servicio está listo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadinessReportDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    MeController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La persona y su lugar en el negocio. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    BusinessesController_open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBusinessRequestDto"];
+            };
+        };
+        responses: {
+            /** @description El lugar de la persona en el negocio nuevo. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeMembershipDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    InvitationsController_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteUserRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    InvitationsController_redeem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RedeemInvitationRequestDto"];
+            };
+        };
+        responses: {
+            /** @description El lugar de la persona en el negocio. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeMembershipDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    UsersController_list: {
+        parameters: {
+            query?: {
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonPageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    UsersController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    UsersController_renew: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationDto"];
                 };
             };
             /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
