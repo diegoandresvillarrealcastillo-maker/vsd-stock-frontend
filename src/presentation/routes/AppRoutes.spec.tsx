@@ -4,11 +4,13 @@ import { describe, expect, it } from 'vitest';
 import type { Role } from '../../domain/model/permissions';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createTestConnection } from '../../../test/support/connection';
+import { createFakePeople } from '../../../test/support/people';
+import { createTestThemePreference } from '../../../test/support/theme';
 import { AuthProvider } from '../auth/AuthProvider';
 import { ConnectionProvider } from '../connection/ConnectionProvider';
 import { MotionProvider } from '../motion/MotionProvider';
+import { PeopleProvider } from '../people/PeopleProvider';
 import { ThemeProvider } from '../theme/ThemeProvider';
-import { createTestThemePreference } from '../../../test/support/theme';
 import { AppRoutes } from './AppRoutes';
 
 function renderAt(path: string, signedInAs?: { role: Role; membership?: boolean }) {
@@ -25,9 +27,11 @@ function renderAt(path: string, signedInAs?: { role: Role; membership?: boolean 
       <ConnectionProvider monitor={createTestConnection().monitor}>
         <MotionProvider>
           <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
-            <MemoryRouter initialEntries={[path]}>
-              <AppRoutes />
-            </MemoryRouter>
+            <PeopleProvider people={createFakePeople()}>
+              <MemoryRouter initialEntries={[path]}>
+                <AppRoutes />
+              </MemoryRouter>
+            </PeopleProvider>
           </AuthProvider>
         </MotionProvider>
       </ConnectionProvider>
@@ -41,20 +45,31 @@ const menu = () =>
     .getAllByRole('link')
     .map((link) => link.textContent);
 
+const heading = (name: string) => screen.findByRole('heading', { level: 1, name });
+
 describe('AppRoutes', () => {
   describe('for someone who has not signed in', () => {
-    it('shows the public page at «ingresar»', () => {
+    it('shows sign in at «ingresar», without the menu', () => {
       renderAt('/ingresar');
 
-      expect(screen.getByRole('heading', { level: 1, name: 'VSD Stock' })).toBeDefined();
+      expect(screen.getByRole('heading', { level: 1, name: 'Ingresar' })).toBeDefined();
       expect(screen.queryByRole('navigation', { name: 'Principal' })).toBeNull();
     });
 
-    it.each(['/', '/catalogo', '/compras', '/empezar'])('sends %s to sign in', async (path) => {
-      renderAt(path);
+    it('shows create account at «registrarse»', () => {
+      renderAt('/registrarse');
 
-      expect(await screen.findByRole('heading', { level: 1, name: 'VSD Stock' })).toBeDefined();
+      expect(screen.getByRole('heading', { level: 1, name: 'Crear cuenta' })).toBeDefined();
     });
+
+    it.each(['/', '/catalogo', '/compras', '/personas', '/empezar', '/invitacion'])(
+      'sends %s to sign in',
+      async (path) => {
+        renderAt(path);
+
+        expect(await heading('Ingresar')).toBeDefined();
+      },
+    );
   });
 
   describe('for someone with a business', () => {
@@ -62,8 +77,14 @@ describe('AppRoutes', () => {
       renderAt('/', { role: 'owner' });
 
       expect(await screen.findByText('Tienda La Esquina')).toBeDefined();
-      expect(screen.getByText('Ana Gómez')).toBeDefined();
+      expect(screen.getByText('Ana Gómez', { selector: 'p, span' })).toBeDefined();
       expect(menu()).toEqual(['Inicio', 'Catálogo', 'Inventario', 'Compras', 'Personas']);
+    });
+
+    it('opens on the home page', async () => {
+      renderAt('/', { role: 'cashier' });
+
+      expect(await heading('Inicio')).toBeDefined();
     });
 
     it.each([
@@ -72,62 +93,71 @@ describe('AppRoutes', () => {
       ['/inventario', 'Inventario'],
       ['/compras', 'Compras'],
       ['/personas', 'Personas'],
+      ['/personas/nueva', 'Invitar a alguien'],
     ])('shows %s as «%s»', async (path, title) => {
       renderAt(path, { role: 'admin' });
 
-      expect(await screen.findByRole('heading', { level: 1, name: title })).toBeDefined();
+      expect(await heading(title)).toBeDefined();
     });
 
     it('does not offer the cashier what the cashier can not use, and does not let them in by writing the address', async () => {
       renderAt('/compras', { role: 'cashier' });
 
-      expect(
-        await screen.findByRole('heading', { level: 1, name: 'No tienes acceso' }),
-      ).toBeDefined();
+      expect(await heading('No tienes acceso')).toBeDefined();
       expect(menu()).toEqual(['Inicio', 'Catálogo', 'Inventario']);
       expect(screen.queryByRole('heading', { level: 1, name: 'Compras' })).toBeNull();
     });
 
-    it.each(['/personas', '/compras'])('keeps the cashier out of %s', async (path) => {
-      renderAt(path, { role: 'cashier' });
+    it.each(['/personas', '/personas/nueva', '/personas/abc', '/compras'])(
+      'keeps the cashier out of %s',
+      async (path) => {
+        renderAt(path, { role: 'cashier' });
 
-      expect(
-        await screen.findByRole('heading', { level: 1, name: 'No tienes acceso' }),
-      ).toBeDefined();
-    });
+        expect(await heading('No tienes acceso')).toBeDefined();
+      },
+    );
 
     it('lets the cashier into what the cashier can use', async () => {
       renderAt('/catalogo', { role: 'cashier' });
 
-      expect(await screen.findByRole('heading', { level: 1, name: 'Catálogo' })).toBeDefined();
+      expect(await heading('Catálogo')).toBeDefined();
     });
 
     it('says the page does not exist, and offers the way home', async () => {
       renderAt('/no-existe', { role: 'owner' });
 
-      expect(
-        await screen.findByRole('heading', { level: 1, name: 'No encontramos esta página' }),
-      ).toBeDefined();
+      expect(await heading('No encontramos esta página')).toBeDefined();
       expect(screen.getByRole('link', { name: 'Ir al inicio' }).getAttribute('href')).toBe('/');
     });
 
-    it('takes whoever already signed in away from the public page', async () => {
-      renderAt('/ingresar', { role: 'owner' });
+    it.each(['/ingresar', '/registrarse', '/empezar', '/invitacion'])(
+      'takes whoever already works in a business away from %s',
+      async (path) => {
+        renderAt(path, { role: 'owner' });
 
-      await waitFor(() =>
-        expect(screen.getByRole('navigation', { name: 'Principal' })).toBeDefined(),
-      );
-    });
+        await waitFor(() =>
+          expect(screen.getByRole('navigation', { name: 'Principal' })).toBeDefined(),
+        );
+        expect(screen.getByRole('heading', { level: 1, name: 'Inicio' })).toBeDefined();
+      },
+    );
   });
 
   describe('for someone with a session but no business yet', () => {
-    it.each(['/', '/catalogo', '/ingresar'])('sends %s to «create your business»', async (path) => {
-      renderAt(path, { role: 'owner', membership: false });
+    it.each(['/', '/catalogo', '/ingresar', '/registrarse'])(
+      'sends %s to «create your business»',
+      async (path) => {
+        renderAt(path, { role: 'owner', membership: false });
 
-      expect(
-        await screen.findByRole('heading', { level: 1, name: 'Crea tu negocio' }),
-      ).toBeDefined();
-      expect(screen.queryByRole('navigation', { name: 'Principal' })).toBeNull();
+        expect(await heading('Crea tu negocio')).toBeDefined();
+        expect(screen.queryByRole('navigation', { name: 'Principal' })).toBeNull();
+      },
+    );
+
+    it('lets them use an invitation instead', async () => {
+      renderAt('/invitacion', { role: 'owner', membership: false });
+
+      expect(await heading('Unirme a un negocio')).toBeDefined();
     });
   });
 });
