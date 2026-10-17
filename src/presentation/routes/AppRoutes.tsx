@@ -1,8 +1,12 @@
 import { Route, Routes } from 'react-router';
 import { NAVIGATION, type NavItem } from '../../domain/model/navigation';
+import { CatalogPage } from '../pages/CatalogPage';
+import { CategoriesPage } from '../pages/CategoriesPage';
 import { ComingSoonPage } from '../pages/ComingSoonPage';
+import { EditProductPage } from '../pages/EditProductPage';
 import { HomePage } from '../pages/HomePage';
 import { InvitePage } from '../pages/InvitePage';
+import { NewProductPage } from '../pages/NewProductPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { OnboardingPage } from '../pages/OnboardingPage';
 import { PeoplePage } from '../pages/PeoplePage';
@@ -17,6 +21,7 @@ import { RequireAction } from './RequireAction';
 /** La pantalla de cada entrada del menu. Las que todavia no se construyen son un titulo con su guarda. */
 function screenOf(item: NavItem) {
   if (item.id === 'home') return <HomePage />;
+  if (item.id === 'catalog') return <CatalogPage />;
   if (item.id === 'people') return <PeoplePage />;
   return <ComingSoonPage title={item.label} />;
 }
@@ -71,6 +76,37 @@ export function AppRoutes() {
         {NAVIGATION.map((item) => {
           const page = <RequireAction action={item.action}>{screenOf(item)}</RequireAction>;
           if (item.path === '/') return <Route key={item.id} index element={page} />;
+          if (item.id === 'catalog') {
+            return (
+              <Route key={item.id} path="catalogo">
+                <Route index element={page} />
+                <Route
+                  path="nuevo"
+                  element={
+                    <RequireAction action="product:manage">
+                      <NewProductPage />
+                    </RequireAction>
+                  }
+                />
+                <Route
+                  path="categorias"
+                  element={
+                    <RequireAction action="product:manage">
+                      <CategoriesPage />
+                    </RequireAction>
+                  }
+                />
+                <Route
+                  path=":productId"
+                  element={
+                    <RequireAction action="product:manage">
+                      <EditProductPage />
+                    </RequireAction>
+                  }
+                />
+              </Route>
+            );
+          }
           if (item.id === 'people') {
             return (
               <Route key={item.id} path="personas">

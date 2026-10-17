@@ -21,10 +21,12 @@ type Settled<T> =
 export function useLoad<T>(
   load: () => Promise<T>,
   deps: readonly (string | number | boolean | null | undefined)[],
-): { state: Loaded<T>; reload: () => void } {
+): { state: Loaded<T>; reload: () => void; previous: T | undefined } {
   const account = useOptionalAccount();
   const [attempt, setAttempt] = useState(0);
   const [settled, setSettled] = useState<Settled<T> | null>(null);
+  // Lo ultimo bueno que llego, aunque ahora se este pidiendo de nuevo: una lista no desaparece mientras se refresca.
+  const [last, setLast] = useState<{ readonly data: T } | null>(null);
   // La llave dice QUE se pidio: lo que llega con otra llave es de otra pregunta y se descarta.
   const key = `${attempt}:${JSON.stringify(deps)}`;
 
@@ -37,7 +39,9 @@ export function useLoad<T>(
     let cancelled = false;
     run().then(
       (data) => {
-        if (!cancelled) setSettled({ key, data });
+        if (cancelled) return;
+        setSettled({ key, data });
+        setLast({ data });
       },
       (error: unknown) => {
         if (cancelled) return;
@@ -57,5 +61,5 @@ export function useLoad<T>(
       : 'data' in settled
         ? { status: 'ready', data: settled.data }
         : { status: 'failed', problem: settled.problem };
-  return { state, reload };
+  return { state, reload, previous: last?.data };
 }

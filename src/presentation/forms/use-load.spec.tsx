@@ -12,7 +12,7 @@ interface Pending {
 }
 
 function Harness({ pending, term }: { pending: Pending[]; term?: string }) {
-  const { state, reload } = useLoad(
+  const { state, reload, previous } = useLoad(
     () =>
       new Promise<string>((resolve, reject) => {
         pending.push({ resolve, reject });
@@ -23,6 +23,7 @@ function Harness({ pending, term }: { pending: Pending[]; term?: string }) {
     <div>
       <p data-testid="estado">{state.status}</p>
       <p data-testid="dato">{state.status === 'ready' ? state.data : ''}</p>
+      <p data-testid="previo">{previous ?? ''}</p>
       <p data-testid="mensaje">{state.status === 'failed' ? state.problem.message : ''}</p>
       <button type="button" onClick={reload}>
         otra vez
@@ -44,6 +45,7 @@ function Searching({ pending }: { pending: Pending[] }) {
 }
 
 const state = () => screen.getByTestId('estado').textContent;
+const previous = () => screen.getByTestId('previo').textContent;
 const failure = (cls: 'network' | 'session' | 'transient') =>
   new ApiError({
     class: cls,
@@ -175,5 +177,49 @@ describe('useLoad', () => {
     });
 
     expect(auth.sessions.current()).not.toBeNull();
+  });
+  describe('what it remembers while it asks again', () => {
+    it('has nothing from before while the first ask is in flight', () => {
+      render(<Harness pending={[]} />);
+
+      expect(previous()).toBe('');
+    });
+
+    it('keeps the last thing it got while it asks again, so a list does not disappear', async () => {
+      const pending: Pending[] = [];
+      render(<Harness pending={pending} />);
+      await act(async () => {
+        pending[0]?.resolve('uno');
+        await Promise.resolve();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'otra vez' }));
+
+      expect(state()).toBe('loading');
+      expect(previous()).toBe('uno');
+      await act(async () => {
+        pending[1]?.resolve('dos');
+        await Promise.resolve();
+      });
+      expect(previous()).toBe('dos');
+    });
+
+    it('keeps the last good thing when asking again fails', async () => {
+      const pending: Pending[] = [];
+      render(<Harness pending={pending} />);
+      await act(async () => {
+        pending[0]?.resolve('uno');
+        await Promise.resolve();
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'otra vez' }));
+
+      await act(async () => {
+        pending[1]?.reject(failure('network'));
+        await Promise.resolve();
+      });
+
+      expect(state()).toBe('failed');
+      expect(previous()).toBe('uno');
+    });
   });
 });
