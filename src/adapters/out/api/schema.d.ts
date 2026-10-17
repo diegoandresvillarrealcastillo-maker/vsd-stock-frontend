@@ -42,6 +42,56 @@ export interface components {
              */
             timestamp: string;
         };
+        ProblemErrorDto: {
+            /**
+             * @description Puntero JSON (RFC 6901) al campo de la peticion que no sirve.
+             * @example /lines/0/quantityMilli
+             */
+            pointer: string;
+            /**
+             * @description Código estable del problema de ese campo, para que el cliente decida qué mostrar.
+             * @example out-of-range
+             */
+            code: string;
+            /** @description Explicación para quien programa. No es un texto para la persona usuaria. */
+            detail: string;
+        };
+        ProblemDetailsDto: {
+            /**
+             * @description Identifica el tipo de error. Siempre `urn:vsd-stock:problem:` seguido del `code`.
+             * @example urn:vsd-stock:problem:not-found
+             */
+            type: string;
+            /**
+             * @description Resumen corto del tipo de error.
+             * @example No encontrado
+             */
+            title: string;
+            /**
+             * @description El estado HTTP de la respuesta.
+             * @example 404
+             */
+            status: number;
+            /** @description Explicación de esta ocurrencia, para quien programa. Un error inesperado no revela su causa: solo trae el `traceId`. */
+            detail: string;
+            /**
+             * @description La ruta que falló, sin cadena de consulta (puede llevar datos).
+             * @example /v1/products/3f0c9d58-8f6e-4f0a-9f0e-0d1d2a6b7c11
+             */
+            instance: string;
+            /**
+             * @description Código estable con que el cliente reconoce el error. Es lo único en lo que debe apoyarse para decidir qué hacer; `title` y `detail` pueden cambiar.
+             * @example not-found
+             */
+            code: string;
+            /**
+             * @description Identificador de seguimiento. Es el `X-Request-Id` de la petición, que el cliente puede haber enviado, y aparece en el registro del servidor.
+             * @example 3f0c9d58-8f6e-4f0a-9f0e-0d1d2a6b7c11
+             */
+            traceId: string;
+            /** @description Los campos inválidos, cuando el error es de validación. */
+            errors?: components["schemas"]["ProblemErrorDto"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -67,6 +117,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthReportDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
         };
