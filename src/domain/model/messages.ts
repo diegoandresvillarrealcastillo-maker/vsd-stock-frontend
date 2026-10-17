@@ -50,7 +50,7 @@ const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   'supplier-in-use':
     'Ese proveedor ya tiene compras y no se puede borrar. Cámbiale el nombre si hace falta.',
   'operation-id-reused':
-    'Esta compra ya se había registrado con otros datos. Mira la lista de compras antes de repetirla.',
+    'Esto ya se había registrado con otros datos. Revisa lo que ya quedó guardado antes de repetirlo.',
 };
 
 const GENERIC =

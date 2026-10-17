@@ -1,35 +1,38 @@
+import type { ReactNode } from 'react';
 import { Route, Routes } from 'react-router';
-import { NAVIGATION, type NavItem } from '../../domain/model/navigation';
+import type { Action } from '../../domain/model/permissions';
+import { AdjustStockPage } from '../pages/AdjustStockPage';
 import { CatalogPage } from '../pages/CatalogPage';
 import { CategoriesPage } from '../pages/CategoriesPage';
-import { ComingSoonPage } from '../pages/ComingSoonPage';
 import { EditProductPage } from '../pages/EditProductPage';
 import { HomePage } from '../pages/HomePage';
 import { InvitePage } from '../pages/InvitePage';
 import { NewProductPage } from '../pages/NewProductPage';
+import { NewPurchasePage } from '../pages/NewPurchasePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { OnboardingPage } from '../pages/OnboardingPage';
 import { PeoplePage } from '../pages/PeoplePage';
 import { PersonPage } from '../pages/PersonPage';
+import { PurchasesPage } from '../pages/PurchasesPage';
 import { RedeemPage } from '../pages/RedeemPage';
 import { SignInPage } from '../pages/SignInPage';
 import { SignUpPage } from '../pages/SignUpPage';
+import { StockHistoryPage } from '../pages/StockHistoryPage';
+import { StockPage } from '../pages/StockPage';
+import { SuppliersPage } from '../pages/SuppliersPage';
 import { AppShell } from '../shell/AppShell';
 import { RequireMembership, RequireNoMembership, SignedOutOnly } from './AccountGate';
 import { RequireAction } from './RequireAction';
 
-/** La pantalla de cada entrada del menu. Las que todavia no se construyen son un titulo con su guarda. */
-function screenOf(item: NavItem) {
-  if (item.id === 'home') return <HomePage />;
-  if (item.id === 'catalog') return <CatalogPage />;
-  if (item.id === 'people') return <PeoplePage />;
-  return <ComingSoonPage title={item.label} />;
+/** Una pantalla con su guarda: la misma tabla de permisos que aplica el servidor (ADR 0017), como cortesia. */
+function guarded(action: Action, screen: ReactNode) {
+  return <RequireAction action={action}>{screen}</RequireAction>;
 }
 
 /**
  * Las rutas de la aplicacion. Quien no entro ve ingresar y crear cuenta; quien entro y no tiene negocio, crear el suyo o
- * canjear una invitacion; quien lo tiene, el marco con las pantallas que su rol puede usar. Las pantallas se construyen una
- * a una: hasta entonces cada una tiene su ruta y su guarda.
+ * canjear una invitacion; quien lo tiene, el marco con las pantallas que su rol puede usar. La accion de la pantalla principal
+ * de cada seccion es la misma de `domain/model/navigation.ts`: lo que el menu ofrece es lo que la ruta deja abrir.
  */
 export function AppRoutes() {
   return (
@@ -73,65 +76,28 @@ export function AppRoutes() {
           </RequireMembership>
         }
       >
-        {NAVIGATION.map((item) => {
-          const page = <RequireAction action={item.action}>{screenOf(item)}</RequireAction>;
-          if (item.path === '/') return <Route key={item.id} index element={page} />;
-          if (item.id === 'catalog') {
-            return (
-              <Route key={item.id} path="catalogo">
-                <Route index element={page} />
-                <Route
-                  path="nuevo"
-                  element={
-                    <RequireAction action="product:manage">
-                      <NewProductPage />
-                    </RequireAction>
-                  }
-                />
-                <Route
-                  path="categorias"
-                  element={
-                    <RequireAction action="product:manage">
-                      <CategoriesPage />
-                    </RequireAction>
-                  }
-                />
-                <Route
-                  path=":productId"
-                  element={
-                    <RequireAction action="product:manage">
-                      <EditProductPage />
-                    </RequireAction>
-                  }
-                />
-              </Route>
-            );
-          }
-          if (item.id === 'people') {
-            return (
-              <Route key={item.id} path="personas">
-                <Route index element={page} />
-                <Route
-                  path="nueva"
-                  element={
-                    <RequireAction action={item.action}>
-                      <InvitePage />
-                    </RequireAction>
-                  }
-                />
-                <Route
-                  path=":personId"
-                  element={
-                    <RequireAction action={item.action}>
-                      <PersonPage />
-                    </RequireAction>
-                  }
-                />
-              </Route>
-            );
-          }
-          return <Route key={item.id} path={`${item.path.slice(1)}/*`} element={page} />;
-        })}
+        <Route index element={guarded('product:view', <HomePage />)} />
+        <Route path="catalogo">
+          <Route index element={guarded('product:view', <CatalogPage />)} />
+          <Route path="nuevo" element={guarded('product:manage', <NewProductPage />)} />
+          <Route path="categorias" element={guarded('product:manage', <CategoriesPage />)} />
+          <Route path=":productId" element={guarded('product:manage', <EditProductPage />)} />
+        </Route>
+        <Route path="inventario">
+          <Route index element={guarded('stock:view', <StockPage />)} />
+          <Route path=":productId" element={guarded('stock:view', <StockHistoryPage />)} />
+          <Route path=":productId/ajustar" element={guarded('stock:adjust', <AdjustStockPage />)} />
+        </Route>
+        <Route path="compras">
+          <Route index element={guarded('purchase:create', <PurchasesPage />)} />
+          <Route path="nueva" element={guarded('purchase:create', <NewPurchasePage />)} />
+          <Route path="proveedores" element={guarded('purchase:create', <SuppliersPage />)} />
+        </Route>
+        <Route path="personas">
+          <Route index element={guarded('user:manage-cashiers', <PeoplePage />)} />
+          <Route path="nueva" element={guarded('user:manage-cashiers', <InvitePage />)} />
+          <Route path=":personId" element={guarded('user:manage-cashiers', <PersonPage />)} />
+        </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

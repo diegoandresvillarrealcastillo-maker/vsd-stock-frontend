@@ -16,14 +16,18 @@ export function SubmitButton({
   pending,
   children,
   variant = 'primary',
+  onClick,
 }: {
   pending: boolean;
   children: ReactNode;
   variant?: keyof typeof VARIANTS;
+  /** Si se da, es un boton comun que hace esto al pulsarlo (una accion que no es un formulario); si no, manda el formulario. */
+  onClick?: () => void;
 }) {
   return (
     <button
-      type="submit"
+      type={onClick === undefined ? 'submit' : 'button'}
+      {...(onClick === undefined ? {} : { onClick })}
       disabled={pending}
       aria-busy={pending}
       className={`${BASE} ${VARIANTS[variant]}`}
