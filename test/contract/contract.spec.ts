@@ -2,9 +2,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   CONTRACT_PATH,
+  PERMISSIONS_PATH,
   VECTORS_PATH,
   backendFileUrl,
   compareContracts,
+  comparePermissions,
   compareVectors,
   contractUrl,
   fetchBackendContract,
@@ -25,6 +27,15 @@ const VECTORS = {
   currency: 'COP',
   breakdown: [{ total: 1000, rateBp: 1900, base: 840, tax: 160 }],
   gross: [{ unitPrice: 2500, quantityMilli: 1500, total: 3750 }],
+};
+
+const PERMISSIONS = {
+  version: 1,
+  roles: ['owner', 'admin', 'cashier'],
+  actions: {
+    'sale:create': { roles: ['owner', 'admin', 'cashier'], offline: true },
+    'product:manage': { roles: ['owner', 'admin'], offline: false },
+  },
 };
 
 function text(document: unknown): string {
@@ -187,6 +198,90 @@ describe('compareVectors', () => {
   });
 });
 
+describe('comparePermissions', () => {
+  it('treats identical tables as equal even when whitespace and key order differ', () => {
+    const reordered = {
+      actions: {
+        'product:manage': PERMISSIONS.actions['product:manage'],
+        'sale:create': PERMISSIONS.actions['sale:create'],
+      },
+      roles: PERMISSIONS.roles,
+      version: 1,
+    };
+
+    expect(comparePermissions(text(PERMISSIONS), JSON.stringify(reordered))).toEqual({
+      same: true,
+      differences: [],
+    });
+  });
+
+  it('names an action that only the backend has, and one that only this copy has', () => {
+    const backend = {
+      ...PERMISSIONS,
+      actions: {
+        ...PERMISSIONS.actions,
+        'report:sales': { roles: ['owner', 'admin'], offline: false },
+      },
+    };
+    const { 'sale:create': _removed, ...withoutSale } = backend.actions;
+
+    expect(comparePermissions(text(PERMISSIONS), text(backend)).differences).toEqual([
+      'El backend agregó la acción «report:sales»',
+    ]);
+    expect(
+      comparePermissions(text(PERMISSIONS), text({ ...backend, actions: withoutSale })).differences,
+    ).toEqual([
+      'El backend agregó la acción «report:sales»',
+      'El backend quitó la acción «sale:create»',
+    ]);
+  });
+
+  it('names the action whose roles or offline flag changed', () => {
+    const roles = {
+      ...PERMISSIONS,
+      actions: { ...PERMISSIONS.actions, 'product:manage': { roles: ['owner'], offline: false } },
+    };
+    const offline = {
+      ...PERMISSIONS,
+      actions: {
+        ...PERMISSIONS.actions,
+        'sale:create': { roles: ['owner', 'admin', 'cashier'], offline: false },
+      },
+    };
+
+    expect(comparePermissions(text(PERMISSIONS), text(roles)).differences).toEqual([
+      'La acción «product:manage» cambió de roles',
+    ]);
+    expect(comparePermissions(text(PERMISSIONS), text(offline)).differences).toEqual([
+      'La acción «sale:create» cambió si funciona sin conexión',
+    ]);
+  });
+
+  it('reports a change in the list of roles', () => {
+    const backend = { ...PERMISSIONS, roles: ['owner', 'cashier'] };
+
+    expect(comparePermissions(text(PERMISSIONS), text(backend)).differences).toEqual([
+      'La lista de roles cambió',
+    ]);
+  });
+
+  it('still reports a change that is not an action or the roles', () => {
+    const backend = { ...PERMISSIONS, version: 2 };
+
+    const result = comparePermissions(text(PERMISSIONS), text(backend));
+
+    expect(result.same).toBe(false);
+    expect(result.differences).toEqual([
+      'El contenido cambió sin que cambie ninguna acción ni la lista de roles',
+    ]);
+  });
+
+  it('says which side is broken when a document is not JSON', () => {
+    expect(() => comparePermissions('no es json', text(PERMISSIONS))).toThrow('La copia local');
+    expect(() => comparePermissions(text(PERMISSIONS), 'no es json')).toThrow('del backend');
+  });
+});
+
 describe('fetchBackendContract', () => {
   function fakeFetch(answer: Response | Error) {
     const requests: { url: string; headers: Headers }[] = [];
@@ -240,6 +335,7 @@ describe('run', () => {
   interface Backend {
     openapi: Answer;
     vectors: Answer;
+    permissions: Answer;
   }
 
   // Cada archivo del backend tiene su propia respuesta; una Response solo se lee una vez, por eso se clona.
@@ -253,9 +349,10 @@ describe('run', () => {
     const io: Io = {
       fetch: (input) => {
         urls.push(input);
-        return input.includes('/contents/openapi.json')
-          ? answer(backend.openapi)
-          : answer(backend.vectors);
+        if (input.includes('/contents/openapi.json')) return answer(backend.openapi);
+        if (input.includes('/contents/contract/permissions.json'))
+          return answer(backend.permissions);
+        return answer(backend.vectors);
       },
       readFile: (path) => {
         const content = files[path];
@@ -271,13 +368,18 @@ describe('run', () => {
     return { io, logs, errors, written, urls };
   }
 
-  const bothLocal = { [CONTRACT_PATH]: text(CONTRACT), [VECTORS_PATH]: text(VECTORS) };
+  const bothLocal = {
+    [CONTRACT_PATH]: text(CONTRACT),
+    [VECTORS_PATH]: text(VECTORS),
+    [PERMISSIONS_PATH]: text(PERMISSIONS),
+  };
   const bothRemote = (): Backend => ({
     openapi: new Response(text(CONTRACT)),
     vectors: new Response(text(VECTORS)),
+    permissions: new Response(text(PERMISSIONS)),
   });
 
-  it('check passes when both local copies are the ones of the backend', async () => {
+  it('check passes when every local copy is the one of the backend', async () => {
     const { io, logs } = fakeIo(bothLocal, bothRemote());
 
     const code = await run(['check'], { CONTRACT_REF: 'preproduccion' }, io);
@@ -285,9 +387,10 @@ describe('run', () => {
     expect(code).toBe(0);
     expect(logs.join('\n')).toContain('preproduccion');
     expect(logs.join('\n')).toContain('vectores');
+    expect(logs.join('\n')).toContain('permisos');
   });
 
-  it('check asks the backend for both files on the same branch', async () => {
+  it('check asks the backend for every file on the same branch', async () => {
     const { io, urls } = fakeIo(bothLocal, bothRemote());
 
     await run(['check'], { CONTRACT_REF: 'preproduccion' }, io);
@@ -296,6 +399,7 @@ describe('run', () => {
       [
         contractUrl('preproduccion'),
         backendFileUrl('contract/calculation-vectors.json', 'preproduccion'),
+        backendFileUrl('contract/permissions.json', 'preproduccion'),
       ].sort(),
     );
   });
@@ -333,6 +437,7 @@ describe('run', () => {
     const backendContract = { ...CONTRACT, paths: {} };
     const backendVectors = { ...VECTORS, gross: [] };
     const { io, errors } = fakeIo(bothLocal, {
+      ...bothRemote(),
       openapi: new Response(text(backendContract)),
       vectors: new Response(text(backendVectors)),
     });
@@ -342,6 +447,37 @@ describe('run', () => {
     expect(code).toBe(1);
     expect(errors.join('\n')).toContain('El backend quitó GET /health');
     expect(errors.join('\n')).toContain('La sección «gross» cambió');
+  });
+
+  it('check fails when the permission table of the backend changed, and names the action', async () => {
+    const backend = {
+      ...PERMISSIONS,
+      actions: { ...PERMISSIONS.actions, 'product:manage': { roles: ['owner'], offline: false } },
+    };
+    const { io, errors } = fakeIo(bothLocal, {
+      ...bothRemote(),
+      permissions: new Response(text(backend)),
+    });
+
+    const code = await run(['check'], {}, io);
+
+    expect(code).toBe(1);
+    expect(errors.join('\n')).toContain('tabla de permisos');
+    expect(errors.join('\n')).toContain('La acción «product:manage» cambió de roles');
+    expect(errors.join('\n')).toContain('npm run contract:sync');
+  });
+
+  it('check fails and names the file when the backend branch does not have the permissions yet', async () => {
+    const { io, errors } = fakeIo(bothLocal, {
+      ...bothRemote(),
+      permissions: new Response('Not Found', { status: 404 }),
+    });
+
+    const code = await run(['check'], { CONTRACT_REF: 'desarrollo' }, io);
+
+    expect(code).toBe(1);
+    expect(errors.join('\n')).toContain('permissions.json');
+    expect(errors.join('\n')).toContain('404');
   });
 
   it('check fails and names the file when the backend branch does not have the vectors yet', async () => {
@@ -362,6 +498,7 @@ describe('run', () => {
     const { io, errors } = fakeIo(bothLocal, {
       openapi: new TypeError('offline'),
       vectors: new TypeError('offline'),
+      permissions: new TypeError('offline'),
     });
 
     const code = await run(['check'], {}, io);
@@ -380,12 +517,17 @@ describe('run', () => {
     expect(errors.join('\n')).toContain('npm run contract:sync');
   });
 
-  it('sync writes both files of the backend exactly as they are', async () => {
+  it('sync writes every file of the backend exactly as they are', async () => {
     const openapi = text({ ...CONTRACT, info: { title: 'VSD Stock API' } });
     const vectors = text({ ...VECTORS, version: 2 });
+    const permissions = text({ ...PERMISSIONS, version: 2 });
     const { io, written } = fakeIo(
       {},
-      { openapi: new Response(openapi), vectors: new Response(vectors) },
+      {
+        openapi: new Response(openapi),
+        vectors: new Response(vectors),
+        permissions: new Response(permissions),
+      },
     );
 
     const code = await run(['sync'], {}, io);
@@ -393,6 +535,7 @@ describe('run', () => {
     expect(code).toBe(0);
     expect(written[CONTRACT_PATH]).toBe(openapi);
     expect(written[VECTORS_PATH]).toBe(vectors);
+    expect(written[PERMISSIONS_PATH]).toBe(permissions);
   });
 
   it('sync does not write anything when the backend does not answer', async () => {
@@ -401,7 +544,20 @@ describe('run', () => {
       {
         openapi: new Response('Not Found', { status: 404 }),
         vectors: new Response('Not Found', { status: 404 }),
+        permissions: new Response('Not Found', { status: 404 }),
       },
+    );
+
+    const code = await run(['sync'], {}, io);
+
+    expect(code).toBe(1);
+    expect(written).toEqual({});
+  });
+
+  it('sync does not write anything either when only the permissions are missing in the backend', async () => {
+    const { io, written } = fakeIo(
+      {},
+      { ...bothRemote(), permissions: new Response('Not Found', { status: 404 }) },
     );
 
     const code = await run(['sync'], {}, io);
@@ -434,7 +590,7 @@ describe('run', () => {
     await run(['check'], { GITHUB_TOKEN: 'secreto' }, io);
 
     expect(urls).toContain(contractUrl('desarrollo'));
-    expect(tokens).toEqual(['Bearer secreto', 'Bearer secreto']);
+    expect(tokens).toEqual(['Bearer secreto', 'Bearer secreto', 'Bearer secreto']);
   });
 
   it.each([[[]], [['otra-cosa']]])(

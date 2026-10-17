@@ -5,7 +5,8 @@ package-lock.json
 .lighthouseci/
 
 # Generados o copiados tal cual: darles formato los separaria de su origen.
-# contract/openapi.json es el del backend, byte por byte; schema.d.ts lo escribe
+# contract/openapi.json y contract/permissions.json son los del backend, byte por byte; schema.d.ts lo escribe
 # openapi-typescript a partir de el.
 contract/openapi.json
+contract/permissions.json
 src/adapters/out/api/schema.d.ts
