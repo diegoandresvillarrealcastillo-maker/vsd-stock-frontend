@@ -19,6 +19,7 @@
     "test/architecture",
     "test/contract",
     "test/design",
+    "test/docs",
     "test/support/contrast.ts",
     "test/support/contrast.spec.ts"
   ]
