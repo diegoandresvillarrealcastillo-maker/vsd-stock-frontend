@@ -9,3 +9,10 @@
 
 [extend]
 useDefault = true
+
+# Contrasena FALSA de las pruebas del cliente de identidad. Sirve para comprobar que el cuerpo de "crear cuenta" lleva la
+# contrasena que se escribio y que viaja solo al servicio de identidad; no es de ninguna cuenta. La regla de claves genericas
+# la toma por una clave porque se escribe junto al nombre `password`. Se nombra el valor exacto; no se perdona ninguna regla.
+[[allowlists]]
+description = "Contrasena falsa de las pruebas del cliente de identidad"
+regexes = ['''^S3cretoLargo123$''']
