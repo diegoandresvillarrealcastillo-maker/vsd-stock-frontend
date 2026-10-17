@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { ApiError, type ApiFailure } from '../../domain/model/api-error';
-import type { Me } from '../../domain/model/me';
+import type { Me, Membership } from '../../domain/model/me';
 import type { LoadMe } from '../../domain/ports/in/load-me';
 import type { SessionManager } from '../../domain/ports/in/session-manager';
 
@@ -122,6 +122,17 @@ export function AuthProvider({
   );
 
   return <AccountContext value={account}>{children}</AccountContext>;
+}
+
+/** La cuenta de la persona, o `null` fuera de `AuthProvider` (para lo que sirve con y sin cuenta). */
+export function useOptionalAccount(): Account | null {
+  return useContext(AccountContext);
+}
+
+/** Donde trabaja la persona y con que rol, o `null` mientras se pregunta o si todavia no tiene negocio. */
+export function useMembership(): Membership | null {
+  const { state } = useAccount();
+  return state.status === 'ready' ? state.me.membership : null;
 }
 
 /** La cuenta de la persona. Solo funciona dentro de `AuthProvider`. */
