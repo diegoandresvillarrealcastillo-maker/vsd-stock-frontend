@@ -101,7 +101,7 @@ describe('what the person is told when the API refuses', () => {
     ],
     [
       'operation-id-reused',
-      'Esta compra ya se había registrado con otros datos. Mira la lista de compras antes de repetirla.',
+      'Esto ya se había registrado con otros datos. Revisa lo que ya quedó guardado antes de repetirlo.',
     ],
   ])('says %s in words, by its code and never by the text of the server', (code, words) => {
     expect(failureMessage(failure({ problem: problem(code) }))).toBe(words);
