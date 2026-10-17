@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import logoUrl from '../assets/logo-stock.webp';
 import { Button } from '../components/Button';
+import { ConnectionPanel } from '../components/ConnectionPanel';
 import { SamplePanel, type SampleItem } from '../components/SamplePanel';
 import { ThemeToggle } from '../components/ThemeToggle';
 
@@ -41,6 +42,19 @@ export function HomePage() {
               versión.
             </p>
           </div>
+        </section>
+
+        <section
+          aria-labelledby="conexion-titulo"
+          className="mx-auto flex max-w-2xl flex-col gap-4 px-gutter pt-6 pb-2"
+        >
+          <h2 id="conexion-titulo" className="text-xl font-semibold text-fg">
+            Estado del servicio
+          </h2>
+          <p className="text-sm text-fg-muted">
+            Lo comprobamos con el servidor: que tu equipo diga que hay red no basta.
+          </p>
+          <ConnectionPanel />
         </section>
 
         <section

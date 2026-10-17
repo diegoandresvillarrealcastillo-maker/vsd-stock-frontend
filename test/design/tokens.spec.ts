@@ -148,6 +148,18 @@ describe('brand palette', () => {
       expect(get(mode === 'light' ? light : dark, 'accent').toLowerCase()).toBe('#f97801');
     },
   );
+
+  // El estado "en linea" usa verde: es lo que cualquier persona espera. Nunca va
+  // solo, siempre lo acompanan un icono y un texto.
+  it.each(['light', 'dark'] as const)(
+    'has a green success color, not blue or orange (%s)',
+    (mode) => {
+      const { r, g, b } = channels(get(mode === 'light' ? light : dark, 'success'));
+
+      expect(g).toBeGreaterThan(r + 30);
+      expect(g).toBeGreaterThan(b + 30);
+    },
+  );
 });
 
 describe.each(['light', 'dark'] as const)('contrast in the %s theme', (mode) => {
@@ -169,6 +181,8 @@ describe.each(['light', 'dark'] as const)('contrast in the %s theme', (mode) => 
     ['on-accent', 'accent-hover'],
     ['accent-text', 'surface'],
     ['accent-text', 'surface-raised'],
+    ['success', 'surface'],
+    ['success', 'surface-raised'],
     ['on-band', 'band'],
   ])('text %s on %s reaches 4.5:1 (AA for normal text)', (foreground, background) => {
     expect(contrastRatio(color(foreground), color(background))).toBeGreaterThanOrEqual(4.5);
