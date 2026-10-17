@@ -19,7 +19,15 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "contract:generate": "openapi-typescript contract/openapi.json --output src/adapters/out/api/schema.d.ts",
+    "contract:sync": "node scripts/contract.ts sync && npm run contract:generate",
+    "contract:check": "node scripts/contract.ts check",
     "prepare": "husky"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -53,6 +61,7 @@
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.6.0",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.10",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",

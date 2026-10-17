@@ -2,3 +2,9 @@ dist/
 coverage/
 node_modules/
 package-lock.json
+
+# Generados o copiados tal cual: darles formato los separaria de su origen.
+# contract/openapi.json es el del backend, byte por byte; schema.d.ts lo escribe
+# openapi-typescript a partir de el.
+contract/openapi.json
+src/adapters/out/api/schema.d.ts
