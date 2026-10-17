@@ -7,7 +7,11 @@ Esta guía resume el flujo. Las decisiones y su porqué están en el
 ## Antes de empezar
 
 1. **Un ticket por cambio.** Cada trabajo tiene un Issue con el prefijo de su ciclo (`[C1-07] …`), asignado a
-   una persona, y se crea **antes** de empezar. Sin Issue no hay rama.
+   una persona, y se crea **antes** de empezar. Sin Issue no hay rama. Parte de la plantilla de Issue
+   ([`ticket.md`](.github/ISSUE_TEMPLATE/ticket.md)): trae el objetivo, los criterios de aceptación, de qué
+   depende y la definición de terminado. Según la documentación de GitHub, las plantillas se leen de la rama por
+   defecto (`produccion`); mientras no se promuevan, es probable que no se precargue y haya que copiar el
+   esqueleto desde el archivo.
 2. **Una rama corta por ticket**, creada desde `desarrollo` actualizado:
 
    ```bash
