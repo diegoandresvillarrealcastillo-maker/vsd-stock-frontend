@@ -5,6 +5,7 @@ import type { Category } from '../../domain/model/catalog';
 import type { Problem } from '../../domain/model/problem';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createFakeCatalog, testCategory } from '../../../test/support/catalog';
+import { deferred } from '../../../test/support/deferred';
 import { renderScreen } from '../../../test/support/screens';
 import { CategoriesPage } from './CategoriesPage';
 
@@ -34,16 +35,6 @@ const refused = (code: string) =>
     retryAfterMs: null,
   });
 const network = new ApiError({ class: 'network', status: null, problem: null, retryAfterMs: null });
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (error: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
 
 const names = () =>
   within(screen.getByRole('list', { name: 'Categorías' }))
