@@ -1,11 +1,20 @@
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Script } from 'node:vm';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import { composeServiceWorker } from '../../scripts/build-service-worker';
 
 // El service worker se ejecuta TAL COMO SE DESPLIEGA: el mismo archivo, con los tipos quitados y la lista y la version
-// antepuestas por `scripts/build-service-worker.ts`. Lo unico de mentira es lo que el navegador le da (`self`, `caches`,
-// `fetch`), para ver que guarda, que sirve y, sobre todo, que NO toca.
+// antepuestas por `scripts/build-service-worker.ts`, escrito a disco como lo escribe la compilacion y leido de ahi. Lo
+// unico de mentira es lo que el navegador le da (`self`, `caches`, `fetch`), para ver que guarda, que sirve y, sobre todo,
+// que NO toca.
+
+const DEPLOY_DIR = mkdtempSync(join(tmpdir(), 'vsd-sw-'));
+let deployed = 0;
+afterAll(() => {
+  rmSync(DEPLOY_DIR, { recursive: true, force: true });
+});
 
 const ORIGIN = 'https://stock.example.com';
 const PRECACHE = ['/', '/assets/app-1a2b3c.js', '/assets/app-4d5e6f.css', '/favicon.png'];
@@ -61,7 +70,9 @@ interface FetchEventLike {
 
 function deploy({ precache = PRECACHE } = {}) {
   const source = readFileSync('service-worker/sw.ts', 'utf8');
-  const code = composeServiceWorker(source, precache, VERSION);
+  deployed += 1;
+  const file = join(DEPLOY_DIR, `sw-${String(deployed)}.js`);
+  writeFileSync(file, composeServiceWorker(source, precache, VERSION));
 
   const handlers = new Map<string, (event: unknown) => void>();
   const scope = {
@@ -74,7 +85,7 @@ function deploy({ precache = PRECACHE } = {}) {
   };
   const caches = new FakeCaches();
   const network = vi.fn((request: unknown) => Promise.resolve(`red: ${JSON.stringify(request)}`));
-  new Script(code, { filename: 'sw.js' }).runInNewContext({
+  new Script(readFileSync(file, 'utf8'), { filename: file }).runInNewContext({
     self: scope,
     caches,
     fetch: network,
