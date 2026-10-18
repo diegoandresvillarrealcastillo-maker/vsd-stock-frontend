@@ -4,9 +4,9 @@ Lo que se hace **al cerrar cada ciclo**: recorrer la aplicación completa, con u
 comprobar que cada pantalla hace lo que dice. Las pruebas automáticas dicen que cada pieza funciona; esto dice que **juntas**
 funcionan.
 
-Este recorrido se hizo el **17 de octubre de 2026** contra la **pila local** (una base de Docker con el esquema real, la API del
-backend y un servicio de identidad de mentira). **No se ha hecho contra el Supabase de PRE porque PRE todavía no existe**: cuando
-exista, se repite este mismo recorrido y se anota al final. Hasta entonces, el cierre del ciclo no incluye esa parte.
+Este recorrido se hizo dos veces: el **17 de octubre de 2026** contra la **pila local** (una base de Docker con el esquema real, la
+API del backend y un servicio de identidad de mentira) y el **18 de octubre de 2026** contra el **Supabase real de PRE**. En las dos
+las 24 filas dieron lo esperado (ver [Historial de corridas](#historial-de-corridas)).
 
 ## Preparar la pila
 
@@ -80,10 +80,12 @@ Cada fila dice qué haces y **qué tiene que pasar**. Las frases son las de la p
 
 ## Lo que este recorrido no cubre
 
-- **El Supabase real de PRE.** Ni el correo de confirmación, ni los límites de uso de correos, ni que el proyecto firme con
-  claves asimétricas, ni el adaptador de Prisma a través del pooler. Eso es `npm run verify:pre` del backend
-  ([ADR 0025](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0025-verificacion-de-pre-contra-supabase.md))
-  y, después, repetir este recorrido contra PRE.
+- **El correo de confirmación y los límites de uso de correos de Supabase.** En PRE «Confirm email» está apagado a propósito
+  (el correo integrado de Supabase envía solo 2 por hora), así que el recorrido no pasa por ahí. En producción hay que
+  configurar un correo propio (deuda con ADR). Lo demás de PRE (las claves asimétricas, el adaptador de Prisma a través del
+  pooler y la seguridad por fila) lo comprueba `npm run verify:pre` del backend
+  ([ADR 0025](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0025-verificacion-de-pre-contra-supabase.md)),
+  y su primera corrida pasó el 18 de octubre de 2026.
 - **Un teléfono.** Se recorrió en un navegador de escritorio. Cuánto cansa volver a escribir la contraseña al recargar en un
   teléfono que recarga a menudo (el ADR 0022 lo dice como riesgo) sigue sin medirse.
 - **Lo que un rol no puede hacer dentro de una pantalla que sí ve** (por ejemplo, que el cajero no tenga «Ajustar existencia» en
@@ -97,4 +99,14 @@ Cada fila dice qué haces y **qué tiene que pasar**. Las frases son las de la p
 1. Levanta la pila (el enlace de arriba) y arranca el frontend.
 2. Recorre las tablas en orden. Si algo no dice lo de la columna de la derecha, **eso es un defecto**: abre un Issue con el
    número de fila.
-3. Cuando exista PRE, repítelo contra él y agrega aquí la fecha, quién lo hizo y lo que no coincidió.
+3. Para repetirlo contra PRE, la API y la web corren en tu máquina pero con la base y la identidad de PRE (las variables están en
+   el [plan de ambientes del backend](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/ambientes.md);
+   la clave del navegador es la **publicable**, nunca la secreta). Los datos que crea el recorrido quedan en PRE: son de prueba.
+4. Agrega una fila al historial de abajo con la fecha, contra qué se hizo, quién lo hizo y lo que no coincidió.
+
+## Historial de corridas
+
+| Fecha      | Contra qué                                              | Quién                         | Resultado                       |
+| ---------- | ------------------------------------------------------- | ----------------------------- | ------------------------------- |
+| 2026-10-17 | Pila local (Docker, esquema real, identidad de mentira) | El asistente, en un navegador | Las 24 filas dieron lo esperado |
+| 2026-10-18 | Supabase real de PRE (API y web en una máquina local)   | Diego                         | Las 24 filas dieron lo esperado |
