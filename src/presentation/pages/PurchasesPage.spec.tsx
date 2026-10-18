@@ -57,6 +57,14 @@ describe('PurchasesPage', () => {
     expect(rows()).toHaveLength(3);
   });
 
+  it('says only how many products when the purchase has no note', async () => {
+    setup();
+    await screen.findByRole('list', { name: 'Compras' });
+
+    expect(rows()[1]?.querySelectorAll('p')[1]?.textContent).toBe('1 producto');
+    expect(rows()[2]?.querySelectorAll('p')[1]?.textContent).toBe('5 productos');
+  });
+
   it('says the day, who it was bought from, how many products and the note', async () => {
     setup();
     await screen.findByRole('list', { name: 'Compras' });

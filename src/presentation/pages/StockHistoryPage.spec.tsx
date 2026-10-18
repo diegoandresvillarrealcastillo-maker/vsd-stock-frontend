@@ -1,5 +1,5 @@
 import { fireEvent, screen, within } from '@testing-library/react';
-import { Route, Routes } from 'react-router';
+import { Link, Route, Routes } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../domain/model/api-error';
 import type { Role } from '../../domain/model/permissions';
@@ -242,6 +242,52 @@ describe('StockHistoryPage', () => {
       expect(screen.getByText('Cada fila es algo que pasó y no se borra.')).toBeDefined();
       expect(rows()[0]?.textContent).toContain('− 2');
       expect(rows()[0]?.textContent).not.toContain('und');
+    });
+  });
+
+  describe('what stands out in the list', () => {
+    it('colors what went out, and only that', async () => {
+      setup();
+      await screen.findByRole('list', { name: 'Historial' });
+
+      expect(within(rows()[0]!).getByText(/− 2 und/).className).toContain('text-accent-text');
+      expect(within(rows()[1]!).getByText(/\+ 24 und/).className).not.toContain('text-accent-text');
+    });
+  });
+
+  describe('when the address changes to another product', () => {
+    it('asks for the movements of that product and shows its name', async () => {
+      const azucar = testStockItem({
+        productId: 'azucar',
+        name: 'Azúcar 1 kg',
+        unit: 'kilogram',
+        quantityMilli: 2500,
+      });
+      const inventory = createFakeInventory([ARROZ, azucar]);
+      inventory.listMovements.mockImplementation((productId) =>
+        Promise.resolve(
+          lastPage(productId === 'arroz' ? [AJUSTE] : [testMovement({ ...COMPRA, id: 'm9' })]),
+        ),
+      );
+      const auth = createTestAuth({ stored: testSession('ana') });
+      auth.answer(testMe('ana', 'owner'));
+      renderScreen(
+        <>
+          <Link to="/inventario/azucar">ir al azúcar</Link>
+          <Routes>
+            <Route path="/inventario/:productId" element={<StockHistoryPage />} />
+          </Routes>
+        </>,
+        { path: '/inventario/arroz', auth, inventory },
+      );
+      await screen.findByRole('heading', { level: 1, name: 'Arroz 500 g' });
+
+      fireEvent.click(screen.getByRole('link', { name: 'ir al azúcar' }));
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Azúcar 1 kg' })).toBeDefined();
+      await screen.findByText(/Pedido de octubre/);
+      expect(inventory.listMovements).toHaveBeenLastCalledWith('azucar');
+      expect(rows()).toHaveLength(1);
     });
   });
 });

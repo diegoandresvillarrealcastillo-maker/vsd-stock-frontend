@@ -58,6 +58,20 @@ describe('useSearchTerm', () => {
     expect(searched()).toBe('[a]');
   });
 
+  it('waits the new delay when the delay changes while it is waiting', async () => {
+    vi.useFakeTimers();
+    const { rerender } = render(<Harness delayMs={1000} />);
+    type('a');
+    await wait(50);
+
+    rerender(<Harness delayMs={100} />);
+    await wait(99);
+    expect(searched()).toBe('[]');
+    await wait(1);
+
+    expect(searched()).toBe('[a]');
+  });
+
   it('searches only the last thing typed: every key starts the wait again', async () => {
     vi.useFakeTimers();
     render(<Harness />);

@@ -333,4 +333,30 @@ describe('SuppliersPage', () => {
       expect(await screen.findByText('No pudimos borrar «Distribuidora El Sol»')).toBeDefined();
     });
   });
+
+  describe('what goes away when the person does something else', () => {
+    it('the question about deleting, when another supplier starts to be changed', async () => {
+      setup();
+      await screen.findByText('Distribuidora El Sol');
+      fireEvent.click(within(row('Distribuidora El Sol')).getByRole('button', { name: 'Borrar' }));
+      expect(screen.getByText('¿Borrar «Distribuidora El Sol»?')).toBeDefined();
+
+      fireEvent.click(within(row('Granos del Valle')).getByRole('button', { name: 'Cambiar' }));
+
+      expect(screen.queryByText('¿Borrar «Distribuidora El Sol»?')).toBeNull();
+      expect(screen.getByLabelText('Nuevo nombre de «Granos del Valle»')).toBeDefined();
+    });
+
+    it('the editor, when the person asks about deleting another supplier', async () => {
+      setup();
+      await screen.findByText('Distribuidora El Sol');
+      fireEvent.click(within(row('Distribuidora El Sol')).getByRole('button', { name: 'Cambiar' }));
+      expect(screen.getByLabelText('Nuevo nombre de «Distribuidora El Sol»')).toBeDefined();
+
+      fireEvent.click(within(row('Granos del Valle')).getByRole('button', { name: 'Borrar' }));
+
+      expect(screen.queryByLabelText('Nuevo nombre de «Distribuidora El Sol»')).toBeNull();
+      expect(screen.getByText('¿Borrar «Granos del Valle»?')).toBeDefined();
+    });
+  });
 });

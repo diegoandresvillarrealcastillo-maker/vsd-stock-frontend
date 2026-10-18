@@ -63,6 +63,16 @@ async function addProduct(name: string, quantity: string, cost: string) {
   addLine();
 }
 
+const draftNeeds = async (start: () => Promise<void> | void, message: string) => {
+  await screen.findByLabelText('Cantidad');
+  await start();
+
+  register();
+
+  expect(screen.getAllByText(message).length).toBeGreaterThan(0);
+  expect(screen.queryByText('Agrega al menos una línea.')).toBeNull();
+};
+
 const lines = () =>
   within(screen.getByRole('list', { name: 'Líneas de la compra' })).getAllByRole('listitem');
 
@@ -562,6 +572,86 @@ describe('NewPurchasePage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Quitar la línea 1' }));
 
       await waitFor(() => expect(screen.queryByText('El costo no es válido.')).toBeNull());
+    });
+  });
+
+  describe('a line that is half written when the person registers', () => {
+    it('says what is missing when only the product was chosen', async () => {
+      setup();
+
+      await draftNeeds(async () => {
+        await pick('Arroz');
+      }, 'Escribe la cantidad.');
+    });
+
+    it('says what is missing when only the quantity was written', async () => {
+      setup();
+
+      await draftNeeds(() => {
+        type('Cantidad', '2');
+      }, 'Elige un producto.');
+    });
+
+    it('says what is missing when only the cost was written', async () => {
+      setup();
+
+      await draftNeeds(() => {
+        type('Costo por unidad', '2500');
+      }, 'Elige un producto.');
+    });
+
+    it('moves the complete line into the list and empties the draft as soon as it is sent', async () => {
+      const purchasing = createFakePurchasing([SOL, VALLE], []);
+      purchasing.createPurchase.mockReturnValue(new Promise<never>(() => undefined));
+      setup(purchasing);
+      await pick('Arroz');
+      type('Cantidad', '2');
+      type('Costo por unidad', '2500');
+
+      register();
+
+      await waitFor(() => expect(lines()).toHaveLength(1));
+      expect(screen.getByLabelText<HTMLInputElement>('Cantidad').value).toBe('');
+      expect(screen.getByLabelText<HTMLInputElement>('Costo por unidad').value).toBe('');
+      expect(screen.queryByRole('button', { name: 'Cambiar producto' })).toBeNull();
+    });
+  });
+
+  describe('what goes away when the person changes something', () => {
+    it('the failure of the server, when a line is removed', async () => {
+      const purchasing = createFakePurchasing([SOL, VALLE], []);
+      purchasing.createPurchase.mockRejectedValue(network);
+      setup(purchasing);
+      await addProduct('Arroz', '2', '2500');
+      register();
+      await screen.findByText('No pudimos registrar la compra');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Quitar la línea 1' }));
+
+      expect(screen.queryByText('No pudimos registrar la compra')).toBeNull();
+    });
+
+    it('«add at least one line», as soon as the person writes', async () => {
+      setup();
+      await screen.findByLabelText('Nota (opcional)');
+      register();
+      expect(screen.getByText('Agrega al menos una línea.')).toBeDefined();
+
+      type('Nota (opcional)', 'Pedido de octubre');
+
+      expect(screen.queryByText('Agrega al menos una línea.')).toBeNull();
+    });
+
+    it('what the line being written lacked, as soon as the person writes', async () => {
+      setup();
+      await screen.findByLabelText('Cantidad');
+      addLine();
+      expect(screen.getAllByText('Elige un producto.').length).toBeGreaterThan(0);
+
+      type('Costo por unidad', '2500');
+
+      expect(screen.queryByText('Elige un producto.')).toBeNull();
+      expect(screen.queryByText('Escribe la cantidad.')).toBeNull();
     });
   });
 });
