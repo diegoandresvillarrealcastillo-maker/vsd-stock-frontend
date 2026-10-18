@@ -45,7 +45,7 @@ describe('CatalogUseCase', () => {
 
       const result = await useCase.listProducts({});
 
-      expect(sent).toEqual([{ method: 'GET', path: '/v1/products', query: { limit: 50 } }]);
+      expect(sent).toStrictEqual([{ method: 'GET', path: '/v1/products', query: { limit: 50 } }]);
       expect(result.items.map((product) => product.id)).toEqual(['a']);
       expect(result.nextCursor).toBeNull();
     });
@@ -68,7 +68,7 @@ describe('CatalogUseCase', () => {
 
       await useCase.listProducts({ search: '   ' });
 
-      expect(sent[0]?.query).toEqual({ limit: 50 });
+      expect(sent[0]?.query).toStrictEqual({ limit: 50 });
     });
 
     it('asks for the next page with the cursor of the last one, as it came', async () => {
@@ -202,7 +202,7 @@ describe('CatalogUseCase', () => {
 
       await useCase.updateProduct('a', { name: ' Arroz Diana ', unitPrice: 3500 });
 
-      expect(sent).toEqual([
+      expect(sent).toStrictEqual([
         {
           method: 'PATCH',
           path: '/v1/products/a',
@@ -311,6 +311,15 @@ describe('CatalogUseCase', () => {
 
       expect(await useCase.findProductByCode('barcode', '123')).toBeNull();
     });
+
+    it.each(['0', '000', ' 0000 '])(
+      'does not take a product without a barcode for the one that is «%s», which is nothing once the zeros go',
+      async (code) => {
+        const { useCase } = setup(page([wireProduct('a', { barcode: null })]));
+
+        expect(await useCase.findProductByCode('barcode', code)).toBeNull();
+      },
+    );
   });
 
   describe('categories', () => {
@@ -395,5 +404,26 @@ describe('CatalogUseCase', () => {
       expect(await failedWith(useCase.renameCategory('c', 'a'))).toBeInstanceOf(ApiError);
       expect(await failedWith(useCase.listCategories())).toBeInstanceOf(ApiError);
     });
+  });
+
+  describe('what it says when the answer is not what the contract says', () => {
+    it.each([
+      [
+        'a page',
+        (useCase: CatalogUseCase) => useCase.listProducts({}),
+        { items: [{ id: 3 }], nextCursor: null },
+      ],
+      ['a product', (useCase: CatalogUseCase) => useCase.getProduct('a'), { id: 'a' }],
+      ['a category', (useCase: CatalogUseCase) => useCase.createCategory('X'), { id: 'a' }],
+    ])(
+      'keeps the status of the strange answer for %s, so the log can tell',
+      async (_what, ask, body) => {
+        const { useCase } = setup(reply(body, 203));
+
+        const error = await failedWith(ask(useCase));
+
+        expect((error as ApiError).failure.status).toBe(203);
+      },
+    );
   });
 });
