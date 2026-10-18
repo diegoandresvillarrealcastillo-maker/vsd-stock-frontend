@@ -117,6 +117,8 @@ describe('StockPage', () => {
 
     expect(within(rows()[4]!).getByText('Archivado')).toBeDefined();
     expect(within(rows()[5]!).getByText('Negativa')).toBeDefined();
+    // Cero no es negativo.
+    expect(within(rows()[3]!).queryByText('Negativa')).toBeNull();
     expect(rows()[5]?.textContent).toContain('-1,5 und');
     expect(within(rows()[0]!).queryByText('Archivado')).toBeNull();
     expect(within(rows()[0]!).queryByText('Negativa')).toBeNull();

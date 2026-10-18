@@ -427,4 +427,42 @@ describe('AdjustStockPage', () => {
       expect(screen.queryByRole('button', { name: 'Guardar ajuste' })).toBeNull();
     });
   });
+
+  describe('small things that are easy to get wrong', () => {
+    it('does not count the spaces around the reason against the limit', async () => {
+      const { inventory } = setup();
+      await screen.findByRole('heading', { level: 1 });
+      fireEvent.click(screen.getByRole('radio', { name: 'Restar' }));
+      type('Cuánto', '2');
+      type('Motivo (obligatorio)', `${'a'.repeat(500)}   `);
+
+      save();
+
+      await screen.findByText('/inventario/arroz');
+      expect(inventory.adjust).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not say what the stock would be for a quantity of zero', async () => {
+      setup();
+      await screen.findByRole('heading', { level: 1 });
+      fireEvent.click(screen.getByRole('radio', { name: 'Sumar' }));
+
+      type('Cuánto', '0');
+
+      expect(screen.queryByText(/Quedarían/)).toBeNull();
+    });
+
+    it('takes away why it could not save as soon as the person writes again', async () => {
+      const inventory = createFakeInventory([ARROZ]);
+      inventory.adjust.mockRejectedValue(network);
+      setup(inventory);
+      await fillSubtract();
+      save();
+      await screen.findByText('No pudimos guardar el ajuste');
+
+      type('Motivo (obligatorio)', 'Otro motivo');
+
+      expect(screen.queryByText('No pudimos guardar el ajuste')).toBeNull();
+    });
+  });
 });

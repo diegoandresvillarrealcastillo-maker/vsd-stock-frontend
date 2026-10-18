@@ -213,4 +213,18 @@ describe('InventoryUseCase', () => {
       expect(await failedWith(useCase.adjust(input))).toBeInstanceOf(ApiError);
     });
   });
+
+  describe('when the stock answer is not what the contract says', () => {
+    it('does not believe a stock page that is not one, and keeps its status for the log', async () => {
+      const { useCase } = setup(
+        wireProduct('p1'),
+        reply({ items: [{ id: 3 }], nextCursor: null }, 203),
+      );
+
+      const error = await failedWith(useCase.findStock('p1'));
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).failure.status).toBe(203);
+    });
+  });
 });

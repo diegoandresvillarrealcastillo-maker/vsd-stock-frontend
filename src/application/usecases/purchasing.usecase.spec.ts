@@ -130,7 +130,7 @@ describe('PurchasingUseCase', () => {
       await useCase.updateSupplier('s1', { contact: ' 311 ' });
       await useCase.updateSupplier('s1', { contact: null });
 
-      expect(sent.map((request) => request.body)).toEqual([
+      expect(sent.map((request) => request.body)).toStrictEqual([
         { name: 'Nuevo nombre' },
         { contact: '311' },
         { contact: null },
