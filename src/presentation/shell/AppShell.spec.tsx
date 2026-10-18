@@ -5,9 +5,11 @@ import { describe, expect, it } from 'vitest';
 import type { Role } from '../../domain/model/permissions';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createTestConnection } from '../../../test/support/connection';
+import { createTestLocal } from '../../../test/support/local';
 import { createTestThemePreference } from '../../../test/support/theme';
 import { AuthProvider } from '../auth/AuthProvider';
 import { ConnectionProvider } from '../connection/ConnectionProvider';
+import { LocalWorkspaceProvider } from '../local/LocalWorkspaceProvider';
 import { MotionProvider } from '../motion/MotionProvider';
 import { ThemeProvider } from '../theme/ThemeProvider';
 import { AppShell } from './AppShell';
@@ -21,6 +23,7 @@ async function setup({
   auth.answer(testMe('ana', role, businessName));
   const connection = createTestConnection();
   const theme = createTestThemePreference();
+  const local = createTestLocal();
 
   function Providers({ children }: { children: ReactNode }) {
     return (
@@ -28,7 +31,9 @@ async function setup({
         <ConnectionProvider monitor={connection.monitor}>
           <MotionProvider>
             <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
-              <MemoryRouter initialEntries={[at]}>{children}</MemoryRouter>
+              <LocalWorkspaceProvider workspace={local.workspace}>
+                <MemoryRouter initialEntries={[at]}>{children}</MemoryRouter>
+              </LocalWorkspaceProvider>
             </AuthProvider>
           </MotionProvider>
         </ConnectionProvider>
@@ -48,7 +53,7 @@ async function setup({
   );
   // Espera a que se sepa quien es la persona.
   await waitFor(() => expect(screen.queryByText(/cargando tu cuenta/i)).toBeNull());
-  return { auth, connection, theme };
+  return { auth, connection, theme, local };
 }
 
 const nav = () => screen.getByRole('navigation', { name: 'Principal' });

@@ -6,6 +6,7 @@ import type { Catalog } from '../../src/domain/ports/in/catalog';
 import type { Inventory } from '../../src/domain/ports/in/inventory';
 import type { Purchasing } from '../../src/domain/ports/in/purchasing';
 import { AuthProvider } from '../../src/presentation/auth/AuthProvider';
+import { LocalWorkspaceProvider } from '../../src/presentation/local/LocalWorkspaceProvider';
 import { CatalogProvider } from '../../src/presentation/catalog/CatalogProvider';
 import { InventoryProvider } from '../../src/presentation/inventory/InventoryProvider';
 import { PurchasingProvider } from '../../src/presentation/purchasing/PurchasingProvider';
@@ -16,6 +17,7 @@ import { ThemeProvider } from '../../src/presentation/theme/ThemeProvider';
 import { createTestAuth, type TestAuth } from './auth';
 import { createFakeCatalog } from './catalog';
 import { createTestConnection } from './connection';
+import { createTestLocal, type TestLocal } from './local';
 import { createFakeInventory } from './inventory';
 import { createFakePeople } from './people';
 import { createFakePurchasing } from './purchasing';
@@ -38,6 +40,8 @@ interface Options {
   /** El estado de navegacion con el que se llega a la pantalla (lo que la pantalla anterior le deja dicho). */
   state?: unknown;
   auth?: TestAuth;
+  /** El espacio de trabajo local de la persona (bases en memoria). Por omision, uno vacio. */
+  local?: TestLocal;
   people?: BusinessPeople;
   catalog?: Catalog;
   inventory?: Inventory;
@@ -48,6 +52,7 @@ interface Options {
 /** Monta una pantalla con todo lo que la aplicacion le da: tema, conexion, movimiento, cuenta, personas, catalogo, existencias, compras y enrutador. */
 export function renderScreen(ui: ReactElement, options: Options = {}) {
   const auth = options.auth ?? createTestAuth();
+  const local = options.local ?? createTestLocal();
   const people = options.people ?? createFakePeople();
   const catalog = options.catalog ?? createFakeCatalog();
   const inventory = options.inventory ?? createFakeInventory();
@@ -58,24 +63,26 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
       <ConnectionProvider monitor={connection.monitor}>
         <MotionProvider>
           <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
-            <PeopleProvider people={people}>
-              <CatalogProvider catalog={catalog}>
-                <InventoryProvider inventory={inventory}>
-                  <PurchasingProvider purchasing={purchasing}>
-                    <MemoryRouter
-                      initialEntries={[{ pathname: options.path ?? '/', state: options.state }]}
-                    >
-                      <Where />
-                      {ui}
-                    </MemoryRouter>
-                  </PurchasingProvider>
-                </InventoryProvider>
-              </CatalogProvider>
-            </PeopleProvider>
+            <LocalWorkspaceProvider workspace={local.workspace}>
+              <PeopleProvider people={people}>
+                <CatalogProvider catalog={catalog}>
+                  <InventoryProvider inventory={inventory}>
+                    <PurchasingProvider purchasing={purchasing}>
+                      <MemoryRouter
+                        initialEntries={[{ pathname: options.path ?? '/', state: options.state }]}
+                      >
+                        <Where />
+                        {ui}
+                      </MemoryRouter>
+                    </PurchasingProvider>
+                  </InventoryProvider>
+                </CatalogProvider>
+              </PeopleProvider>
+            </LocalWorkspaceProvider>
           </AuthProvider>
         </MotionProvider>
       </ConnectionProvider>
     </ThemeProvider>,
   );
-  return { ...view, auth, people, catalog, inventory, purchasing, connection };
+  return { ...view, auth, local, people, catalog, inventory, purchasing, connection };
 }

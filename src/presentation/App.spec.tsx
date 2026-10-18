@@ -1,9 +1,10 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import type { Role } from '../domain/model/permissions';
 import { createTestAuth, testMe, testSession, type TestAuth } from '../../test/support/auth';
 import { createTestConnection } from '../../test/support/connection';
+import { createTestLocal } from '../../test/support/local';
 import { createFakeCatalog } from '../../test/support/catalog';
 import { createFakeInventory } from '../../test/support/inventory';
 import { createFakePeople } from '../../test/support/people';
@@ -28,6 +29,7 @@ function renderApp({
         theme={theme}
         connection={connection.monitor}
         auth={auth}
+        local={createTestLocal().workspace}
         people={createFakePeople()}
         catalog={createFakeCatalog()}
         inventory={createFakeInventory()}
@@ -74,7 +76,8 @@ describe('App', () => {
     renderApp({ auth: signedIn('owner'), path: '/personas' });
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Personas' })).toBeDefined();
-    expect(await screen.findByText('Ana Gómez')).toBeDefined();
+    // El nombre tambien esta en la cabecera: la lista de personas es lo que esta dentro del contenido.
+    expect(await within(screen.getByRole('main')).findByText('Ana Gómez')).toBeDefined();
   });
 
   it('gives the whole interface the motion provider, so no screen has to set it up', async () => {

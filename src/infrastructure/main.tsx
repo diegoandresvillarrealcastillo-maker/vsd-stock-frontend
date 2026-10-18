@@ -11,6 +11,7 @@ import { resolveApiBaseUrl } from './api-base-url';
 import { resolveAuthConfig } from './auth-config';
 import { createAuth } from './create-auth';
 import { createConnectionMonitor } from './create-connection-monitor';
+import { createLocalWorkspace } from './create-local-workspace';
 import { createThemePreference } from './create-theme-preference';
 
 // Punto de arranque: cablea los adaptadores del navegador, arma los casos de
@@ -44,6 +45,14 @@ const auth = createAuth({
   now: () => new Date(),
 });
 
+// El espacio de trabajo local: una base cifrada por persona, el registro del dispositivo y la serie de folios (ADR 0018).
+const local = createLocalWorkspace({
+  api: auth.api,
+  now: () => new Date(),
+  getStorage: () => window.localStorage,
+  fillRandom: (bytes) => window.crypto.getRandomValues(bytes),
+});
+
 const people = new BusinessPeopleUseCase(auth.api);
 const catalog = new CatalogUseCase(auth.api);
 const inventory = new InventoryUseCase(auth.api);
@@ -56,6 +65,7 @@ createRoot(container).render(
         theme={theme}
         connection={connection}
         auth={auth}
+        local={local}
         people={people}
         catalog={catalog}
         inventory={inventory}

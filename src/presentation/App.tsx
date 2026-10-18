@@ -3,6 +3,7 @@ import type { BusinessPeople } from '../domain/ports/in/business-people';
 import type { Catalog } from '../domain/ports/in/catalog';
 import type { Inventory } from '../domain/ports/in/inventory';
 import type { LoadMe } from '../domain/ports/in/load-me';
+import type { LocalWorkspace } from '../domain/ports/in/local-workspace';
 import type { Purchasing } from '../domain/ports/in/purchasing';
 import type { SessionManager } from '../domain/ports/in/session-manager';
 import type { ThemePreference } from '../domain/ports/in/theme-preference';
@@ -10,6 +11,7 @@ import { AuthProvider } from './auth/AuthProvider';
 import { CatalogProvider } from './catalog/CatalogProvider';
 import { ConnectionProvider } from './connection/ConnectionProvider';
 import { InventoryProvider } from './inventory/InventoryProvider';
+import { LocalWorkspaceProvider } from './local/LocalWorkspaceProvider';
 import { MotionProvider } from './motion/MotionProvider';
 import { PeopleProvider } from './people/PeopleProvider';
 import { PurchasingProvider } from './purchasing/PurchasingProvider';
@@ -25,6 +27,7 @@ export function App({
   theme,
   connection,
   auth,
+  local,
   people,
   catalog,
   inventory,
@@ -33,6 +36,7 @@ export function App({
   theme: ThemePreference;
   connection: ConnectionMonitor;
   auth: { sessions: SessionManager; loadMe: LoadMe };
+  local: LocalWorkspace;
   people: BusinessPeople;
   catalog: Catalog;
   inventory: Inventory;
@@ -43,15 +47,17 @@ export function App({
       <ConnectionProvider monitor={connection}>
         <MotionProvider>
           <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
-            <PeopleProvider people={people}>
-              <CatalogProvider catalog={catalog}>
-                <InventoryProvider inventory={inventory}>
-                  <PurchasingProvider purchasing={purchasing}>
-                    <AppRoutes />
-                  </PurchasingProvider>
-                </InventoryProvider>
-              </CatalogProvider>
-            </PeopleProvider>
+            <LocalWorkspaceProvider workspace={local}>
+              <PeopleProvider people={people}>
+                <CatalogProvider catalog={catalog}>
+                  <InventoryProvider inventory={inventory}>
+                    <PurchasingProvider purchasing={purchasing}>
+                      <AppRoutes />
+                    </PurchasingProvider>
+                  </InventoryProvider>
+                </CatalogProvider>
+              </PeopleProvider>
+            </LocalWorkspaceProvider>
           </AuthProvider>
         </MotionProvider>
       </ConnectionProvider>

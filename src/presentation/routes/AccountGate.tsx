@@ -3,6 +3,7 @@ import { Navigate } from 'react-router';
 import { useAccount } from '../auth/AuthProvider';
 import { Button } from '../components/Button';
 import { Skeleton } from '../components/Skeleton';
+import { useLocal } from '../local/LocalWorkspaceProvider';
 
 /** Mientras se pregunta quien es la persona. El contenedor avisa a los lectores de pantalla; los bloques son decoracion. */
 function LoadingAccount() {
@@ -69,6 +70,23 @@ export function RequireNoMembership({ children }: { children: ReactNode }) {
     case 'ready':
       return state.me.membership === null ? <>{children}</> : <Navigate to="/" replace />;
   }
+}
+
+/**
+ * La puerta del mostrador: deja pasar a quien tiene su espacio de trabajo local abierto, ya sea porque entro con conexion o
+ * porque reanudo el mostrador sin ella (ADR 0022, punto 11). Sin nadie trabajando va a entrar; quien entro pero no pudo abrir
+ * su base va a la administracion, que dice por que.
+ */
+export function RequireWorkspace({ children }: { children: ReactNode }) {
+  const { active, setup } = useLocal();
+  const { state } = useAccount();
+  if (active !== null) return <>{children}</>;
+  if (state.status === 'loading' || setup.status === 'starting') return <LoadingAccount />;
+  if (state.status === 'failed') return <AccountFailed />;
+  if (state.status === 'ready') {
+    return <Navigate to={state.me.membership === null ? '/empezar' : '/'} replace />;
+  }
+  return <Navigate to="/ingresar" replace />;
 }
 
 /** La puerta de entrar: solo para quien no tiene sesion. Quien ya la tiene sigue su camino segun tenga negocio o no. */
