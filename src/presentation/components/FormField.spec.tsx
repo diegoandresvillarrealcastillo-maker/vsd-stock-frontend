@@ -55,6 +55,14 @@ describe('FormField', () => {
     const { input } = renderField();
 
     expect(input.type).toBe('text');
+    expect(input.placeholder).toBe('');
+  });
+
+  it('can show an example of what to write, without taking the place of the label', () => {
+    const { input } = renderField({ placeholder: 'Nombre, SKU o código de barras' });
+
+    expect(input.placeholder).toBe('Nombre, SKU o código de barras');
+    expect(input.labels?.[0]?.textContent).toBe('Correo');
   });
 
   it('shows a hint and ties it to the input', () => {

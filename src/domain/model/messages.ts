@@ -36,6 +36,21 @@ const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   'invitation-not-found': 'Ese código no existe o ya se usó. Revísalo o pide uno nuevo.',
   'invitation-expired': 'Ese código venció. Pídele uno nuevo a quien te invitó.',
   'invitation-not-pending': 'Esa persona ya canjeó su invitación: no hay código que renovar.',
+  'category-not-found': 'Esa categoría ya no existe.',
+  'product-not-found': 'Ese producto ya no existe en tu negocio.',
+  'category-name-taken': 'Ya hay una categoría con ese nombre.',
+  'category-in-use':
+    'La categoría todavía tiene productos. Muévelos a otra categoría o archívalos antes de borrarla.',
+  'sku-taken': 'Ese SKU ya lo tiene otro producto.',
+  'barcode-taken': 'Ese código de barras ya lo tiene otro producto.',
+  'unit-locked':
+    'La unidad no se puede cambiar porque el producto ya tiene movimientos de existencias.',
+  'supplier-not-found': 'Ese proveedor ya no existe en tu negocio.',
+  'purchase-not-found': 'Esa compra no existe en tu negocio.',
+  'supplier-in-use':
+    'Ese proveedor ya tiene compras y no se puede borrar. Cámbiale el nombre si hace falta.',
+  'operation-id-reused':
+    'Esta compra ya se había registrado con otros datos. Mira la lista de compras antes de repetirla.',
 };
 
 const GENERIC =

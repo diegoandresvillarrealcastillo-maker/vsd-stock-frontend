@@ -1,9 +1,11 @@
 import type { ConnectionMonitor } from '../domain/ports/in/connection-monitor';
 import type { BusinessPeople } from '../domain/ports/in/business-people';
+import type { Catalog } from '../domain/ports/in/catalog';
 import type { LoadMe } from '../domain/ports/in/load-me';
 import type { SessionManager } from '../domain/ports/in/session-manager';
 import type { ThemePreference } from '../domain/ports/in/theme-preference';
 import { AuthProvider } from './auth/AuthProvider';
+import { CatalogProvider } from './catalog/CatalogProvider';
 import { ConnectionProvider } from './connection/ConnectionProvider';
 import { MotionProvider } from './motion/MotionProvider';
 import { PeopleProvider } from './people/PeopleProvider';
@@ -20,11 +22,13 @@ export function App({
   connection,
   auth,
   people,
+  catalog,
 }: {
   theme: ThemePreference;
   connection: ConnectionMonitor;
   auth: { sessions: SessionManager; loadMe: LoadMe };
   people: BusinessPeople;
+  catalog: Catalog;
 }) {
   return (
     <ThemeProvider preference={theme}>
@@ -32,7 +36,9 @@ export function App({
         <MotionProvider>
           <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
             <PeopleProvider people={people}>
-              <AppRoutes />
+              <CatalogProvider catalog={catalog}>
+                <AppRoutes />
+              </CatalogProvider>
             </PeopleProvider>
           </AuthProvider>
         </MotionProvider>

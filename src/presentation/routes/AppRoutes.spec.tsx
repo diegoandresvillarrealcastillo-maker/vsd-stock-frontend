@@ -4,9 +4,11 @@ import { describe, expect, it } from 'vitest';
 import type { Role } from '../../domain/model/permissions';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createTestConnection } from '../../../test/support/connection';
+import { createFakeCatalog } from '../../../test/support/catalog';
 import { createFakePeople } from '../../../test/support/people';
 import { createTestThemePreference } from '../../../test/support/theme';
 import { AuthProvider } from '../auth/AuthProvider';
+import { CatalogProvider } from '../catalog/CatalogProvider';
 import { ConnectionProvider } from '../connection/ConnectionProvider';
 import { MotionProvider } from '../motion/MotionProvider';
 import { PeopleProvider } from '../people/PeopleProvider';
@@ -28,9 +30,11 @@ function renderAt(path: string, signedInAs?: { role: Role; membership?: boolean 
         <MotionProvider>
           <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
             <PeopleProvider people={createFakePeople()}>
-              <MemoryRouter initialEntries={[path]}>
-                <AppRoutes />
-              </MemoryRouter>
+              <CatalogProvider catalog={createFakeCatalog()}>
+                <MemoryRouter initialEntries={[path]}>
+                  <AppRoutes />
+                </MemoryRouter>
+              </CatalogProvider>
             </PeopleProvider>
           </AuthProvider>
         </MotionProvider>
@@ -89,7 +93,9 @@ describe('AppRoutes', () => {
 
     it.each([
       ['/catalogo', 'Catálogo'],
-      ['/catalogo/abc', 'Catálogo'],
+      ['/catalogo/nuevo', 'Nuevo producto'],
+      ['/catalogo/categorias', 'Categorías'],
+      ['/catalogo/arroz', 'Arroz 500 g'],
       ['/inventario', 'Inventario'],
       ['/compras', 'Compras'],
       ['/personas', 'Personas'],
@@ -108,14 +114,19 @@ describe('AppRoutes', () => {
       expect(screen.queryByRole('heading', { level: 1, name: 'Compras' })).toBeNull();
     });
 
-    it.each(['/personas', '/personas/nueva', '/personas/abc', '/compras'])(
-      'keeps the cashier out of %s',
-      async (path) => {
-        renderAt(path, { role: 'cashier' });
+    it.each([
+      '/personas',
+      '/personas/nueva',
+      '/personas/abc',
+      '/compras',
+      '/catalogo/nuevo',
+      '/catalogo/categorias',
+      '/catalogo/arroz',
+    ])('keeps the cashier out of %s', async (path) => {
+      renderAt(path, { role: 'cashier' });
 
-        expect(await heading('No tienes acceso')).toBeDefined();
-      },
-    );
+      expect(await heading('No tienes acceso')).toBeDefined();
+    });
 
     it('lets the cashier into what the cashier can use', async () => {
       renderAt('/catalogo', { role: 'cashier' });
@@ -175,6 +186,14 @@ describe('AppRoutes', () => {
 
       expect(screen.getByLabelText('Correo')).toBeDefined();
       expect(screen.getByLabelText('Contraseña')).toBeDefined();
+    });
+  });
+
+  describe('the catalog', () => {
+    it('shows the products at «catalogo», and not only a title', async () => {
+      renderAt('/catalogo', { role: 'cashier' });
+
+      expect(await screen.findByText('Los productos que vendes y compras.')).toBeDefined();
     });
   });
 });
