@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { FormAlert } from './FormAlert';
 import { SubmitButton } from './SubmitButton';
@@ -32,6 +32,21 @@ describe('SubmitButton', () => {
     const button = screen.getByRole<HTMLButtonElement>('button', { name: 'Ingresar' });
     expect(button.type).toBe('submit');
     expect(button.disabled).toBe(false);
+  });
+
+  it('can be a plain button that does something when pressed, for an action that is not a form', () => {
+    const pressed: string[] = [];
+    render(
+      <SubmitButton pending={false} onClick={() => pressed.push('listo')}>
+        Registrar compra
+      </SubmitButton>,
+    );
+
+    const button = screen.getByRole<HTMLButtonElement>('button', { name: 'Registrar compra' });
+    fireEvent.click(button);
+
+    expect(button.type).toBe('button');
+    expect(pressed).toEqual(['listo']);
   });
 
   it('says it is working and does not let the form go twice while it sends', () => {

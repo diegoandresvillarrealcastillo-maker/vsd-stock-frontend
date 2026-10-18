@@ -1,18 +1,9 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { Role } from '../../domain/model/permissions';
+import { NAVIGATION } from '../../domain/model/navigation';
+import { can, ROLES, type Role } from '../../domain/model/permissions';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
-import { createTestConnection } from '../../../test/support/connection';
-import { createFakeCatalog } from '../../../test/support/catalog';
-import { createFakePeople } from '../../../test/support/people';
-import { createTestThemePreference } from '../../../test/support/theme';
-import { AuthProvider } from '../auth/AuthProvider';
-import { CatalogProvider } from '../catalog/CatalogProvider';
-import { ConnectionProvider } from '../connection/ConnectionProvider';
-import { MotionProvider } from '../motion/MotionProvider';
-import { PeopleProvider } from '../people/PeopleProvider';
-import { ThemeProvider } from '../theme/ThemeProvider';
+import { renderScreen } from '../../../test/support/screens';
 import { AppRoutes } from './AppRoutes';
 
 function renderAt(path: string, signedInAs?: { role: Role; membership?: boolean }) {
@@ -24,23 +15,7 @@ function renderAt(path: string, signedInAs?: { role: Role; membership?: boolean 
         : testMe('ana', signedInAs.role),
     );
   }
-  render(
-    <ThemeProvider preference={createTestThemePreference().preference}>
-      <ConnectionProvider monitor={createTestConnection().monitor}>
-        <MotionProvider>
-          <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
-            <PeopleProvider people={createFakePeople()}>
-              <CatalogProvider catalog={createFakeCatalog()}>
-                <MemoryRouter initialEntries={[path]}>
-                  <AppRoutes />
-                </MemoryRouter>
-              </CatalogProvider>
-            </PeopleProvider>
-          </AuthProvider>
-        </MotionProvider>
-      </ConnectionProvider>
-    </ThemeProvider>,
-  );
+  renderScreen(<AppRoutes />, { path, auth });
   return auth;
 }
 
@@ -96,8 +71,12 @@ describe('AppRoutes', () => {
       ['/catalogo/nuevo', 'Nuevo producto'],
       ['/catalogo/categorias', 'Categorías'],
       ['/catalogo/arroz', 'Arroz 500 g'],
-      ['/inventario', 'Inventario'],
+      ['/inventario', 'Existencias'],
+      ['/inventario/p-1', 'Arroz 500 g'],
+      ['/inventario/p-1/ajustar', 'Ajustar existencia'],
       ['/compras', 'Compras'],
+      ['/compras/nueva', 'Nueva compra'],
+      ['/compras/proveedores', 'Proveedores'],
       ['/personas', 'Personas'],
       ['/personas/nueva', 'Invitar a alguien'],
     ])('shows %s as «%s»', async (path, title) => {
@@ -119,6 +98,9 @@ describe('AppRoutes', () => {
       '/personas/nueva',
       '/personas/abc',
       '/compras',
+      '/compras/nueva',
+      '/compras/proveedores',
+      '/inventario/p-1/ajustar',
       '/catalogo/nuevo',
       '/catalogo/categorias',
       '/catalogo/arroz',
@@ -128,11 +110,33 @@ describe('AppRoutes', () => {
       expect(await heading('No tienes acceso')).toBeDefined();
     });
 
-    it('lets the cashier into what the cashier can use', async () => {
-      renderAt('/catalogo', { role: 'cashier' });
+    it.each([
+      ['/catalogo', 'Catálogo'],
+      ['/inventario', 'Existencias'],
+      ['/inventario/p-1', 'Arroz 500 g'],
+    ])('lets the cashier into %s, which the cashier can use', async (path, title) => {
+      renderAt(path, { role: 'cashier' });
 
-      expect(await heading('Catálogo')).toBeDefined();
+      expect(await heading(title)).toBeDefined();
     });
+
+    it.each(NAVIGATION.flatMap((item) => ROLES.map((role) => [item, role] as const)))(
+      'lets a role into what its menu offers and keeps it out of what its menu does not: %j',
+      async (item, role) => {
+        renderAt(item.path, { role });
+
+        const forbidden = !can(role, item.action);
+        if (forbidden) expect(await heading('No tienes acceso')).toBeDefined();
+        else {
+          await waitFor(() =>
+            expect(screen.getByRole('navigation', { name: 'Principal' })).toBeDefined(),
+          );
+          expect(screen.queryByRole('heading', { level: 1, name: 'No tienes acceso' })).toBeNull();
+          expect(menu()).toContain(item.label);
+        }
+        expect(menu().includes(item.label)).toBe(!forbidden);
+      },
+    );
 
     it('says the page does not exist, and offers the way home', async () => {
       renderAt('/no-existe', { role: 'owner' });

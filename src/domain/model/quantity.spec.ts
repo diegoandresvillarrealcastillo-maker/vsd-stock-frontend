@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatPesos,
   formatQuantity,
+  formatSignedQuantity,
   parsePesos,
   parseQuantityMilli,
   quantityToInput,
@@ -40,6 +41,22 @@ describe('formatQuantity', () => {
 
   it('writes a negative quantity with its sign', () => {
     expect(formatQuantity(-2_500)).toBe('-2,5');
+  });
+});
+
+describe('formatSignedQuantity', () => {
+  it.each([
+    [24_000, '+ 24'],
+    [-2_000, '− 2'],
+    [1_500, '+ 1,5'],
+    [-250, '− 0,25'],
+    [12_345_678, '+ 12.345,678'],
+  ])('writes a movement of %i thousandths as «%s»', (milli, text) => {
+    expect(formatSignedQuantity(milli)).toBe(text);
+  });
+
+  it('writes zero without a sign', () => {
+    expect(formatSignedQuantity(0)).toBe('0');
   });
 });
 

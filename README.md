@@ -142,8 +142,8 @@ Cómo entra una persona y qué ve según su rol (ADR 0017, 0022 y 0024). Todo es
   escribe la dirección a mano ve «No tienes acceso». **Es cortesía, no seguridad:** el servidor aplica la misma tabla en
   cada petición.
 - **Las puertas de las rutas** (`presentation/routes/`): sin sesión, todo lleva a `/ingresar`; con sesión y sin negocio, a
-  `/empezar`; con negocio, al marco de la aplicación (`/`, `/catalogo`, `/inventario`, `/compras`, `/personas`). Las
-  pantallas se construyen una a una; hasta entonces cada ruta tiene su guarda y su título.
+  `/empezar`; con negocio, al marco de la aplicación (`/`, `/catalogo`, `/inventario`, `/compras`, `/personas`). Cada
+  ruta tiene su guarda, la misma tabla de permisos que usa el menú.
 - **Sin conexión:** una pantalla que lista o cambia algo necesita al servidor y lo dice («Esta pantalla necesita
   conexión») en vez de mostrarse vacía. La base local del Ciclo 3 es lo que lo cambiará.
 
@@ -203,6 +203,42 @@ Cómo entra una persona y qué ve según su rol (ADR 0017, 0022 y 0024). Todo es
 
 **Diseño:** el catálogo, el formulario del producto (también el caso del SKU repetido) y las categorías están en la
 [página de Ciclo 2 de Figma](https://www.figma.com/design/BDeOxwJeQ3AfUThABfmC3L?node-id=3-181).
+
+### Inventario y compras
+
+| Ruta                      | Pantalla                 | Quién la ve                                                             |
+| ------------------------- | ------------------------ | ----------------------------------------------------------------------- |
+| `/inventario`             | Existencias              | Todos los roles (`stock:view`)                                          |
+| `/inventario/:id`         | Historial de un producto | Igual; quien ajusta (`stock:adjust`: dueño y administrador) ve el botón |
+| `/inventario/:id/ajustar` | Ajustar existencia       | Quien ajusta                                                            |
+| `/compras`                | Compras                  | Quien registra compras (`purchase:create`: dueño y administrador)       |
+| `/compras/nueva`          | Nueva compra             | Igual                                                                   |
+| `/compras/proveedores`    | Proveedores              | Igual                                                                   |
+
+- **La existencia nunca se edita a mano** (ADR 0013): es la suma de los movimientos. Un ajuste es un movimiento más, con un
+  motivo **obligatorio** (hasta 500 letras) que queda escrito en el historial. La pantalla pide si **suma o resta** sin
+  elegir por la persona, y dice cuánto quedaría («Quedarían 4 und.», también si queda negativa).
+- **Las operaciones que no se pueden repetir llevan su llave** (ADR 0019): cada pantalla de ajuste o de compra genera un
+  `operationId` **una sola vez**. Si el envío falla (se cayó la conexión antes de ver la respuesta), reintentar usa **la misma**
+  llave y el servidor no ajusta ni suma dos veces. Si la respuesta dice que ya lo había hecho (`Idempotent-Replayed`), la
+  pantalla lo dice («Ya estaba registrada…»). Si la persona cambia los datos tras un fallo incierto y el servidor dice
+  `operation-id-reused`, se le manda a revisar lo que ya quedó guardado.
+- **Existencias:** busca por nombre, SKU o código de barras, filtra «Por debajo del mínimo» (la alerta se dice con palabras
+  además del color: «Bajo el mínimo»; una existencia negativa lleva «Negativa») y carga de 50 en 50. Un producto archivado
+  sigue apareciendo con su etiqueta.
+- **Historial:** lo más nuevo primero, con el signo del movimiento (`+ 24`, `− 2`), su motivo y el momento. La API no da la
+  existencia de **un** producto: se averigua su SKU y se busca entre las existencias.
+- **Compra:** un proveedor opcional, una nota opcional y una o más líneas (producto activo, cantidad en su unidad y costo por
+  unidad en pesos enteros). El producto se busca como en el catálogo y **no se repite** en otra línea. Si la línea que se está
+  escribiendo está completa al registrar, se suma sola para no perderla; si está a medias, se dice qué le falta. Lo que el
+  servidor objeta de una línea (`/lines/1/productId`…) se muestra **en esa línea**.
+- **Proveedores:** agregar, cambiar el nombre y el contacto y borrar (con confirmación); si ya tiene compras, dice por qué no
+  se puede borrar.
+- **Lo que no hace todavía:** la lista de compras no abre el detalle de cada una (la API lo da en `GET /v1/purchases/{id}`) y
+  no calcula totales (el servidor no los devuelve, y una cantidad con decimales por un costo no siempre da pesos enteros).
+
+**Diseño:** las existencias, el historial, el ajuste, las compras, la nueva compra, la línea con problema, la compra repetida y
+los proveedores están en la [página de Ciclo 2 de Figma](https://www.figma.com/design/BDeOxwJeQ3AfUThABfmC3L?node-id=3-181).
 
 ## Contrato OpenAPI
 
