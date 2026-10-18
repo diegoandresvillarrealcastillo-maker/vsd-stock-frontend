@@ -72,7 +72,11 @@ export function failureMessage(failure: ApiFailure): string {
     return 'No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.';
   }
   if (failure.class === 'session') return 'Tu sesión terminó. Ingresa de nuevo.';
-  const known = failure.problem === null ? undefined : PROBLEM_MESSAGES[failure.problem.code];
+  const code = failure.problem?.code;
+  const known =
+    code !== undefined && Object.hasOwn(PROBLEM_MESSAGES, code)
+      ? PROBLEM_MESSAGES[code]
+      : undefined;
   if (known !== undefined) return known;
   if (failure.class === 'transient') {
     return failure.retryAfterMs === null

@@ -171,4 +171,38 @@ describe('AppRoutes', () => {
       expect(await heading('Unirme a un negocio')).toBeDefined();
     });
   });
+
+  describe('what each screen of the menu really is', () => {
+    it('shows the people of the business at «personas», and not only a title', async () => {
+      renderAt('/personas', { role: 'admin' });
+
+      expect(
+        await screen.findByText('Quién trabaja en tu negocio y qué puede hacer.'),
+      ).toBeDefined();
+    });
+
+    it('shows the sign-in form at «ingresar», and not only a title', () => {
+      renderAt('/ingresar');
+
+      expect(screen.getByLabelText('Correo')).toBeDefined();
+      expect(screen.getByLabelText('Contraseña')).toBeDefined();
+    });
+  });
+
+  describe('what each screen of the menu really is', () => {
+    it('shows the people of the business at «personas», and not only a title', async () => {
+      renderAt('/personas', { role: 'admin' });
+
+      expect(
+        await screen.findByText('Quién trabaja en tu negocio y qué puede hacer.'),
+      ).toBeDefined();
+    });
+
+    it('shows the sign-in form at «ingresar», and not only a title', () => {
+      renderAt('/ingresar');
+
+      expect(screen.getByLabelText('Correo')).toBeDefined();
+      expect(screen.getByLabelText('Contraseña')).toBeDefined();
+    });
+  });
 });

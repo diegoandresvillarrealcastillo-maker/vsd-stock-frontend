@@ -175,4 +175,15 @@ describe('the owners of a business', () => {
   it('is empty when there is none', () => {
     expect(activeOwners([person()])).toEqual([]);
   });
+
+  it('does not believe a person without the field of the invitation, which the contract always sends', () => {
+    const { invitationExpiresAt: _omitted, ...rest } = wire();
+
+    expect(parsePerson(rest)).toBeNull();
+  });
+
+  it('does not believe a date that is not text, even if it could be turned into one', () => {
+    expect(parsePerson(wire({ createdAt: 1_760_000_000_000 }))).toBeNull();
+    expect(parsePerson(wire({ invitationExpiresAt: 1_760_000_000_000 }))).toBeNull();
+  });
 });
