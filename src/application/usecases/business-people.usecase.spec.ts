@@ -219,7 +219,7 @@ describe('BusinessPeopleUseCase', () => {
       await useCase.updatePerson('p1', { role: 'admin' });
       await useCase.updatePerson('p1', { active: false });
 
-      expect(sent.map((r) => [r.method, r.path, r.body])).toEqual([
+      expect(sent.map((r) => [r.method, r.path, r.body])).toStrictEqual([
         ['PATCH', '/v1/users/p1', { fullName: 'Nuevo' }],
         ['PATCH', '/v1/users/p1', { role: 'admin' }],
         ['PATCH', '/v1/users/p1', { active: false }],
@@ -259,6 +259,64 @@ describe('BusinessPeopleUseCase', () => {
 
       expect(sent).toEqual([{ method: 'POST', path: '/v1/users/p9/invitation' }]);
       expect(invitation.code).toBe('ABCD-EFGH-JKMN-PQRS');
+    });
+  });
+
+  describe('what a membership has to carry to be believed', () => {
+    it.each(['userId', 'businessId', 'businessName', 'fullName', 'role'])(
+      'does not believe an answer without «%s»',
+      async (field) => {
+        const { [field]: _omitted, ...rest } = membership as Record<string, unknown>;
+        const { useCase } = setup(rest, rest);
+
+        expect(
+          await failedWith(useCase.createBusiness({ businessName: 'T', ownerName: 'A' })),
+        ).toBeInstanceOf(ApiError);
+        expect(await failedWith(useCase.redeemInvitation('ABCD'))).toBeInstanceOf(ApiError);
+      },
+    );
+
+    it('does not believe a role that does not exist, nor a list in place of the membership', async () => {
+      const { useCase } = setup({ ...membership, role: 'constructor' }, [membership]);
+
+      expect(
+        await failedWith(useCase.createBusiness({ businessName: 'T', ownerName: 'A' })),
+      ).toBeInstanceOf(ApiError);
+      expect(await failedWith(useCase.redeemInvitation('ABCD'))).toBeInstanceOf(ApiError);
+    });
+
+    it('says which status the strange answer had, so whoever reads the log can tell', async () => {
+      const { useCase } = setup({ odd: true });
+
+      const error = await failedWith(useCase.createBusiness({ businessName: 'T', ownerName: 'A' }));
+
+      expect((error as ApiError).failure.status).toBe(200);
+    });
+  });
+
+  describe('sending only what is given', () => {
+    it('never sends a field that was not given, not even as undefined', async () => {
+      const { sent, useCase } = setup(wirePerson('p1'));
+
+      await useCase.updatePerson('p1', { role: 'admin' });
+
+      expect(Object.keys(sent[0]?.body as object)).toEqual(['role']);
+    });
+
+    it('sends the active flag when it is false, which is a value and not an absence', async () => {
+      const { sent, useCase } = setup(wirePerson('p1'));
+
+      await useCase.updatePerson('p1', { active: false });
+
+      expect(Object.keys(sent[0]?.body as object)).toEqual(['active']);
+    });
+
+    it('sends the identifier of the person as a path when renewing too', async () => {
+      const { sent, useCase } = setup(wireInvitation('p9'));
+
+      await useCase.renewInvitation('a/b?c');
+
+      expect(sent[0]?.path).toBe('/v1/users/a%2Fb%3Fc/invitation');
     });
   });
 });

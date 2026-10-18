@@ -356,4 +356,107 @@ describe('CatalogPage', () => {
       expect(await screen.findByText('Guardamos «Arroz 500 g».')).toBeDefined();
     });
   });
+
+  describe('what it can not know', () => {
+    it('shows only the SKU of a product with no category while the categories are unknown', async () => {
+      const catalog = createFakeCatalog([PANELA], CATEGORIES);
+      catalog.listAllCategories.mockRejectedValue(failure);
+      setup('owner', catalog);
+
+      await screen.findByText('Panela');
+
+      expect(rows()[0]?.textContent).toContain('PAN-1');
+      expect(rows()[0]?.textContent).not.toContain('Sin categoría');
+    });
+
+    it('offers nothing to manage when it does not know who is asking', async () => {
+      const auth = createTestAuth({ stored: testSession('ana') });
+      auth.answer({ identity: { id: 'ana', email: 'ana@example.com' }, membership: null });
+      renderScreen(<CatalogPage />, {
+        path: '/catalogo',
+        auth,
+        catalog: createFakeCatalog([ARROZ], CATEGORIES),
+      });
+
+      await screen.findByText('Arroz 500 g');
+
+      expect(screen.queryByRole('link', { name: 'Nuevo producto' })).toBeNull();
+      expect(screen.queryByRole('link', { name: /Arroz 500 g/ })).toBeNull();
+      expect(screen.queryByRole('link', { name: /Ver y cambiar categorías/ })).toBeNull();
+    });
+
+    it('ignores a notice that is not text', async () => {
+      const auth = createTestAuth({ stored: testSession('ana') });
+      auth.answer(testMe('ana', 'owner'));
+      renderScreen(<CatalogPage />, {
+        path: '/catalogo',
+        state: { notice: 5 },
+        auth,
+        catalog: createFakeCatalog([ARROZ], CATEGORIES),
+      });
+
+      await screen.findByText('Arroz 500 g');
+
+      expect(screen.queryByRole('status')).toBeNull();
+    });
+
+    it('says there are no archived products, which is not the same as having none', async () => {
+      setup('owner', createFakeCatalog([], CATEGORIES));
+      await screen.findByText('Todavía no tienes productos.');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Archivados' }));
+
+      expect(await screen.findByText('No hay productos archivados.')).toBeDefined();
+    });
+  });
+
+  describe('typing in the search box', () => {
+    it('asks by itself for what was typed without the spaces around it', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const { catalog } = setup();
+      await screen.findByText('Arroz 500 g');
+
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar' }), {
+        target: { value: '  aceite  ' },
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(400);
+      });
+
+      expect(catalog.listProducts).toHaveBeenLastCalledWith({ active: true, search: 'aceite' });
+    });
+
+    it('forgets the wait of the earlier key: it does not ask for what was typed before the last key', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const { catalog } = setup();
+      await screen.findByText('Arroz 500 g');
+      const box = screen.getByRole('searchbox', { name: 'Buscar' });
+
+      fireEvent.change(box, { target: { value: 'a' } });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200);
+      });
+      fireEvent.change(box, { target: { value: 'ac' } });
+      // Ya paso lo que esperaba la primera tecla (300 ms), pero la segunda sigue esperando.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(150);
+      });
+      expect(catalog.listProducts).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200);
+      });
+
+      expect(catalog.listProducts).toHaveBeenCalledTimes(2);
+      expect(catalog.listProducts).toHaveBeenLastCalledWith({ active: true, search: 'ac' });
+    });
+
+    it('does not let the browser reload the page when the search is sent with Enter', async () => {
+      setup();
+      await screen.findByText('Arroz 500 g');
+
+      const notCancelled = fireEvent.submit(screen.getByRole('search'));
+
+      expect(notCancelled).toBe(false);
+    });
+  });
 });

@@ -1,6 +1,7 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../domain/model/api-error';
+import type { Category } from '../../domain/model/catalog';
 import type { Problem } from '../../domain/model/problem';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createFakeCatalog, testCategory } from '../../../test/support/catalog';
@@ -33,6 +34,16 @@ const refused = (code: string) =>
     retryAfterMs: null,
   });
 const network = new ApiError({ class: 'network', status: null, problem: null, retryAfterMs: null });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
 
 const names = () =>
   within(screen.getByRole('list', { name: 'Categorías' }))
@@ -283,6 +294,115 @@ describe('CategoriesPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sí, borrar' }));
 
       expect(await screen.findByText('No pudimos borrar «Granos»')).toBeDefined();
+    });
+  });
+
+  describe('what goes away when the person does something else', () => {
+    it('the server message about the new name, as soon as the person writes again', async () => {
+      const catalog = createFakeCatalog([], [GRANOS]);
+      catalog.createCategory.mockRejectedValue(network);
+      setup(catalog);
+      await screen.findByText('Granos');
+      fireEvent.change(screen.getByLabelText('Nueva categoría'), { target: { value: 'Bebidas' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Agregar categoría' }));
+      await screen.findByText('No pudimos agregar la categoría');
+
+      fireEvent.change(screen.getByLabelText('Nueva categoría'), { target: { value: 'Bebida' } });
+
+      expect(screen.queryByText('No pudimos agregar la categoría')).toBeNull();
+    });
+
+    it('the question about deleting, when another category starts to be renamed', async () => {
+      setup();
+      await screen.findByText('Granos');
+      fireEvent.click(within(row('Granos')).getByRole('button', { name: 'Borrar' }));
+      expect(screen.getByText('¿Borrar «Granos»?')).toBeDefined();
+
+      fireEvent.click(within(row('Aseo y cocina')).getByRole('button', { name: 'Cambiar nombre' }));
+
+      expect(screen.queryByText('¿Borrar «Granos»?')).toBeNull();
+      expect(screen.getByLabelText('Nuevo nombre de «Aseo y cocina»')).toBeDefined();
+    });
+
+    it('the editor, when the person asks about deleting another category', async () => {
+      setup();
+      await screen.findByText('Granos');
+      fireEvent.click(within(row('Granos')).getByRole('button', { name: 'Cambiar nombre' }));
+      expect(screen.getByLabelText('Nuevo nombre de «Granos»')).toBeDefined();
+
+      fireEvent.click(within(row('Aseo y cocina')).getByRole('button', { name: 'Borrar' }));
+
+      expect(screen.queryByLabelText('Nuevo nombre de «Granos»')).toBeNull();
+      expect(screen.getByText('¿Borrar «Aseo y cocina»?')).toBeDefined();
+    });
+
+    it('why the last delete failed, when another category starts to be renamed', async () => {
+      const catalog = createFakeCatalog([], [GRANOS, ASEO]);
+      catalog.deleteCategory.mockRejectedValue(refused('category-in-use'));
+      setup(catalog);
+      await screen.findByText('Granos');
+      fireEvent.click(within(row('Granos')).getByRole('button', { name: 'Borrar' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, borrar' }));
+      await screen.findByText('No se puede borrar «Granos»');
+
+      fireEvent.click(within(row('Aseo y cocina')).getByRole('button', { name: 'Cambiar nombre' }));
+
+      expect(screen.queryByText('No se puede borrar «Granos»')).toBeNull();
+    });
+
+    it('why the last rename failed, when the person asks about deleting another category', async () => {
+      const catalog = createFakeCatalog([], [GRANOS, ASEO]);
+      catalog.renameCategory.mockRejectedValue(network);
+      setup(catalog);
+      await screen.findByText('Granos');
+      fireEvent.click(within(row('Granos')).getByRole('button', { name: 'Cambiar nombre' }));
+      fireEvent.change(screen.getByLabelText('Nuevo nombre de «Granos»'), {
+        target: { value: 'Cereales' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+      // El titulo dice cual cambio no se hizo.
+      await screen.findByText('No pudimos cambiar el nombre de «Granos»');
+
+      fireEvent.click(within(row('Aseo y cocina')).getByRole('button', { name: 'Borrar' }));
+
+      expect(screen.queryByText('No pudimos cambiar el nombre de «Granos»')).toBeNull();
+    });
+  });
+
+  describe('while the list is asked again', () => {
+    it('keeps the list it had, without the skeleton, and closes the question at once when it deletes', async () => {
+      const catalog = createFakeCatalog([], [GRANOS, ASEO]);
+      setup(catalog);
+      await screen.findByText('Granos');
+      const reloading = deferred<Category[]>();
+      catalog.listAllCategories.mockReturnValue(reloading.promise);
+
+      fireEvent.click(within(row('Granos')).getByRole('button', { name: 'Borrar' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, borrar' }));
+
+      expect(await screen.findByText('Borramos «Granos».')).toBeDefined();
+      expect(screen.queryByText('¿Borrar «Granos»?')).toBeNull();
+      expect(names()).toEqual(['Granos', 'Aseo y cocina']);
+      expect(screen.queryByText(/Cargando categorías/)).toBeNull();
+    });
+
+    it('hides the list and says it could not load when asking again fails', async () => {
+      const catalog = createFakeCatalog([], [GRANOS, ASEO]);
+      setup(catalog);
+      await screen.findByText('Granos');
+      const reloading = deferred<Category[]>();
+      catalog.listAllCategories.mockReturnValue(reloading.promise);
+      fireEvent.change(screen.getByLabelText('Nueva categoría'), { target: { value: 'Bebidas' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Agregar categoría' }));
+      await screen.findByText('Agregamos «Bebidas».');
+
+      await act(async () => {
+        reloading.reject(network);
+        await Promise.resolve();
+      });
+
+      expect(await screen.findByText('No pudimos cargar las categorías')).toBeDefined();
+      expect(screen.queryByRole('list', { name: 'Categorías' })).toBeNull();
     });
   });
 });

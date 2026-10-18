@@ -157,4 +157,13 @@ describe('taxLabel', () => {
   ])('writes %i basis points as «%s»', (bp, label) => {
     expect(taxLabel(bp)).toBe(label);
   });
+
+  it.each(['barcode', 'categoryId', 'minStockMilli', 'updatedAt'])(
+    'does not believe a product that leaves out «%s», which the contract always sends (null when it is empty)',
+    (field) => {
+      const { [field]: _omitted, ...rest } = PRODUCT as Record<string, unknown>;
+
+      expect(parseProduct(rest)).toBeNull();
+    },
+  );
 });

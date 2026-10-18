@@ -233,4 +233,55 @@ describe('what any error that reaches a form becomes', () => {
       'network',
     );
   });
+
+  describe('how long the server asks to wait', () => {
+    const wait = (retryAfterMs: number | null) =>
+      failureMessage(failure({ class: 'transient', status: 429, retryAfterMs }));
+
+    it.each([
+      [0, 'El servidor pide esperar 1 segundo antes de volver a intentarlo.'],
+      [400, 'El servidor pide esperar 1 segundo antes de volver a intentarlo.'],
+      [1_500, 'El servidor pide esperar 2 segundos antes de volver a intentarlo.'],
+      [59_000, 'El servidor pide esperar 59 segundos antes de volver a intentarlo.'],
+      [60_000, 'El servidor pide esperar 1 minuto antes de volver a intentarlo.'],
+      [120_000, 'El servidor pide esperar 2 minutos antes de volver a intentarlo.'],
+    ])('says %i ms as «%s»', (milliseconds, words) => {
+      expect(wait(milliseconds)).toBe(words);
+    });
+  });
+
+  describe('a code the server sends that this client does not know', () => {
+    it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])(
+      'does not take «%s» for a code with a sentence: it says something general',
+      (code) => {
+        const message = failureMessage(failure({ problem: problem(code) }));
+
+        expect(typeof message).toBe('string');
+        expect(message).toBe(
+          'No pudimos completar esto. Inténtalo de nuevo; si sigue igual, avisa a quien administra el sistema.',
+        );
+      },
+    );
+  });
+
+  describe('the problems of each field, again', () => {
+    it('only a validation failure carries fields: another code with errors does not', () => {
+      const withErrors = failure({
+        problem: problem('forbidden', [{ pointer: '/x', code: 'c', detail: 'no' }]),
+      });
+
+      expect(fieldErrors(withErrors)).toEqual({});
+    });
+
+    it('reads a pointer that is also the name of something every object has', () => {
+      const withErrors = failure({
+        problem: problem('validation-failed', [
+          { pointer: 'toString', code: 'c', detail: 'primero' },
+          { pointer: 'toString', code: 'c', detail: 'segundo' },
+        ]),
+      });
+
+      expect(fieldErrors(withErrors)).toEqual({ toString: 'primero' });
+    });
+  });
 });

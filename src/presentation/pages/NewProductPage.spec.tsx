@@ -437,4 +437,89 @@ describe('NewProductPage', () => {
       expect(await screen.findByLabelText('Nombre')).toBeDefined();
     });
   });
+
+  describe('what is sent and what goes away', () => {
+    it('sends the SKU without the spaces around it', async () => {
+      const { catalog } = setup();
+      await fillBasics();
+      type('SKU (código interno)', '  ARR-500  ');
+
+      save();
+
+      await screen.findByText('/catalogo');
+      expect(catalog.createProduct).toHaveBeenCalledWith(
+        expect.objectContaining({ sku: 'ARR-500' }),
+      );
+    });
+
+    it('says it plainly when the one that has the barcode is active', async () => {
+      const catalog = createFakeCatalog([], CATEGORIES);
+      catalog.createProduct.mockRejectedValue(refused('barcode-taken'));
+      catalog.findProductByCode.mockResolvedValue(
+        testProduct({ id: 'otro', name: 'Arroz Diana 500 g', barcode: '7701234567897' }),
+      );
+      setup(catalog);
+      await fillBasics();
+      type('Código de barras (opcional)', '7701234567897');
+
+      save();
+
+      expect(await screen.findByText('Ese código ya es de «Arroz Diana 500 g».')).toBeDefined();
+      expect(screen.queryByText(/archivado/)).toBeNull();
+    });
+
+    it('encodes the id of the product that has the code in the link to it', async () => {
+      const catalog = createFakeCatalog([], CATEGORIES);
+      catalog.createProduct.mockRejectedValue(refused('sku-taken'));
+      catalog.findProductByCode.mockResolvedValue(
+        testProduct({ id: 'a/b', name: 'Raro', sku: 'ARR-500' }),
+      );
+      setup(catalog);
+      await fillBasics();
+
+      save();
+
+      const link = await screen.findByRole('link', { name: 'Ver el producto' });
+      expect(link.getAttribute('href')).toBe('/catalogo/a%2Fb');
+    });
+
+    it('takes away who has the SKU as soon as the person writes another one', async () => {
+      const catalog = createFakeCatalog([], CATEGORIES);
+      catalog.createProduct.mockRejectedValue(refused('sku-taken'));
+      catalog.findProductByCode.mockResolvedValue(
+        testProduct({ id: 'otro', name: 'Arroz Diana 500 g', sku: 'ARR-500' }),
+      );
+      setup(catalog);
+      await fillBasics();
+      save();
+      await screen.findByText('ARR-500 es de «Arroz Diana 500 g». Usa otro SKU.');
+
+      type('SKU (código interno)', 'ARR-501');
+
+      expect(screen.queryByText('ARR-500 es de «Arroz Diana 500 g». Usa otro SKU.')).toBeNull();
+      expect(screen.queryByRole('link', { name: 'Ver el producto' })).toBeNull();
+    });
+
+    it('takes away what the server said as soon as the person writes again', async () => {
+      const catalog = createFakeCatalog([], CATEGORIES);
+      catalog.createProduct.mockRejectedValue(network);
+      setup(catalog);
+      await fillBasics();
+      save();
+      await screen.findByText('No pudimos guardar el producto');
+
+      type('Nombre', 'Arroz');
+
+      expect(screen.queryByText('No pudimos guardar el producto')).toBeNull();
+    });
+
+    it('does not take a value that is not one of the units for a unit', async () => {
+      setup();
+      await screen.findByLabelText('Nombre');
+
+      fireEvent.change(screen.getByLabelText('Unidad'), { target: { value: 'caja-rara' } });
+
+      expect(screen.getByLabelText<HTMLSelectElement>('Unidad').value).toBe('unit');
+    });
+  });
 });

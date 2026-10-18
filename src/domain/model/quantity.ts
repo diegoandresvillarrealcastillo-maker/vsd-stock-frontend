@@ -50,7 +50,7 @@ export function parsePesos(text: string): Parsed {
       message: 'Escribe solo números, sin puntos, comas ni símbolos. Por ejemplo: 3200.',
     };
   }
-  if (trimmed.length > 13 || Number(trimmed) > MAX_PESOS) {
+  if (Number(trimmed) > MAX_PESOS) {
     return { ok: false, message: 'Ese precio es demasiado alto.' };
   }
   return { ok: true, value: Number(trimmed) };
@@ -81,7 +81,7 @@ export function parseQuantityMilli(text: string, options: { whole: boolean }): P
   const decimals = match[2] ?? '';
   if (decimals.length > 3) return { ok: false, message: 'Se aceptan hasta tres decimales.' };
   const milli = Number(integer) * 1000 + Number(decimals.padEnd(3, '0'));
-  if (integer.length > 7 || milli > MAX_QUANTITY_MILLI) {
+  if (milli > MAX_QUANTITY_MILLI) {
     return { ok: false, message: 'Esa cantidad es demasiado alta.' };
   }
   if (options.whole && milli % 1000 !== 0) {
