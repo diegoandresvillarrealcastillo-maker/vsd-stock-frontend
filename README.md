@@ -394,6 +394,8 @@ naranja del logo (`#f97801`) solo como acento.**
 
 - Cómo contribuir (ramas, commits, PR, comprobaciones, contrato y diseño): [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Rendimiento y Lighthouse: [`docs/rendimiento.md`](docs/rendimiento.md).
+- El recorrido de la aplicación completa con el que se cierra cada ciclo, paso a paso y con lo que debe pasar:
+  [`docs/recorrido-del-ciclo-2.md`](docs/recorrido-del-ciclo-2.md).
 - Todos los ADR del proyecto, también los de este repositorio, viven en el backend:
   [`vsd-stock-backend/docs/adr`](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/tree/desarrollo/docs/adr).
 - El flujo de trabajo (ramas, Issues, commits y PR) está en el
