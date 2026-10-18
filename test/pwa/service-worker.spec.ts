@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { runInNewContext } from 'node:vm';
+import { Script } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import { composeServiceWorker } from '../../scripts/build-service-worker';
 
@@ -74,7 +74,14 @@ function deploy({ precache = PRECACHE } = {}) {
   };
   const caches = new FakeCaches();
   const network = vi.fn((request: unknown) => Promise.resolve(`red: ${JSON.stringify(request)}`));
-  runInNewContext(code, { self: scope, caches, fetch: network, URL, Set, Promise });
+  new Script(code, { filename: 'sw.js' }).runInNewContext({
+    self: scope,
+    caches,
+    fetch: network,
+    URL,
+    Set,
+    Promise,
+  });
 
   /** El navegador pide algo: devuelve lo que el service worker contesto, o `undefined` si no quiso atenderlo. */
   const ask = async (url: string, { method = 'GET', mode = 'cors' } = {}) => {
