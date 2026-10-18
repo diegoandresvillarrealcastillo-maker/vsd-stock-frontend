@@ -113,14 +113,50 @@ Una dirección mal escrita detiene el arranque con un mensaje que nombra la vari
 tiene su icono (un punto que pulsa, un check, una nube tachada) y su texto, y el panel es una región `status`,
 así que un lector de pantalla anuncia los cambios.
 
+## Sesión, cuenta y navegación
+
+Cómo entra una persona y qué ve según su rol (ADR 0017, 0022 y 0024). Todo esto vive en `domain/`, `application/` y
+`adapters/`: la interfaz solo lo consume.
+
+- **La sesión vive solo en memoria** (`MemorySessionStore`): ni almacenamiento local, ni cookies, ni la base del
+  dispositivo. **Recargar la página la pierde a propósito**: es lo que evita dejar una credencial en el equipo de otra
+  persona. El token de renovación tampoco se guarda en ningún lado.
+- **El navegador habla directo con Supabase Auth** (`HttpIdentityService`, con `fetch` y sin biblioteca): entrar
+  (`/token?grant_type=password`), registrar, renovar y salir. Los límites de uso de Supabase se cuentan por IP y detrás de
+  un proxy todas las personas compartirían la de la API. Se configura al compilar con `VITE_AUTH_URL` y
+  `VITE_AUTH_PUBLISHABLE_KEY` (ver [`.env.example`](.env.example)): van **juntas o ninguna**, y la clave es la
+  **publicable**; una clave secreta (`sb_secret_…` o `service_role`) detiene el arranque, porque lo que se compila en un
+  navegador lo lee cualquiera. Sin ninguna, la aplicación arranca y al intentar entrar dice que el servicio no está
+  disponible (no que la clave esté mal).
+- **El token se renueva solo** un minuto antes de vencer, una renovación a la vez aunque muchas pantallas lo pidan. Un
+  fallo pasajero (sin red, servicio caído o con límite de uso) **no cierra la sesión**: se reintenta. Solo cierra una
+  respuesta del servicio que dice que el token ya no sirve.
+- **La API recibe el token de la sesión** (`HttpApiGateway`) y nada más: solo acepta rutas (`/v1/...`), nunca
+  direcciones completas, para que el token no pueda salir hacia otro servidor. Lee `Retry-After` y
+  `Idempotent-Replayed`, y clasifica cada fallo en las clases del [ADR 0009](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0009-motor-offline-y-libro-de-movimientos.md).
+- **«Quién soy»** es `GET /v1/me`: la persona y, si ya trabaja en un negocio, su rol. Una cuenta pasa por cuatro estados
+  (`useAccount`): sin sesión, cargando, lista, o **falló** (hay sesión pero no se pudo preguntar; se conserva y se puede
+  reintentar o cerrar).
+- **Las pantallas por rol** salen de `contract/permissions.json`, una copia **exacta** de la tabla de permisos del backend
+  (`npm run contract:sync` la trae y `contract:check` la compara). El menú solo ofrece lo que el rol puede usar y quien
+  escribe la dirección a mano ve «No tienes acceso». **Es cortesía, no seguridad:** el servidor aplica la misma tabla en
+  cada petición.
+- **Las puertas de las rutas** (`presentation/routes/`): sin sesión, todo lleva a `/ingresar`; con sesión y sin negocio, a
+  `/empezar`; con negocio, al marco de la aplicación (`/`, `/catalogo`, `/inventario`, `/compras`, `/personas`). Las
+  pantallas se construyen una a una; hasta entonces cada ruta tiene su guarda y su título.
+- **Sin conexión:** una pantalla que lista o cambia algo necesita al servidor y lo dice («Esta pantalla necesita
+  conexión») en vez de mostrarse vacía. La base local del Ciclo 3 es lo que lo cambiará.
+
 ## Contrato OpenAPI
 
-El único acoplamiento con el backend es su contrato (ADR 0001). Aquí vive de cuatro formas:
+El único acoplamiento con el backend es su contrato (ADR 0001). Aquí vive de cinco formas:
 
 - [`contract/openapi.json`](contract/openapi.json): una copia **exacta** del contrato del backend. No se edita
   a mano.
 - [`contract/calculation-vectors.json`](contract/calculation-vectors.json): una copia **exacta** de los vectores de
   cálculo del backend (ver abajo). Tampoco se edita a mano.
+- [`contract/permissions.json`](contract/permissions.json): una copia **exacta** de la tabla de permisos por rol del
+  backend (ADR 0017). De ella salen el menú y las guardas de las rutas.
 - [`src/adapters/out/api/schema.d.ts`](src/adapters/out/api/schema.d.ts): los tipos que `openapi-typescript`
   (solo de desarrollo) genera de esa copia. Solo tienen tipos: no pesan nada en el navegador, y tampoco entra una
   biblioteca de cliente HTTP, el adaptador usa `fetch`.

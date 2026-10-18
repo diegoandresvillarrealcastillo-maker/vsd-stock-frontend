@@ -24,6 +24,434 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comprueba que el servicio puede atender peticiones de negocio
+         * @description No requiere sesión. Comprueba lo que el servicio necesita para trabajar: hoy, la base de datos. Responde 503 con `database-unavailable` si la base no responde y con `database-not-configured` si nunca se configuró.
+         */
+        get: operations["ReadinessController_ready"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quién soy
+         * @description Devuelve a la persona que demuestra el token y, si ya tiene negocio, el suyo y su rol. El negocio y el rol salen de la base de datos, nunca del token. Una persona que se registró pero aún no tiene negocio recibe `membership: null`. Responde 401 si el token falta o no sirve (`token-expired` si solo venció) y 403 `user-inactive` si fue dada de baja.
+         */
+        get: operations["MeController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/businesses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abrir un negocio
+         * @description Lo hace quien se registró y aún no pertenece a ningún negocio: queda como su dueño. El negocio nace con una sucursal y una bodega, ambas «Principal». Responde 409 `already-member` si la persona ya trabaja en un negocio.
+         */
+        post: operations["BusinessesController_open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invitar a alguien al negocio
+         * @description Crea la invitación y devuelve su código **una sola vez**. El servidor solo guarda su hash. La invitación vale siete días. Un administrador invita cajeros; invitar administradores es del dueño.
+         */
+        post: operations["InvitationsController_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invitations/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Canjear una invitación
+         * @description Une a quien llama al negocio del código, con el rol con que lo invitaron. Un código sirve una sola vez. Responde 404 `invitation-not-found` si no existe, ya se usó o se dio de baja (el mismo mensaje para todo), 410 `invitation-expired` si venció y 409 `already-member` si la persona ya trabaja en un negocio.
+         */
+        post: operations["InvitationsController_redeem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las personas del negocio
+         * @description Ordenadas por nombre. Las ve la gerencia (dueño y administradores). Pagina por cursor (ADR 0019).
+         */
+        get: operations["UsersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar a una persona
+         * @description Cambia el nombre, el rol o el alta (`active`). Al cajero lo administra la gerencia; a un administrador o a un dueño, solo el dueño. Nunca deja al negocio sin un dueño activo (409 `last-owner`). Una persona dada de baja pierde el acceso en su siguiente petición.
+         */
+        patch: operations["UsersController_update"];
+        trace?: never;
+    };
+    "/v1/users/{userId}/invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Renovar una invitación
+         * @description Da un código nuevo a una invitación pendiente (se perdió o venció); el anterior deja de servir. Responde 409 `invitation-not-pending` si la persona ya canjeó la suya o está dada de baja.
+         */
+        post: operations["UsersController_renew"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las categorías del negocio
+         * @description Ordenadas por nombre. Las ven los tres roles. Pagina por cursor (ADR 0019).
+         */
+        get: operations["CategoriesController_list"];
+        put?: never;
+        /**
+         * Crear una categoría
+         * @description Es de la gerencia (`product:manage`). El nombre es único en el negocio sin importar mayúsculas (409 `category-name-taken`).
+         */
+        post: operations["CategoriesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/categories/{categoryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar una categoría
+         * @description Es de la gerencia (`product:manage`). Responde 409 `category-in-use` si todavía tiene productos: se mueven o se archivan antes.
+         */
+        delete: operations["CategoriesController_remove"];
+        options?: never;
+        head?: never;
+        /**
+         * Renombrar una categoría
+         * @description Es de la gerencia (`product:manage`).
+         */
+        patch: operations["CategoriesController_rename"];
+        trace?: never;
+    };
+    "/v1/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Los productos del negocio
+         * @description Ordenados por nombre. Los ven los tres roles. `search` busca una parte del nombre o del SKU sin importar mayúsculas, o un código de barras completo. Pagina por cursor (ADR 0019).
+         */
+        get: operations["ProductsController_list"];
+        put?: never;
+        /**
+         * Crear un producto
+         * @description Es de la gerencia (`product:manage`). Nace activo. Responde 409 `sku-taken` o `barcode-taken` si ya hay otro con ese código, y 400 `validation-failed` con todos los campos que no sirven.
+         */
+        post: operations["ProductsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/products/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Un producto
+         * @description Lo ven los tres roles.
+         */
+        get: operations["ProductsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar un producto
+         * @description Es de la gerencia (`product:manage`; cambiar el precio pide además `price:update`). Archivar es `active: false`: un producto con historia no se borra. La unidad no cambia si el producto ya tiene movimientos (409 `unit-locked`).
+         */
+        patch: operations["ProductsController_update"];
+        trace?: never;
+    };
+    "/v1/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Los proveedores del negocio
+         * @description Ordenados por nombre. Es de la gerencia (`purchase:create`). Pagina por cursor (ADR 0019).
+         */
+        get: operations["SuppliersController_list"];
+        put?: never;
+        /**
+         * Crear un proveedor
+         * @description Es de la gerencia (`purchase:create`). Solo lleva nombre y un contacto opcional.
+         */
+        post: operations["SuppliersController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/suppliers/{supplierId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar un proveedor
+         * @description Es de la gerencia (`purchase:create`). Responde 409 `supplier-in-use` si ya tiene compras: son historia y no se tocan.
+         */
+        delete: operations["SuppliersController_remove"];
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar un proveedor
+         * @description Es de la gerencia (`purchase:create`). Al menos un campo; `contact: null` lo borra.
+         */
+        patch: operations["SuppliersController_update"];
+        trace?: never;
+    };
+    "/v1/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las compras del negocio
+         * @description De la más nueva a la más vieja, sin las líneas pero con cuántas tiene cada una (`lineCount`). Es de la gerencia (`purchase:create`). Pagina por cursor (ADR 0019).
+         */
+        get: operations["PurchasesController_list"];
+        put?: never;
+        /**
+         * Registrar una compra
+         * @description Es de la gerencia (`purchase:create`). La compra, sus líneas y la entrada de existencias se guardan juntas o no se guarda nada. Es idempotente por `operationId` (ADR 0019): la primera vez responde 201; repetirla con los mismos datos responde 200 con la misma compra y `Idempotent-Replayed: true`, sin sumar otra vez; con otros datos, 409 `operation-id-reused`. Los problemas de los campos salen juntos en 400 `validation-failed`, con el puntero de cada línea (`/lines/1/productId`).
+         */
+        post: operations["PurchasesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/purchases/{purchaseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Una compra con sus líneas
+         * @description Es de la gerencia (`purchase:create`).
+         */
+        get: operations["PurchasesController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * La bodega del negocio
+         * @description En v2 hay una sola, creada junto con el negocio. La ven los tres roles.
+         */
+        get: operations["WarehouseController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * La existencia de cada producto
+         * @description Ordenada por nombre. La ven los tres roles. `search` busca una parte del nombre o del SKU sin importar mayúsculas, o un código de barras completo; `belowMinimum=true` deja solo los que tienen mínimo y están por debajo de él. Un producto que nunca se movió aparece con cero. Pagina por cursor (ADR 0019).
+         */
+        get: operations["StockController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * El historial de un producto
+         * @description Los movimientos del libro de un producto, del más nuevo al más viejo: ventas, compras, ajustes y anulaciones. Lo ven los tres roles. `productId` es obligatorio; si el producto no existe, 404 `product-not-found`. Pagina por cursor (ADR 0019).
+         */
+        get: operations["StockMovementsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajustar la existencia de un producto
+         * @description Es de la gerencia (`stock:adjust`). Un ajuste es **un movimiento nuevo del libro** con su motivo, nunca una edición del saldo: el saldo lo sube o baja el disparador de la base en la misma transacción. Es idempotente por `operationId` (ADR 0019): la primera vez responde 201; repetirlo con los mismos datos responde 200 con el mismo movimiento y `Idempotent-Replayed: true`, sin ajustar otra vez; con otros datos, 409 `operation-id-reused`. La existencia puede quedar en negativo: el libro cuenta lo que pasó.
+         */
+        post: operations["StockAdjustmentsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -41,6 +469,427 @@ export interface components {
              * @example 2026-10-16T15:30:00.000Z
              */
             timestamp: string;
+        };
+        ReadinessReportDto: {
+            /**
+             * @description Siempre «ok» en una respuesta 200: si el servicio no está listo, responde 503.
+             * @example ok
+             * @enum {string}
+             */
+            status: "ok";
+            /**
+             * @description La base de datos responde.
+             * @example up
+             * @enum {string}
+             */
+            database: "up";
+            /**
+             * Format: date-time
+             * @description Instante en que se comprobó, en ISO 8601 y en UTC.
+             * @example 2026-10-17T15:30:00.000Z
+             */
+            timestamp: string;
+        };
+        MeIdentityDto: {
+            /**
+             * Format: uuid
+             * @description El identificador de la persona en el servicio de identidad (el `sub` del token).
+             */
+            id: string;
+            /** @description El correo con que se registró, si lo tiene. */
+            email: string | null;
+        };
+        MeMembershipDto: {
+            /**
+             * Format: uuid
+             * @description La persona dentro del negocio.
+             */
+            userId: string;
+            /** Format: uuid */
+            businessId: string;
+            /** @example Tienda La Esquina */
+            businessName: string;
+            /**
+             * @description Su rol en este negocio. Sale de la base de datos, nunca del token.
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "cashier";
+            /** @example Ana Gómez */
+            fullName: string;
+        };
+        MeDto: {
+            identity: components["schemas"]["MeIdentityDto"];
+            /** @description Su lugar en un negocio. `null` si se registró pero aún no creó un negocio ni canjeó una invitación. */
+            membership: components["schemas"]["MeMembershipDto"] | null;
+        };
+        CreateBusinessRequestDto: {
+            /** @example Tienda La Esquina */
+            businessName: string;
+            /**
+             * @description Cómo se llama quien lo abre.
+             * @example Ana Gómez
+             */
+            ownerName: string;
+        };
+        InviteUserRequestDto: {
+            /** @example Luis Pérez */
+            fullName: string;
+            /**
+             * @description Administrador o cajero. Un administrador solo puede invitar cajeros; invitar administradores es del dueño. No se invita a un dueño: se nombra cambiando el rol de una persona que ya está.
+             * @enum {string}
+             */
+            role: "admin" | "cashier";
+            /**
+             * @description Opcional. Se guarda en minúsculas. No se envía ningún correo.
+             * @example luis@ejemplo.co
+             */
+            email?: string;
+        };
+        PersonDto: {
+            /** Format: uuid */
+            id: string;
+            /** @example Luis Pérez */
+            fullName: string;
+            email: string | null;
+            /** @enum {string} */
+            role: "owner" | "admin" | "cashier";
+            /**
+             * @description `pending` es una invitación que nadie canjeó; `inactive`, una persona (o invitación) dada de baja.
+             * @enum {string}
+             */
+            status: "active" | "pending" | "inactive";
+            /**
+             * Format: date-time
+             * @description Hasta cuándo vale su invitación, mientras esté pendiente.
+             */
+            invitationExpiresAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        InvitationCodeDto: {
+            /**
+             * @description El código de la invitación, de cuatro en cuatro para dictarlo. **Se muestra una sola vez**: el servidor solo guarda su hash. Si se pierde, se renueva.
+             * @example 0123-4567-89AB-CDEF
+             */
+            code: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        InvitationDto: {
+            person: components["schemas"]["PersonDto"];
+            invitation: components["schemas"]["InvitationCodeDto"];
+        };
+        RedeemInvitationRequestDto: {
+            /**
+             * @description El código que dieron a la persona. Se acepta en mayúsculas o minúsculas, con o sin guiones y espacios.
+             * @example 0123-4567-89AB-CDEF
+             */
+            code: string;
+        };
+        PersonPageDto: {
+            items: components["schemas"]["PersonDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. Es opaco: no se interpreta. */
+            nextCursor: string | null;
+        };
+        UpdateUserRequestDto: {
+            fullName?: string;
+            /**
+             * @description Cambiar el rol de un cajero a administrador, o de cualquiera a dueño, es del dueño.
+             * @enum {string}
+             */
+            role?: "owner" | "admin" | "cashier";
+            /** @description `false` da de baja a la persona (o revoca su invitación); `true` la reactiva. No se puede dar de baja al último dueño. */
+            active?: boolean;
+        };
+        CategoryDto: {
+            /** Format: uuid */
+            id: string;
+            /** @example Granos */
+            name: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CategoryPageDto: {
+            items: components["schemas"]["CategoryDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
+        };
+        CategoryRequestDto: {
+            /**
+             * @description Único en el negocio sin importar mayúsculas.
+             * @example Granos
+             */
+            name: string;
+        };
+        ProductDto: {
+            /** Format: uuid */
+            id: string;
+            /** @example Arroz 500 g */
+            name: string;
+            /** @example ARR-500 */
+            sku: string;
+            /** @example 7701234567897 */
+            barcode: string | null;
+            /** @enum {string} */
+            unit: "unit" | "kilogram" | "gram" | "pound" | "liter" | "milliliter";
+            /**
+             * @description Pesos enteros, con el IVA incluido.
+             * @example 3200
+             */
+            unitPrice: number;
+            /** @enum {integer} */
+            taxRateBp: 0 | 500 | 1900;
+            /** @description `false` si está archivado. */
+            active: boolean;
+            /** Format: uuid */
+            categoryId: string | null;
+            /** @description Milésimas de la unidad. */
+            minStockMilli: number | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ProductPageDto: {
+            items: components["schemas"]["ProductDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
+        };
+        CreateProductRequestDto: {
+            /** @example Arroz 500 g */
+            name: string;
+            /**
+             * @description El código interno del negocio: letras sin acento, dígitos y `. _ / -`, con espacios sueltos entre grupos. Único en el negocio sin importar mayúsculas.
+             * @example ARR-500
+             */
+            sku: string;
+            /**
+             * @description GTIN de 8, 12, 13 o 14 dígitos con su dígito de control. Único en el negocio: un UPC-A y el EAN-13 que le antepone un cero son el mismo. `null` o ausente: sin código de barras.
+             * @example 7701234567897
+             */
+            barcode?: string | null;
+            /**
+             * @description Cada presentación (unidad, paca, caja) es otro producto.
+             * @enum {string}
+             */
+            unit: "unit" | "kilogram" | "gram" | "pound" | "liter" | "milliliter";
+            /**
+             * @description Pesos enteros, con el IVA incluido (ADR 0014).
+             * @example 3200
+             */
+            unitPrice: number;
+            /**
+             * @description La tarifa de IVA en puntos básicos: 0 (0 %), 500 (5 %) o 1900 (19 %).
+             * @example 0
+             * @enum {integer}
+             */
+            taxRateBp: 0 | 500 | 1900;
+            /** Format: uuid */
+            categoryId?: string | null;
+            /** @description Existencia mínima en milésimas de la unidad, para la alerta de stock mínimo. */
+            minStockMilli?: number | null;
+        };
+        UpdateProductRequestDto: {
+            name?: string;
+            sku?: string;
+            /** @description `null` borra el código de barras. */
+            barcode?: string | null;
+            /**
+             * @description No cambia si el producto ya tiene movimientos de existencias (409 `unit-locked`).
+             * @enum {string}
+             */
+            unit?: "unit" | "kilogram" | "gram" | "pound" | "liter" | "milliliter";
+            /** @description Cambiar el precio es de la gerencia (`price:update`). */
+            unitPrice?: number;
+            /** @enum {integer} */
+            taxRateBp?: 0 | 500 | 1900;
+            /**
+             * Format: uuid
+             * @description `null` quita la categoría.
+             */
+            categoryId?: string | null;
+            /** @description `null` quita el mínimo. */
+            minStockMilli?: number | null;
+            /** @description `false` archiva el producto (no se vende, conserva su historia); `true` lo reactiva. Un producto no se borra. */
+            active?: boolean;
+        };
+        SupplierDto: {
+            /** Format: uuid */
+            id: string;
+            /** @example Distribuidora El Sol */
+            name: string;
+            /** @example 300 123 4567 */
+            contact: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SupplierPageDto: {
+            items: components["schemas"]["SupplierDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
+        };
+        SupplierRequestDto: {
+            /** @example Distribuidora El Sol */
+            name: string;
+            /**
+             * @description Un teléfono, un correo o lo que sirva para llamar. Al cambiar, `null` lo borra.
+             * @example 300 123 4567
+             */
+            contact?: string | null;
+        };
+        PurchaseLineRequestDto: {
+            /**
+             * Format: uuid
+             * @description Un producto activo del negocio. No puede repetirse en otra línea: júntalas.
+             */
+            productId: string;
+            /**
+             * @description Milésimas de la unidad del producto: 24 unidades son 24000 y kilo y medio es 1500. Los productos que se cuentan en unidades enteras no admiten decimales.
+             * @example 24000
+             */
+            quantityMilli: number;
+            /**
+             * @description Pesos enteros que costó cada unidad.
+             * @example 2500
+             */
+            unitCost: number;
+        };
+        CreatePurchaseRequestDto: {
+            /**
+             * Format: uuid
+             * @description La llave de idempotencia: la genera el cliente una vez por compra. Repetir la petición con el mismo `operationId` y los mismos datos devuelve la misma compra (200 y `Idempotent-Replayed: true`) sin sumar de nuevo; con otros datos, 409 `operation-id-reused`.
+             */
+            operationId: string;
+            /**
+             * Format: uuid
+             * @description Un proveedor del negocio. Es opcional.
+             */
+            supplierId?: string | null;
+            note?: string | null;
+            /** @description Un producto por línea. */
+            lines: components["schemas"]["PurchaseLineRequestDto"][];
+        };
+        PurchaseLineDto: {
+            /** Format: uuid */
+            productId: string;
+            /** @description Milésimas de la unidad del producto. */
+            quantityMilli: number;
+            /** @description Pesos enteros por unidad. */
+            unitCost: number;
+        };
+        PurchaseDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            operationId: string;
+            /** Format: uuid */
+            warehouseId: string;
+            /** Format: uuid */
+            supplierId: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            createdByUserId: string | null;
+            /** @description Ordenadas por producto. */
+            lines: components["schemas"]["PurchaseLineDto"][];
+        };
+        PurchaseSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            operationId: string;
+            /** Format: uuid */
+            warehouseId: string;
+            /** Format: uuid */
+            supplierId: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            createdByUserId: string | null;
+            /** @description Cuántas líneas tiene la compra. */
+            lineCount: number;
+        };
+        PurchasePageDto: {
+            items: components["schemas"]["PurchaseSummaryDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
+        };
+        WarehouseDto: {
+            /** Format: uuid */
+            id: string;
+            /** @example Principal */
+            name: string;
+        };
+        StockDto: {
+            /** Format: uuid */
+            productId: string;
+            /** @example Arroz 500 g */
+            name: string;
+            /** @example ARR-500 */
+            sku: string;
+            /** @enum {string} */
+            unit: "unit" | "kilogram" | "gram" | "pound" | "liter" | "milliliter";
+            /** @description `false` si el producto está archivado. */
+            active: boolean;
+            /** @description Lo que hay: la suma de los movimientos del producto, en milésimas de su unidad. Un producto que nunca se movió tiene cero; puede ser negativa (una venta sin conexión que se aceptó). */
+            quantityMilli: number;
+            /** @description El mínimo que fijó el negocio, o `null` si no fijó uno. */
+            minStockMilli: number | null;
+            /** @description Hay un mínimo y la existencia está **por debajo** de él (igual al mínimo no avisa). */
+            belowMinimum: boolean;
+        };
+        StockPageDto: {
+            items: components["schemas"]["StockDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
+        };
+        StockMovementDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            operationId: string;
+            /** Format: uuid */
+            productId: string;
+            /**
+             * @description Qué lo originó.
+             * @enum {string}
+             */
+            kind: "sale" | "purchase" | "adjustment" | "void";
+            /** @description Milésimas de la unidad del producto; negativo si resta. */
+            deltaMilli: number;
+            /** @description La nota del movimiento: en un ajuste, el motivo; en una compra, la nota de la compra. */
+            reason: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        StockMovementPageDto: {
+            items: components["schemas"]["StockMovementDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
+        };
+        CreateStockAdjustmentRequestDto: {
+            /**
+             * Format: uuid
+             * @description La llave de idempotencia: la genera el cliente una vez por ajuste. Repetir la petición con el mismo `operationId` y los mismos datos devuelve el mismo movimiento (200 y `Idempotent-Replayed: true`) sin ajustar de nuevo; con otros datos, 409 `operation-id-reused`.
+             */
+            operationId: string;
+            /**
+             * Format: uuid
+             * @description Un producto del negocio, archivado o no.
+             */
+            productId: string;
+            /**
+             * @description Cuánto sube (positivo) o baja (negativo) la existencia, en milésimas de la unidad del producto; nunca cero. Los productos que se cuentan en unidades enteras no admiten decimales. **No es el saldo nuevo:** el saldo no se edita, el ajuste es un movimiento.
+             * @example -2000
+             */
+            deltaMilli: number;
+            /**
+             * @description Por qué se ajusta. Es obligatorio y queda escrito en el movimiento.
+             * @example Se cayeron dos paquetes
+             */
+            reason: string;
         };
         ProblemErrorDto: {
             /**
@@ -117,6 +966,891 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthReportDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ReadinessController_ready: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El servicio está listo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadinessReportDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    MeController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La persona y su lugar en el negocio. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    BusinessesController_open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBusinessRequestDto"];
+            };
+        };
+        responses: {
+            /** @description El lugar de la persona en el negocio nuevo. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeMembershipDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    InvitationsController_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteUserRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    InvitationsController_redeem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RedeemInvitationRequestDto"];
+            };
+        };
+        responses: {
+            /** @description El lugar de la persona en el negocio. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeMembershipDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    UsersController_list: {
+        parameters: {
+            query?: {
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonPageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    UsersController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    UsersController_renew: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    CategoriesController_list: {
+        parameters: {
+            query?: {
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryPageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    CategoriesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    CategoriesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La categoría se borró. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    CategoriesController_rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProductsController_list: {
+        parameters: {
+            query?: {
+                /** @description Sin este filtro se devuelven activos y archivados. */
+                active?: "true" | "false";
+                categoryId?: string;
+                search?: string;
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductPageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProductsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProductsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProductsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SuppliersController_list: {
+        parameters: {
+            query?: {
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierPageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SuppliersController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SuppliersController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El proveedor se borró. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SuppliersController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PurchasesController_list: {
+        parameters: {
+            query?: {
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchasePageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PurchasesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePurchaseRequestDto"];
+            };
+        };
+        responses: {
+            /** @description La compra ya se había registrado con este `operationId`: es la misma de antes. */
+            200: {
+                headers: {
+                    /** @description Siempre `true` en esta respuesta. */
+                    "Idempotent-Replayed"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PurchasesController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purchaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    WarehouseController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehouseDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    StockController_list: {
+        parameters: {
+            query?: {
+                /** @description `true`: solo los que están por debajo de su mínimo. `false` no filtra. */
+                belowMinimum?: "true" | "false";
+                /** @description Sin este filtro se devuelven activos y archivados. */
+                active?: "true" | "false";
+                categoryId?: string;
+                search?: string;
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockPageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    StockMovementsController_list: {
+        parameters: {
+            query: {
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+                productId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockMovementPageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    StockAdjustmentsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStockAdjustmentRequestDto"];
+            };
+        };
+        responses: {
+            /** @description El ajuste ya se había registrado con este `operationId`: es el mismo de antes. */
+            200: {
+                headers: {
+                    /** @description Siempre `true` en esta respuesta. */
+                    "Idempotent-Replayed"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockMovementDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockMovementDto"];
                 };
             };
             /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */

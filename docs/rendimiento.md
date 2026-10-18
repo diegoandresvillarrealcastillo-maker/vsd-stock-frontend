@@ -70,6 +70,20 @@ generados no pesan nada en el navegador**: `schema.d.ts` solo tiene tipos y desa
 `openapi-typescript` es una herramienta de desarrollo. Tampoco entra ninguna biblioteca de cliente HTTP: el
 adaptador usa `fetch`.
 
+### Después de C2-08 (sesión, rutas y navegación)
+
+| Pieza                 | Antes (C0-08) | Ahora (C2-08) | Diferencia |
+| --------------------- | ------------: | ------------: | ---------: |
+| JavaScript            |      324,0 KB |      376,3 KB |   +52,3 KB |
+| JavaScript comprimido |      103,3 KB |      119,7 KB |   +16,4 KB |
+| CSS                   |       16,2 KB |       17,4 KB |    +1,2 KB |
+
+Casi todo es **`react-router`** (el enrutador), más la sesión, el cliente del servicio de identidad, la pregunta «quién
+soy», las guardas de rutas y el marco con el menú. La sesión y la API usan `fetch` y no traen ninguna biblioteca (ni
+cliente de Supabase ni de HTTP). Es el mayor aumento desde C0-07 pero sigue lejos de lo que costó Framer Motion.
+Lighthouse sobre la página pública (3 corridas, mismas condiciones de abajo): **rendimiento 98 y 99, accesibilidad 100,
+mejores prácticas 96**; LCP de 2,0 a 2,3 s, TBT de 0 a 44 ms y CLS 0.
+
 ## Lighthouse: lo más cercano a un teléfono de gama baja
 
 **Decisión (2026-10-16):** el equipo no tiene un teléfono de gama baja, así que la comprobación en un
