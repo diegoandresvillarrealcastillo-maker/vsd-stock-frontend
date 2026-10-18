@@ -1,0 +1,5 @@
+{
+  "javascriptGzipKB": 180,
+  "cssGzipKB": 12,
+  "serviceWorkerGzipKB": 3
+}
