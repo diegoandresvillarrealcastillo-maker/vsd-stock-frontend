@@ -209,4 +209,50 @@ describe('SignInPage', () => {
 
     expect(screen.queryByRole('status')).toBeNull();
   });
+
+  it('puts the cursor on the first thing that is missing', () => {
+    setup();
+
+    submit();
+    expect(document.activeElement?.id).toBe('correo');
+    type('Correo', 'ana@ejemplo.co');
+    submit();
+
+    expect(document.activeElement?.id).toBe('contrasena');
+  });
+
+  it('takes away what was missing as soon as the person starts to fix any of it', () => {
+    setup();
+    submit();
+    expect(screen.getByText('Escribe tu correo.')).toBeDefined();
+    expect(screen.getByText('Escribe tu contraseña.')).toBeDefined();
+
+    type('Correo', 'a');
+
+    expect(screen.queryByText('Escribe tu correo.')).toBeNull();
+    expect(screen.queryByText('Escribe tu contraseña.')).toBeNull();
+  });
+
+  it('puts the cursor on the first thing that is missing', () => {
+    setup();
+
+    submit();
+    expect(document.activeElement?.id).toBe('correo');
+    type('Correo', 'ana@ejemplo.co');
+    submit();
+
+    expect(document.activeElement?.id).toBe('contrasena');
+  });
+
+  it('takes away what was missing as soon as the person starts to fix any of it', () => {
+    setup();
+    submit();
+    expect(screen.getByText('Escribe tu correo.')).toBeDefined();
+    expect(screen.getByText('Escribe tu contraseña.')).toBeDefined();
+
+    type('Correo', 'a');
+
+    expect(screen.queryByText('Escribe tu correo.')).toBeNull();
+    expect(screen.queryByText('Escribe tu contraseña.')).toBeNull();
+  });
 });

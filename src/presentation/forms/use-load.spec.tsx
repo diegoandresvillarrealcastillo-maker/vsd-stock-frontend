@@ -176,4 +176,40 @@ describe('useLoad', () => {
 
     expect(auth.sessions.current()).not.toBeNull();
   });
+
+  it('does not close the session because of a failure that arrives for something that is no longer asked', async () => {
+    const auth = createTestAuth({ stored: testSession('ana') });
+    const pending: Pending[] = [];
+    render(
+      <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
+        <Searching pending={pending} />
+      </AuthProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'cambiar' }));
+
+    await act(async () => {
+      pending[0]?.reject(failure('session'));
+      await Promise.resolve();
+    });
+
+    expect(auth.store.get()).not.toBeNull();
+  });
+
+  it('does not close the session because of a failure that arrives for something that is no longer asked', async () => {
+    const auth = createTestAuth({ stored: testSession('ana') });
+    const pending: Pending[] = [];
+    render(
+      <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
+        <Searching pending={pending} />
+      </AuthProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'cambiar' }));
+
+    await act(async () => {
+      pending[0]?.reject(failure('session'));
+      await Promise.resolve();
+    });
+
+    expect(auth.store.get()).not.toBeNull();
+  });
 });

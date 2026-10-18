@@ -151,4 +151,26 @@ describe('OnboardingPage', () => {
 
     expect(auth.loads).toEqual(['ana']);
   });
+
+  it('puts the cursor on the first thing that is missing', async () => {
+    setup();
+
+    await submit();
+    expect(document.activeElement?.id).toBe('negocio');
+    type('Nombre del negocio', 'Tienda La Esquina');
+    await submit();
+
+    expect(document.activeElement?.id).toBe('nombre');
+  });
+
+  it('puts the cursor on the first thing that is missing', async () => {
+    setup();
+
+    await submit();
+    expect(document.activeElement?.id).toBe('negocio');
+    type('Nombre del negocio', 'Tienda La Esquina');
+    await submit();
+
+    expect(document.activeElement?.id).toBe('nombre');
+  });
 });

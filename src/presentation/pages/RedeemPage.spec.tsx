@@ -124,4 +124,66 @@ describe('RedeemPage', () => {
 
     expect(auth.loads).toEqual(['ana']);
   });
+
+  it('puts the cursor on the code when it is missing', async () => {
+    setup();
+
+    await submit();
+
+    expect(document.activeElement?.id).toBe('codigo');
+  });
+
+  it('takes away what was missing as soon as the person starts to write', async () => {
+    setup();
+    await submit();
+    expect(screen.getByText('Escribe el código que te dieron.')).toBeDefined();
+
+    type('A');
+
+    expect(screen.queryByText('Escribe el código que te dieron.')).toBeNull();
+  });
+
+  it('takes away what the server said about the code as soon as the person starts to fix it', async () => {
+    const { people } = setup();
+    people.redeemInvitation.mockRejectedValue(failure('invitation-not-found'));
+    type('ABCD');
+    await submit();
+    expect(screen.queryByRole('alert')).not.toBeNull();
+
+    type('ABCE');
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByLabelText('Código de invitación').getAttribute('aria-invalid')).toBeNull();
+  });
+
+  it('puts the cursor on the code when it is missing', async () => {
+    setup();
+
+    await submit();
+
+    expect(document.activeElement?.id).toBe('codigo');
+  });
+
+  it('takes away what was missing as soon as the person starts to write', async () => {
+    setup();
+    await submit();
+    expect(screen.getByText('Escribe el código que te dieron.')).toBeDefined();
+
+    type('A');
+
+    expect(screen.queryByText('Escribe el código que te dieron.')).toBeNull();
+  });
+
+  it('takes away what the server said about the code as soon as the person starts to fix it', async () => {
+    const { people } = setup();
+    people.redeemInvitation.mockRejectedValue(failure('invitation-not-found'));
+    type('ABCD');
+    await submit();
+    expect(screen.queryByRole('alert')).not.toBeNull();
+
+    type('ABCE');
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByLabelText('Código de invitación').getAttribute('aria-invalid')).toBeNull();
+  });
 });

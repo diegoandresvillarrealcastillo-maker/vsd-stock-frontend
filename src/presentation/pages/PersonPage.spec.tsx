@@ -386,4 +386,314 @@ describe('PersonPage', () => {
       expect(screen.getByRole('alert').textContent).toContain('ya canjeó su invitación');
     });
   });
+
+  describe('what the server says about each field, and the cursor', () => {
+    const invalid = (pointer: string, detail: string) =>
+      new ApiError({
+        class: 'permanent',
+        status: 400,
+        retryAfterMs: null,
+        problem: {
+          type: 'urn:vsd-stock:problem:validation-failed',
+          title: 't',
+          status: 400,
+          detail: 'd',
+          instance: '/v1/users/beto',
+          code: 'validation-failed',
+          traceId: 'x',
+          errors: [{ pointer, code: 'invalid', detail }],
+        },
+      });
+
+    it('puts what the server says about the name under the name', async () => {
+      const { people } = setup('beto');
+      people.updatePerson.mockRejectedValue(invalid('/fullName', 'Ese nombre no sirve.'));
+      fireEvent.change(await screen.findByLabelText('Nombre'), { target: { value: 'Otro' } });
+
+      await save();
+
+      expect(screen.getByText('Ese nombre no sirve.')).toBeDefined();
+      expect(screen.getByLabelText('Nombre').getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('puts what the server says about the role under the role', async () => {
+      const { people } = setup('beto');
+      people.updatePerson.mockRejectedValue(invalid('/role', 'Ese rol no es posible.'));
+      fireEvent.change(await screen.findByLabelText('Rol'), { target: { value: 'cashier' } });
+
+      await save();
+
+      expect(screen.getByText('Ese rol no es posible.')).toBeDefined();
+      expect(screen.getByLabelText('Rol').getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('puts the cursor on the name when it is blanked', async () => {
+      setup('beto');
+      fireEvent.change(await screen.findByLabelText('Nombre'), { target: { value: '  ' } });
+
+      await save();
+
+      expect(document.activeElement?.id).toBe('nombre');
+    });
+
+    it('stops saying «Cambios guardados» as soon as the person changes something else', async () => {
+      setup('beto');
+      fireEvent.change(await screen.findByLabelText('Nombre'), { target: { value: 'Beto P.' } });
+      await save();
+      expect(screen.getByText('Cambios guardados.')).toBeDefined();
+
+      fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Beto Pe' } });
+
+      expect(screen.queryByText('Cambios guardados.')).toBeNull();
+    });
+  });
+
+  describe('what is shown after something is done to the person', () => {
+    it('goes back to what was saved when the person is let go, forgetting what was typed and not saved', async () => {
+      setup('beto');
+      fireEvent.change(await screen.findByLabelText('Nombre'), {
+        target: { value: 'Otro nombre' },
+      });
+      fireEvent.change(screen.getByLabelText('Rol'), { target: { value: 'cashier' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Dar de baja' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Sí, dar de baja' }));
+        await Promise.resolve();
+      });
+
+      expect(screen.getByLabelText<HTMLInputElement>('Nombre').value).toBe('Beto Pérez');
+      expect(screen.getByLabelText<HTMLSelectElement>('Rol').value).toBe('admin');
+    });
+
+    it('does not offer to bring back, or to renew the code of, someone it can not look after', async () => {
+      const OTRO_ADMIN = testPerson({
+        id: 'otro',
+        fullName: 'Otro Admin',
+        role: 'admin',
+        status: 'inactive',
+      });
+      const PENDIENTE = testPerson({
+        id: 'pendiente',
+        fullName: 'Admin Pendiente',
+        role: 'admin',
+        status: 'pending',
+        invitationExpiresAt: new Date('2026-10-24T12:00:00.000Z'),
+      });
+      setup('otro', 'admin', [ANA, OTRO_ADMIN, PENDIENTE]);
+      await screen.findByRole('heading', { level: 1, name: 'Otro Admin' });
+
+      expect(screen.queryByRole('button', { name: 'Dar de alta' })).toBeNull();
+    });
+
+    it('does not offer a new code for an administrator to another administrator', async () => {
+      const PENDIENTE = testPerson({
+        id: 'pendiente',
+        fullName: 'Admin Pendiente',
+        role: 'admin',
+        status: 'pending',
+        invitationExpiresAt: new Date('2026-10-24T12:00:00.000Z'),
+      });
+      setup('pendiente', 'admin', [ANA, PENDIENTE]);
+      await screen.findByRole('heading', { level: 1, name: 'Admin Pendiente' });
+
+      expect(screen.queryByRole('button', { name: 'Crear un código nuevo' })).toBeNull();
+    });
+
+    it('assumes the least it can when it does not know who is looking: nothing can be changed', async () => {
+      const auth = createTestAuth();
+      renderScreen(
+        <Routes>
+          <Route path="/personas/:personId" element={<PersonPage />} />
+        </Routes>,
+        { path: '/personas/carla', auth, people: createFakePeople(EVERYONE) },
+      );
+
+      await screen.findByRole('heading', { level: 1, name: 'Carla Ruiz' });
+
+      expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull();
+      expect(screen.getByText('Solo lectura')).toBeDefined();
+    });
+  });
+
+  describe('who counts as the only owner', () => {
+    it('does not call «the only owner» someone who was let go, when there is another active owner', async () => {
+      const VIEJO = testPerson({
+        id: 'viejo',
+        fullName: 'Viejo Dueño',
+        role: 'owner',
+        status: 'inactive',
+      });
+      setup('viejo', 'owner', [ANA, VIEJO]);
+      await screen.findByRole('heading', { level: 1, name: 'Viejo Dueño' });
+
+      expect(screen.queryByText('Es el único dueño')).toBeNull();
+    });
+
+    it('counts the owner that was just made, so the new one is not taken for the only one', async () => {
+      const { people } = setup('beto', 'owner', [ANA, BETO]);
+      fireEvent.change(await screen.findByLabelText('Rol'), { target: { value: 'owner' } });
+
+      await save();
+      await screen.findByText('Cambios guardados.');
+
+      expect(people.updatePerson).toHaveBeenCalledWith('beto', { role: 'owner' });
+      expect(screen.queryByText('Es el único dueño')).toBeNull();
+    });
+  });
+
+  describe('what the server says about each field, and the cursor', () => {
+    const invalid = (pointer: string, detail: string) =>
+      new ApiError({
+        class: 'permanent',
+        status: 400,
+        retryAfterMs: null,
+        problem: {
+          type: 'urn:vsd-stock:problem:validation-failed',
+          title: 't',
+          status: 400,
+          detail: 'd',
+          instance: '/v1/users/beto',
+          code: 'validation-failed',
+          traceId: 'x',
+          errors: [{ pointer, code: 'invalid', detail }],
+        },
+      });
+
+    it('puts what the server says about the name under the name', async () => {
+      const { people } = setup('beto');
+      people.updatePerson.mockRejectedValue(invalid('/fullName', 'Ese nombre no sirve.'));
+      fireEvent.change(await screen.findByLabelText('Nombre'), { target: { value: 'Otro' } });
+
+      await save();
+
+      expect(screen.getByText('Ese nombre no sirve.')).toBeDefined();
+      expect(screen.getByLabelText('Nombre').getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('puts what the server says about the role under the role', async () => {
+      const { people } = setup('beto');
+      people.updatePerson.mockRejectedValue(invalid('/role', 'Ese rol no es posible.'));
+      fireEvent.change(await screen.findByLabelText('Rol'), { target: { value: 'cashier' } });
+
+      await save();
+
+      expect(screen.getByText('Ese rol no es posible.')).toBeDefined();
+      expect(screen.getByLabelText('Rol').getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('puts the cursor on the name when it is blanked', async () => {
+      setup('beto');
+      fireEvent.change(await screen.findByLabelText('Nombre'), { target: { value: '  ' } });
+
+      await save();
+
+      expect(document.activeElement?.id).toBe('nombre');
+    });
+
+    it('stops saying «Cambios guardados» as soon as the person changes something else', async () => {
+      setup('beto');
+      fireEvent.change(await screen.findByLabelText('Nombre'), { target: { value: 'Beto P.' } });
+      await save();
+      expect(screen.getByText('Cambios guardados.')).toBeDefined();
+
+      fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Beto Pe' } });
+
+      expect(screen.queryByText('Cambios guardados.')).toBeNull();
+    });
+  });
+
+  describe('what is shown after something is done to the person', () => {
+    it('goes back to what was saved when the person is let go, forgetting what was typed and not saved', async () => {
+      setup('beto');
+      fireEvent.change(await screen.findByLabelText('Nombre'), {
+        target: { value: 'Otro nombre' },
+      });
+      fireEvent.change(screen.getByLabelText('Rol'), { target: { value: 'cashier' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Dar de baja' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Sí, dar de baja' }));
+        await Promise.resolve();
+      });
+
+      expect(screen.getByLabelText<HTMLInputElement>('Nombre').value).toBe('Beto Pérez');
+      expect(screen.getByLabelText<HTMLSelectElement>('Rol').value).toBe('admin');
+    });
+
+    it('does not offer to bring back, or to renew the code of, someone it can not look after', async () => {
+      const OTRO_ADMIN = testPerson({
+        id: 'otro',
+        fullName: 'Otro Admin',
+        role: 'admin',
+        status: 'inactive',
+      });
+      const PENDIENTE = testPerson({
+        id: 'pendiente',
+        fullName: 'Admin Pendiente',
+        role: 'admin',
+        status: 'pending',
+        invitationExpiresAt: new Date('2026-10-24T12:00:00.000Z'),
+      });
+      setup('otro', 'admin', [ANA, OTRO_ADMIN, PENDIENTE]);
+      await screen.findByRole('heading', { level: 1, name: 'Otro Admin' });
+
+      expect(screen.queryByRole('button', { name: 'Dar de alta' })).toBeNull();
+    });
+
+    it('does not offer a new code for an administrator to another administrator', async () => {
+      const PENDIENTE = testPerson({
+        id: 'pendiente',
+        fullName: 'Admin Pendiente',
+        role: 'admin',
+        status: 'pending',
+        invitationExpiresAt: new Date('2026-10-24T12:00:00.000Z'),
+      });
+      setup('pendiente', 'admin', [ANA, PENDIENTE]);
+      await screen.findByRole('heading', { level: 1, name: 'Admin Pendiente' });
+
+      expect(screen.queryByRole('button', { name: 'Crear un código nuevo' })).toBeNull();
+    });
+
+    it('assumes the least it can when it does not know who is looking: nothing can be changed', async () => {
+      const auth = createTestAuth();
+      renderScreen(
+        <Routes>
+          <Route path="/personas/:personId" element={<PersonPage />} />
+        </Routes>,
+        { path: '/personas/carla', auth, people: createFakePeople(EVERYONE) },
+      );
+
+      await screen.findByRole('heading', { level: 1, name: 'Carla Ruiz' });
+
+      expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull();
+      expect(screen.getByText('Solo lectura')).toBeDefined();
+    });
+  });
+
+  describe('who counts as the only owner', () => {
+    it('does not call «the only owner» someone who was let go, when there is another active owner', async () => {
+      const VIEJO = testPerson({
+        id: 'viejo',
+        fullName: 'Viejo Dueño',
+        role: 'owner',
+        status: 'inactive',
+      });
+      setup('viejo', 'owner', [ANA, VIEJO]);
+      await screen.findByRole('heading', { level: 1, name: 'Viejo Dueño' });
+
+      expect(screen.queryByText('Es el único dueño')).toBeNull();
+    });
+
+    it('counts the owner that was just made, so the new one is not taken for the only one', async () => {
+      const { people } = setup('beto', 'owner', [ANA, BETO]);
+      fireEvent.change(await screen.findByLabelText('Rol'), { target: { value: 'owner' } });
+
+      await save();
+      await screen.findByText('Cambios guardados.');
+
+      expect(people.updatePerson).toHaveBeenCalledWith('beto', { role: 'owner' });
+      expect(screen.queryByText('Es el único dueño')).toBeNull();
+    });
+  });
 });
