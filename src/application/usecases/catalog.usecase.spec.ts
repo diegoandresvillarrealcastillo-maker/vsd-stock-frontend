@@ -216,7 +216,7 @@ describe('CatalogUseCase', () => {
 
       await useCase.updateProduct('a', { barcode: null, categoryId: null, minStockMilli: null });
 
-      expect(sent[0]?.body).toEqual({ barcode: null, categoryId: null, minStockMilli: null });
+      expect(sent[0]?.body).toStrictEqual({ barcode: null, categoryId: null, minStockMilli: null });
     });
 
     it('sends every field that can change', async () => {
@@ -234,7 +234,7 @@ describe('CatalogUseCase', () => {
         active: false,
       });
 
-      expect(sent[0]?.body).toEqual({
+      expect(sent[0]?.body).toStrictEqual({
         name: 'n',
         sku: 's',
         barcode: '123',
@@ -255,7 +255,10 @@ describe('CatalogUseCase', () => {
 
       expect(archived.active).toBe(false);
       expect(back.active).toBe(true);
-      expect(sent.map((request) => request.body)).toEqual([{ active: false }, { active: true }]);
+      expect(sent.map((request) => request.body)).toStrictEqual([
+        { active: false },
+        { active: true },
+      ]);
     });
 
     it('encodes the id in the path', async () => {
