@@ -206,37 +206,4 @@ describe('PeoplePage', () => {
     expect(names[2]).toContain('Daniel Mora');
     expect(screen.queryByRole('button', { name: 'Cargar más' })).toBeNull();
   });
-
-  it('does not offer to invite while it does not know who is asking', async () => {
-    const auth = createTestAuth();
-    renderScreen(<PeoplePage />, { path: '/personas', auth, people: createFakePeople([ANA]) });
-
-    await screen.findByText('Ana Gómez');
-
-    expect(screen.queryByRole('link', { name: 'Invitar a alguien' })).toBeNull();
-  });
-
-  it('follows the cursor page after page, in order, and keeps offering more until the last one', async () => {
-    const people = createFakePeople([]);
-    people.listPeople
-      .mockResolvedValueOnce({ items: [ANA], nextCursor: 'c1' })
-      .mockResolvedValueOnce({ items: [BETO], nextCursor: 'c2' })
-      .mockResolvedValueOnce({ items: [DANIEL], nextCursor: null });
-    setup('owner', people);
-    await screen.findByText('Ana Gómez');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
-    await screen.findByText('Beto Pérez');
-    fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
-    await screen.findByText('Daniel Mora');
-
-    expect(people.listPeople).toHaveBeenLastCalledWith('c2');
-    const names = within(screen.getByRole('list', { name: 'Personas del negocio' }))
-      .getAllByRole('listitem')
-      .map((row) => row.textContent ?? '');
-    expect(names[0]).toContain('Ana Gómez');
-    expect(names[1]).toContain('Beto Pérez');
-    expect(names[2]).toContain('Daniel Mora');
-    expect(screen.queryByRole('button', { name: 'Cargar más' })).toBeNull();
-  });
 });

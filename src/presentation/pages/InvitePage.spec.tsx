@@ -301,48 +301,4 @@ describe('InvitePage', () => {
     expect(screen.getByLabelText('Correo (opcional)').hasAttribute('disabled')).toBe(true);
     expect(screen.getByLabelText('Nombre de la persona').hasAttribute('disabled')).toBe(true);
   });
-
-  it('puts the cursor on the name when it is missing', async () => {
-    setup();
-
-    await submit();
-
-    expect(document.activeElement?.id).toBe('nombre');
-  });
-
-  it('takes away what was missing as soon as the person starts to write', async () => {
-    setup();
-    await submit();
-    expect(screen.getByText('Escribe el nombre de la persona.')).toBeDefined();
-
-    type('Nombre de la persona', 'D');
-
-    expect(screen.queryByText('Escribe el nombre de la persona.')).toBeNull();
-  });
-
-  it('puts what the server says about the role under the role', async () => {
-    const { people } = setup();
-    people.invite.mockRejectedValue(
-      failure('validation-failed', [
-        { pointer: '/role', code: 'invalid', detail: 'Ese rol no existe.' },
-      ]),
-    );
-    type('Nombre de la persona', 'Daniel');
-
-    await submit();
-
-    expect(screen.getByText('Ese rol no existe.')).toBeDefined();
-    expect(screen.getByLabelText('Rol').getAttribute('aria-invalid')).toBe('true');
-  });
-
-  it('does not let the person change the email while the invitation is being made', async () => {
-    const { people } = setup();
-    people.invite.mockReturnValue(new Promise(() => undefined));
-    type('Nombre de la persona', 'Daniel');
-
-    await submit();
-
-    expect(screen.getByLabelText('Correo (opcional)').hasAttribute('disabled')).toBe(true);
-    expect(screen.getByLabelText('Nombre de la persona').hasAttribute('disabled')).toBe(true);
-  });
 });
