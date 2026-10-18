@@ -1,7 +1,8 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { Route, Routes } from 'react-router';
+import { Link, Route, Routes } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../domain/model/api-error';
+import type { Product } from '../../domain/model/catalog';
 import type { Problem } from '../../domain/model/problem';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createFakeCatalog, testCategory, testProduct } from '../../../test/support/catalog';
@@ -360,6 +361,155 @@ describe('EditProductPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
 
       expect(await screen.findByRole('heading', { level: 1, name: 'Arroz 500 g' })).toBeDefined();
+    });
+  });
+
+  describe('what the form shows after saving: what the server kept, and not what was typed', () => {
+    const saved = async (serverVersion: Partial<Product>, edit: () => void) => {
+      const catalog = createFakeCatalog([ARROZ], CATEGORIES);
+      catalog.updateProduct.mockResolvedValue(testProduct({ ...ARROZ, ...serverVersion }));
+      setup(catalog);
+      await screen.findByRole('heading', { level: 1 });
+      edit();
+      save();
+      await screen.findByText('Cambios guardados.');
+    };
+
+    it('the name', async () => {
+      await saved({ name: 'ARROZ DIANA 500 G' }, () => type('Nombre', 'Arroz Diana 500 g'));
+
+      expect(value('Nombre')).toBe('ARROZ DIANA 500 G');
+    });
+
+    it('the SKU', async () => {
+      await saved({ sku: 'ARR-900' }, () => type('SKU (código interno)', 'arr-900'));
+
+      expect(value('SKU (código interno)')).toBe('ARR-900');
+    });
+
+    it('the barcode, without the spaces around it', async () => {
+      await saved({ barcode: '7701234567898' }, () =>
+        type('Código de barras (opcional)', ' 7701234567898 '),
+      );
+
+      expect(value('Código de barras (opcional)')).toBe('7701234567898');
+    });
+
+    it('the unit', async () => {
+      await saved({ unit: 'gram' }, () =>
+        fireEvent.change(screen.getByLabelText('Unidad'), { target: { value: 'kilogram' } }),
+      );
+
+      expect(screen.getByLabelText<HTMLSelectElement>('Unidad').value).toBe('gram');
+    });
+
+    it('the price, without the zeros to the left', async () => {
+      await saved({ unitPrice: 3500 }, () => type('Precio de venta (IVA incluido)', '03500'));
+
+      expect(value('Precio de venta (IVA incluido)')).toBe('3500');
+    });
+
+    it('the IVA', async () => {
+      await saved({ taxRateBp: 1900 }, () =>
+        fireEvent.click(screen.getByRole('radio', { name: '0 %' })),
+      );
+
+      expect(screen.getByRole<HTMLInputElement>('radio', { name: '19 %' }).checked).toBe(true);
+      expect(screen.getByRole<HTMLInputElement>('radio', { name: '0 %' }).checked).toBe(false);
+    });
+
+    it('the category', async () => {
+      await saved({ categoryId: 'aseo' }, () =>
+        fireEvent.change(screen.getByLabelText('Categoría'), { target: { value: '' } }),
+      );
+
+      expect(screen.getByLabelText<HTMLSelectElement>('Categoría').value).toBe('aseo');
+    });
+
+    it('the minimum, written without the dots of the thousands so it can be read back', async () => {
+      await saved({ minStockMilli: 1_500_000 }, () => type('Existencia mínima (opcional)', '1500'));
+
+      expect(value('Existencia mínima (opcional)')).toBe('1500');
+    });
+  });
+
+  describe('what goes away when the person writes again', () => {
+    it('who has the SKU', async () => {
+      const catalog = createFakeCatalog([ARROZ], CATEGORIES);
+      catalog.updateProduct.mockRejectedValue(refused('sku-taken'));
+      catalog.findProductByCode.mockResolvedValue(
+        testProduct({ id: 'otro', name: 'Arroz Diana', sku: 'ARR-900' }),
+      );
+      setup(catalog);
+      await screen.findByRole('heading', { level: 1 });
+      type('SKU (código interno)', 'ARR-900');
+      save();
+      await screen.findByText('ARR-900 es de «Arroz Diana». Usa otro SKU.');
+
+      type('SKU (código interno)', 'ARR-901');
+
+      expect(screen.queryByText('ARR-900 es de «Arroz Diana». Usa otro SKU.')).toBeNull();
+    });
+
+    it('the notice that the changes were saved', async () => {
+      setup();
+      await screen.findByRole('heading', { level: 1 });
+      type('Precio de venta (IVA incluido)', '3500');
+      save();
+      await screen.findByText('Cambios guardados.');
+
+      type('Precio de venta (IVA incluido)', '3600');
+
+      expect(screen.queryByText('Cambios guardados.')).toBeNull();
+    });
+
+    it('what the server said when it could not save', async () => {
+      const catalog = createFakeCatalog([ARROZ], CATEGORIES);
+      catalog.updateProduct.mockRejectedValue(network);
+      setup(catalog);
+      await screen.findByRole('heading', { level: 1 });
+      type('Nombre', 'Otro nombre');
+      save();
+      await screen.findByText('No pudimos guardar el producto');
+
+      type('Nombre', 'Otro nombre más');
+
+      expect(screen.queryByText('No pudimos guardar el producto')).toBeNull();
+    });
+  });
+
+  describe('when the address changes to another product', () => {
+    it('asks for that product, titles the page with it and starts its form from what it has', async () => {
+      const aceite = testProduct({
+        id: 'aceite',
+        name: 'Aceite 1 L',
+        sku: 'ACE-1L',
+        unitPrice: 12_500,
+        categoryId: null,
+      });
+      const catalog = createFakeCatalog([ARROZ, aceite], CATEGORIES);
+      const auth = createTestAuth({ stored: testSession('ana') });
+      auth.answer(testMe('ana', 'owner'));
+      renderScreen(
+        <>
+          <Link to="/catalogo/aceite">ir al aceite</Link>
+          <Routes>
+            <Route path="/catalogo/:productId" element={<EditProductPage />} />
+          </Routes>
+        </>,
+        { path: '/catalogo/arroz', auth, catalog },
+      );
+      await screen.findByRole('heading', { level: 1, name: 'Arroz 500 g' });
+      type('Nombre', 'Arroz Diana 500 g');
+      save();
+      await screen.findByRole('heading', { level: 1, name: 'Arroz Diana 500 g' });
+
+      fireEvent.click(screen.getByRole('link', { name: 'ir al aceite' }));
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Aceite 1 L' })).toBeDefined();
+      expect(catalog.getProduct).toHaveBeenLastCalledWith('aceite');
+      expect(value('Nombre')).toBe('Aceite 1 L');
+      expect(value('SKU (código interno)')).toBe('ACE-1L');
     });
   });
 });

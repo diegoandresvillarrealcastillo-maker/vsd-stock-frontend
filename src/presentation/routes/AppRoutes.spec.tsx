@@ -188,4 +188,12 @@ describe('AppRoutes', () => {
       expect(screen.getByLabelText('Contraseña')).toBeDefined();
     });
   });
+
+  describe('the catalog', () => {
+    it('shows the products at «catalogo», and not only a title', async () => {
+      renderAt('/catalogo', { role: 'cashier' });
+
+      expect(await screen.findByText('Los productos que vendes y compras.')).toBeDefined();
+    });
+  });
 });
