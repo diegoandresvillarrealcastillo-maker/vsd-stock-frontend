@@ -143,4 +143,44 @@ describe('parseQuantityMilli', () => {
       message: 'Esa cantidad es demasiado alta.',
     });
   });
+
+  describe('what is written with a sign, a lone dot or many zeros', () => {
+    it.each(['-5', '+5', '-0'])('does not take «%s» for a price: a sign is not a digit', (text) => {
+      expect(parsePesos(text)).toEqual({
+        ok: false,
+        message: 'Escribe solo números, sin puntos, comas ni símbolos. Por ejemplo: 3200.',
+      });
+    });
+
+    it('reads zeros to the left as what they are: nothing', () => {
+      expect(parsePesos('0000000000003200')).toEqual({ ok: true, value: 3200 });
+      expect(parseQuantityMilli('00000001,5', { whole: false })).toEqual({ ok: true, value: 1500 });
+    });
+
+    it('does not tell a lone dot that it is a thousands separator: there is no number there', () => {
+      expect(parseQuantityMilli('.', { whole: false })).toEqual({
+        ok: false,
+        message: 'Escribe solo números, con coma para los decimales. Por ejemplo: 1,5.',
+      });
+    });
+
+    it('still rejects a number that is far too long, even if it has no decimals', () => {
+      expect(parsePesos('9'.repeat(40))).toEqual({
+        ok: false,
+        message: 'Ese precio es demasiado alto.',
+      });
+      expect(parseQuantityMilli('9'.repeat(40), { whole: false })).toEqual({
+        ok: false,
+        message: 'Esa cantidad es demasiado alta.',
+      });
+    });
+
+    it('accepts the largest quantity and nothing above it, with or without decimals', () => {
+      expect(parseQuantityMilli('1000000', { whole: false })).toEqual({
+        ok: true,
+        value: 1_000_000_000,
+      });
+      expect(parseQuantityMilli('1000001', { whole: false }).ok).toBe(false);
+    });
+  });
 });
