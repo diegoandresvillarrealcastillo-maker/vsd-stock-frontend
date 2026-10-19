@@ -1,4 +1,5 @@
 import type { LocalProfile } from '../../model/local-profile';
+import type { AttentionReason, NewOperation, QueuedOperation } from '../../model/outbox';
 
 /**
  * El registro de este dispositivo ante el servidor (ADR 0016). El identificador lo crea el dispositivo y se guarda ANTES de
@@ -32,6 +33,26 @@ export interface LocalStore {
   reserveSerial(): Promise<number>;
   /** Cuantas operaciones esperan a ser enviadas. */
   countPending(): Promise<number>;
+  /**
+   * Pone una operacion en la cola. Si ya esta (mismo `operationId`), no hace nada: ni la repite ni le deshace lo que le paso. Su
+   * contenido va cifrado; solo su identificador, su estado y su hora quedan en claro para poder buscarla (ADR 0018).
+   */
+  enqueue(operation: NewOperation): Promise<void>;
+  /**
+   * Las que esperan a ser enviadas, de la mas antigua a la mas nueva (y por identificador si son de la misma hora), hasta
+   * `limit`. Una que no se puede abrir (un bit alterado, otra clave) no se da: sigue contando como pendiente pero no se envia.
+   */
+  pendingOperations(limit: number): Promise<QueuedOperation[]>;
+  /** Las que el servidor no acepto y alguien tiene que mirar, de la mas antigua a la mas nueva. */
+  attentionOperations(): Promise<QueuedOperation[]>;
+  /** Cuantas operaciones piden atencion. */
+  countAttention(): Promise<number>;
+  /** Saca de la cola las que el servidor ya tiene. Las que no estan no son un error. */
+  resolveOperations(operationIds: readonly string[]): Promise<void>;
+  /** Aparta una operacion que el servidor rechazo, diciendo por que: ya no se envia sola. */
+  markAttention(operationId: string, reason: AttentionReason): Promise<void>;
+  /** Anota un intento mas, que no funciono, en cada una. */
+  recordAttempts(operationIds: readonly string[]): Promise<void>;
   /** Suelta la conexion con la base. Lo guardado se conserva. */
   close(): void;
 }

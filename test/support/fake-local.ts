@@ -1,5 +1,6 @@
 import { LocalKeyLostError } from '../../src/domain/model/local-errors';
 import type { LocalProfile } from '../../src/domain/model/local-profile';
+import type { AttentionReason, NewOperation, QueuedOperation } from '../../src/domain/model/outbox';
 import type { DeviceRegistry, RegisteredDevice } from '../../src/domain/ports/out/device-registry';
 import type { IdGenerator } from '../../src/domain/ports/out/id-generator';
 import type {
@@ -14,7 +15,10 @@ export interface PersonData {
   profile: LocalProfile | null;
   device: DeviceRegistration | null;
   serial: number;
+  /** Operaciones «fantasma»: cuentan como pendientes sin estar en la cola, para las pruebas que solo cuentan. */
   pending: number;
+  /** La cola de operaciones, en el orden en que se agregaron. */
+  queue: QueuedOperation[];
 }
 
 /** La base de una persona en memoria. Hace lo mismo que el adaptador de IndexedDB, sin navegador. */
@@ -57,11 +61,83 @@ class FakeLocalStore implements LocalStore {
   }
 
   countPending(): Promise<number> {
-    return Promise.resolve(this.data.pending);
+    return Promise.resolve(
+      this.data.pending +
+        this.data.queue.filter((operation) => operation.state === 'pending').length,
+    );
+  }
+
+  countAttention(): Promise<number> {
+    return Promise.resolve(
+      this.data.queue.filter((operation) => operation.state === 'attention').length,
+    );
+  }
+
+  enqueue(operation: NewOperation): Promise<void> {
+    if (this.data.queue.some((queued) => queued.operationId === operation.operationId)) {
+      return Promise.resolve();
+    }
+    this.data.queue.push({
+      operationId: operation.operationId,
+      kind: operation.kind,
+      shiftId: operation.shiftId ?? null,
+      body: operation.body,
+      createdAt: operation.createdAt.toISOString(),
+      state: 'pending',
+      attempts: 0,
+      attention: null,
+    });
+    return Promise.resolve();
+  }
+
+  pendingOperations(limit: number): Promise<QueuedOperation[]> {
+    return Promise.resolve(this.ofState('pending').slice(0, limit));
+  }
+
+  attentionOperations(): Promise<QueuedOperation[]> {
+    return Promise.resolve(this.ofState('attention'));
+  }
+
+  resolveOperations(operationIds: readonly string[]): Promise<void> {
+    this.data.queue = this.data.queue.filter(
+      (operation) => !operationIds.includes(operation.operationId),
+    );
+    return Promise.resolve();
+  }
+
+  markAttention(operationId: string, reason: AttentionReason): Promise<void> {
+    this.change(operationId, (operation) => ({
+      ...operation,
+      state: 'attention',
+      attention: reason,
+    }));
+    return Promise.resolve();
+  }
+
+  recordAttempts(operationIds: readonly string[]): Promise<void> {
+    for (const operationId of operationIds) {
+      this.change(operationId, (operation) => ({ ...operation, attempts: operation.attempts + 1 }));
+    }
+    return Promise.resolve();
   }
 
   close(): void {
     this.closed = true;
+  }
+
+  private ofState(state: QueuedOperation['state']): QueuedOperation[] {
+    return this.data.queue
+      .filter((operation) => operation.state === state)
+      .sort(
+        (a, b) =>
+          a.createdAt.localeCompare(b.createdAt) || a.operationId.localeCompare(b.operationId),
+      );
+  }
+
+  private change(operationId: string, work: (operation: QueuedOperation) => QueuedOperation): void {
+    this.data.queue = this.data.queue.map((operation) =>
+      operation.operationId === operationId ? work(operation) : operation,
+    );
   }
 }
 
@@ -85,7 +161,7 @@ export class FakeLocalStores implements LocalStores {
   dataOf(authUserId: string): PersonData {
     let data = this.people.get(authUserId);
     if (data === undefined) {
-      data = { profile: null, device: null, serial: 0, pending: 0 };
+      data = { profile: null, device: null, serial: 0, pending: 0, queue: [] };
       this.people.set(authUserId, data);
     }
     return data;

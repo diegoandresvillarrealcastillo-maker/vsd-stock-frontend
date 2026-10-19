@@ -1,5 +1,6 @@
 import type { LocalProfile, CounterAccess } from '../../model/local-profile';
 import type { Me } from '../../model/me';
+import type { Outbox } from './outbox';
 
 /** Quien trabaja ahora en este dispositivo, con su base local abierta. */
 export interface ActiveWorkspace {
@@ -49,6 +50,8 @@ export interface LocalWorkspace {
   nextFolio(): Promise<string>;
   /** Cuantas operaciones esperan a ser enviadas. Lanza `NoWorkspaceError`. */
   pendingCount(): Promise<number>;
+  /** La cola de operaciones de quien trabaja ahora (C3-09). Lanza `NoWorkspaceError`. */
+  outbox(): Outbox;
   /** «Cambiar de persona»: suelta la base y conserva todo lo guardado, para que la persona vuelva a por ello. */
   leave(): Promise<void>;
   /** «Cerrar sesion»: borra la base de la persona con todo lo que tiene, y olvida quien era. No hace nada si no hay nadie. */

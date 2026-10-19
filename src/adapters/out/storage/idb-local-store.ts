@@ -1,6 +1,13 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { LocalKeyLostError } from '../../../domain/model/local-errors';
 import { parseProfile, type LocalProfile } from '../../../domain/model/local-profile';
+import {
+  OPERATION_KINDS,
+  type AttentionReason,
+  type NewOperation,
+  type OperationKind,
+  type QueuedOperation,
+} from '../../../domain/model/outbox';
 import type { DeviceRegistration, LocalStore } from '../../../domain/ports/out/local-store';
 import { AesGcmCipher, RecordUnreadableError, type Sealed } from './aes-gcm-cipher';
 
@@ -159,8 +166,121 @@ export class IdbLocalStore implements LocalStore {
     return this.db.countFromIndex('operations', 'state', 'pending');
   }
 
+  countAttention(): Promise<number> {
+    return this.db.countFromIndex('operations', 'state', 'attention');
+  }
+
+  async enqueue(operation: NewOperation): Promise<void> {
+    // El cifrado va antes de abrir la transaccion: dentro de una de IndexedDB solo se espera a IndexedDB.
+    const sealed = await this.cipher.seal(operationName(operation.operationId), {
+      kind: operation.kind,
+      shiftId: operation.shiftId ?? null,
+      body: operation.body,
+      attempts: 0,
+      attention: null,
+    } satisfies OperationContent);
+    const tx = this.db.transaction('operations', 'readwrite');
+    if ((await tx.store.get(operation.operationId)) === undefined) {
+      await tx.store.put({
+        operationId: operation.operationId,
+        state: 'pending',
+        createdAt: operation.createdAt.toISOString(),
+        ...sealed,
+      });
+    }
+    await tx.done;
+  }
+
+  async pendingOperations(limit: number): Promise<QueuedOperation[]> {
+    return await this.readOperations('pending', limit);
+  }
+
+  async attentionOperations(): Promise<QueuedOperation[]> {
+    return await this.readOperations('attention', Number.POSITIVE_INFINITY);
+  }
+
+  async resolveOperations(operationIds: readonly string[]): Promise<void> {
+    const tx = this.db.transaction('operations', 'readwrite');
+    for (const operationId of operationIds) await tx.store.delete(operationId);
+    await tx.done;
+  }
+
+  async markAttention(operationId: string, reason: AttentionReason): Promise<void> {
+    await this.rewriteOperation(
+      operationId,
+      (content) => ({ ...content, attention: reason }),
+      'attention',
+    );
+  }
+
+  async recordAttempts(operationIds: readonly string[]): Promise<void> {
+    for (const operationId of operationIds) {
+      await this.rewriteOperation(operationId, (content) => ({
+        ...content,
+        attempts: content.attempts + 1,
+      }));
+    }
+  }
+
   close(): void {
     this.db.close();
+  }
+
+  /** Las operaciones de un estado, de la mas antigua a la mas nueva, abriendo solo las que hacen falta. */
+  private async readOperations(
+    state: QueuedOperationRecord['state'],
+    limit: number,
+  ): Promise<QueuedOperation[]> {
+    const records = await this.db.getAllFromIndex('operations', 'state', state);
+    records.sort(
+      (a, b) =>
+        a.createdAt.localeCompare(b.createdAt) || a.operationId.localeCompare(b.operationId),
+    );
+    const operations: QueuedOperation[] = [];
+    for (const record of records) {
+      if (operations.length >= limit) break;
+      const operation = await this.openOperation(record);
+      if (operation !== null) operations.push(operation);
+    }
+    return operations;
+  }
+
+  private async openOperation(record: QueuedOperationRecord): Promise<QueuedOperation | null> {
+    const content = parseOperationContent(
+      await this.openOrUndefined(operationName(record.operationId), record),
+    );
+    if (content === null) return null;
+    return {
+      operationId: record.operationId,
+      createdAt: record.createdAt,
+      state: record.state,
+      ...content,
+    };
+  }
+
+  /**
+   * Cambia el contenido de una operacion que sigue ahi y, si se pide, su estado. Se lee, se cifra de nuevo y se vuelve a mirar si
+   * sigue ahi antes de escribir: una que otra pestaña ya saco de la cola no resucita.
+   */
+  private async rewriteOperation(
+    operationId: string,
+    change: (content: OperationContent) => OperationContent,
+    state?: QueuedOperationRecord['state'],
+  ): Promise<void> {
+    const record = await this.db.get('operations', operationId);
+    if (record === undefined) return;
+    const operation = await this.openOperation(record);
+    if (operation === null) return;
+    const { kind, shiftId, body, attempts, attention } = operation;
+    const sealed = await this.cipher.seal(
+      operationName(operationId),
+      change({ kind, shiftId, body, attempts, attention }),
+    );
+    const tx = this.db.transaction('operations', 'readwrite');
+    const current = await tx.store.get(operationId);
+    if (current !== undefined)
+      await tx.store.put({ ...current, ...(state ? { state } : {}), ...sealed });
+    await tx.done;
   }
 
   private async writeRecord(name: string, value: unknown): Promise<void> {
@@ -174,7 +294,7 @@ export class IdbLocalStore implements LocalStore {
   }
 
   /** Lo que dice un registro, o `undefined` si no se puede abrir (otra clave, un bit alterado, un registro cambiado de lugar). */
-  private async openOrUndefined(name: string, stored: SealedRecord): Promise<unknown> {
+  private async openOrUndefined(name: string, stored: Sealed): Promise<unknown> {
     try {
       return await this.cipher.open(name, stored);
     } catch (error) {
@@ -182,6 +302,52 @@ export class IdbLocalStore implements LocalStore {
       throw error;
     }
   }
+}
+
+/** Lo que se cifra de una operacion de la cola. */
+interface OperationContent {
+  readonly kind: OperationKind;
+  readonly shiftId: string | null;
+  readonly body: Readonly<Record<string, unknown>>;
+  readonly attempts: number;
+  readonly attention: AttentionReason | null;
+}
+
+/** El nombre bajo el que se cifra una operacion: lleva su identificador, asi una copiada al lugar de otra no se abre. */
+function operationName(operationId: string): string {
+  return `operation:${operationId}`;
+}
+
+function parseAttention(value: unknown): AttentionReason | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== 'object') return undefined;
+  const {
+    class: failure,
+    status,
+    code,
+  } = value as { class?: unknown; status?: unknown; code?: unknown };
+  if (failure !== 'conflict' && failure !== 'permanent') return undefined;
+  if (typeof status !== 'number' || !Number.isInteger(status)) return undefined;
+  if (code !== null && typeof code !== 'string') return undefined;
+  return { class: failure, status, code };
+}
+
+function parseOperationContent(value: unknown): OperationContent | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { kind, shiftId, body, attempts, attention } = value as Record<string, unknown>;
+  if (!(OPERATION_KINDS as readonly unknown[]).includes(kind)) return null;
+  if (shiftId !== null && typeof shiftId !== 'string') return null;
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return null;
+  if (typeof attempts !== 'number' || !Number.isInteger(attempts) || attempts < 0) return null;
+  const reason = parseAttention(attention);
+  if (reason === undefined) return null;
+  return {
+    kind: kind as OperationKind,
+    shiftId,
+    body: body as Record<string, unknown>,
+    attempts,
+    attention: reason,
+  };
 }
 
 function parseDevice(value: unknown): DeviceRegistration | null {

@@ -7,6 +7,7 @@ import {
 } from '../../domain/model/local-errors';
 import { COUNTER_RESUME_WINDOW_MS, type LocalProfile } from '../../domain/model/local-profile';
 import type { Me } from '../../domain/model/me';
+import type { NewOperation } from '../../domain/model/outbox';
 import type { Clock } from '../../domain/ports/out/clock';
 import {
   FakeDeviceRegistry,
@@ -628,6 +629,127 @@ describe('LocalWorkspaceUseCase', () => {
       await workspace.forget();
 
       expect(stores.forgotten).toEqual([]);
+    });
+  });
+
+  describe('the queue of operations', () => {
+    const operation = (n: number, at = `2026-10-19T12:0${String(n)}:00.000Z`): NewOperation => ({
+      operationId: `00000000-0000-4000-8000-00000000000${String(n)}`,
+      kind: 'sale',
+      body: { operationId: `00000000-0000-4000-8000-00000000000${String(n)}`, total: 1_000 * n },
+      createdAt: new Date(at),
+    });
+
+    it('needs someone working here', () => {
+      const { workspace } = setup();
+
+      expect(() => workspace.outbox()).toThrow(NoWorkspaceError);
+    });
+
+    it('keeps what is put in it in the base of whoever works, and counts it as waiting', async () => {
+      const { workspace, stores } = setup();
+      await workspace.begin(me());
+
+      await workspace.outbox().enqueue(operation(1));
+
+      expect(stores.dataOf(AUTH_ID).queue).toHaveLength(1);
+      expect(await workspace.pendingCount()).toBe(1);
+      expect(await workspace.outbox().counts()).toEqual({ pending: 1, attention: 0 });
+    });
+
+    it('gives the next batch: the oldest first, no more than twenty', async () => {
+      const { workspace } = setup();
+      await workspace.begin(me());
+      const outbox = workspace.outbox();
+      for (let n = 1; n <= 9; n += 1) await outbox.enqueue(operation(n));
+      for (let n = 0; n < 15; n += 1) {
+        await outbox.enqueue({
+          ...operation(1),
+          operationId: `11111111-1111-4111-8111-${String(n).padStart(12, '0')}`,
+          createdAt: new Date(`2026-10-19T13:${String(n).padStart(2, '0')}:00.000Z`),
+        });
+      }
+
+      const batch = await outbox.nextBatch();
+
+      expect(batch).toHaveLength(20);
+      expect(batch.slice(0, 3).map((queued) => queued.operationId)).toEqual([
+        operation(1).operationId,
+        operation(2).operationId,
+        operation(3).operationId,
+      ]);
+    });
+
+    it('cuts the batch by weight as well, always leaving the first one', async () => {
+      const { workspace } = setup();
+      await workspace.begin(me());
+      const outbox = workspace.outbox();
+      for (const n of [1, 2, 3, 4]) {
+        await outbox.enqueue({ ...operation(n), body: { relleno: 'x'.repeat(30 * 1024) } });
+      }
+
+      expect(await outbox.nextBatch()).toHaveLength(2);
+    });
+
+    it('settles a batch: the done ones leave, the rejected ones are set apart with why, the others count an attempt', async () => {
+      const { workspace } = setup();
+      await workspace.begin(me());
+      const outbox = workspace.outbox();
+      for (const n of [1, 2, 3, 4]) await outbox.enqueue(operation(n));
+
+      await outbox.settle([
+        { operationId: operation(1).operationId, outcome: 'done' },
+        {
+          operationId: operation(2).operationId,
+          outcome: 'attention',
+          reason: { class: 'conflict', status: 409, code: 'shift-already-open' },
+        },
+        { operationId: operation(3).operationId, outcome: 'attempted' },
+      ]);
+
+      expect(
+        (await outbox.nextBatch()).map((queued) => [queued.operationId, queued.attempts]),
+      ).toEqual([
+        [operation(3).operationId, 1],
+        [operation(4).operationId, 0],
+      ]);
+      expect(await outbox.counts()).toEqual({ pending: 2, attention: 1 });
+      expect(await outbox.attention()).toEqual([
+        expect.objectContaining({
+          operationId: operation(2).operationId,
+          attention: { class: 'conflict', status: 409, code: 'shift-already-open' },
+        }),
+      ]);
+    });
+
+    it('does nothing when there is nothing to settle', async () => {
+      const { workspace, stores } = setup();
+      await workspace.begin(me());
+      await workspace.outbox().enqueue(operation(1));
+
+      await workspace.outbox().settle([]);
+
+      expect(stores.dataOf(AUTH_ID).queue).toHaveLength(1);
+    });
+
+    it('stops serving when the person stops working: it never touches the queue of whoever comes next', async () => {
+      const { workspace, stores } = setup();
+      await workspace.begin(me());
+      const outbox = workspace.outbox();
+      await outbox.enqueue(operation(1));
+
+      await workspace.leave();
+      await workspace.begin(me({ id: OTHER_AUTH_ID }));
+
+      await expect(outbox.nextBatch()).rejects.toBeInstanceOf(NoWorkspaceError);
+      await expect(outbox.enqueue(operation(2))).rejects.toBeInstanceOf(NoWorkspaceError);
+      await expect(
+        outbox.settle([{ operationId: operation(1).operationId, outcome: 'done' }]),
+      ).rejects.toBeInstanceOf(NoWorkspaceError);
+      await expect(outbox.counts()).rejects.toBeInstanceOf(NoWorkspaceError);
+      await expect(outbox.attention()).rejects.toBeInstanceOf(NoWorkspaceError);
+      expect(stores.dataOf(OTHER_AUTH_ID).queue).toEqual([]);
+      expect(stores.dataOf(AUTH_ID).queue).toHaveLength(1);
     });
   });
 });
