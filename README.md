@@ -188,7 +188,7 @@ El turno se abre y se cierra **sin conexión**, en `/mostrador/turno` (el detall
   a recibir. Su cuerpo es exactamente el de la ruta individual (`POST /v1/shifts` y `/close`).
 - **Dice la verdad del servidor:** «Falta confirmar con el servidor» mientras el cierre espera, «El servidor ya tiene este turno» cuando
   salió de la cola y «El servidor no aceptó…» cuando lo apartó. Un equipo que el servidor no conoce todavía no abre turno.
-- **El mostrador tiene su propio marco** (`CounterShell`): cabecera, menú (Mostrador · Turno · Equipo) y estado del envío, sin depender de que la
+- **El mostrador tiene su propio marco** (`CounterShell`): cabecera, menú (Mostrador · Turno · Ventas · Equipo) y estado del envío, sin depender de que la
   cuenta esté cargada.
 
 ### Punto de venta
@@ -206,7 +206,28 @@ Se vende, se cobra y se da el comprobante **sin conexión**, en `/mostrador` (el
   Dos toques seguidos cobran una vez.
 - **Responde dentro del presupuesto** con la CPU a ¼: la búsqueda en 20.000 productos pasó de 69–178 ms a 5–12 ms
   ([`docs/rendimiento.md`](docs/rendimiento.md#el-punto-de-venta-c3-12)).
-- **Todavía no:** leer códigos con la cámara, ver o anular las ventas hechas (C3-13) ni varias formas de pago en una venta.
+- **Todavía no:** leer códigos con la cámara ni varias formas de pago en una venta. Las ventas hechas se ven, se revisan y se anulan
+  en [Ventas](#ventas).
+
+### Ventas
+
+Se ven las ventas hechas, se revisan las que el servidor marcó y se anulan, en `/mostrador/ventas` (el detalle está en
+[`docs/ventas.md`](docs/ventas.md)).
+
+| Ruta                               | Pantalla         | Quién la ve                                |
+| ---------------------------------- | ---------------- | ------------------------------------------ |
+| `/mostrador/ventas`                | Ventas           | Todos los roles; las pestañas, la gerencia |
+| `/mostrador/ventas/:saleId`        | Una venta        | Todos los roles                            |
+| `/mostrador/ventas/:saleId/anular` | Anular una venta | Dueño y administrador (`sale:void`)        |
+
+- **Tres vistas:** «Mi turno» (la única del cajero), «Todas» y «Atención», estas dos para el dueño y el administrador. **Sin conexión**
+  se ven las ventas que están en este equipo (por enviar y no aceptadas), sacadas de la cola; las del servidor piden conexión.
+- **«Requiere atención»** es la bandeja de lo que el servidor aceptó pero marcó (vendida sin existencias, folio repetido, precio
+  distinto…) y nadie ha revisado. Solo la gerencia se entera: el menú dice «Ventas 3» (o «Ventas 50+»); el cajero no ve el número.
+- **El detalle** es el comprobante con lo que le pasó a la venta, «Qué pasó», dicho en frases; los nombres y las unidades salen de la
+  copia local. Ofrece **ajustar la existencia** de lo que quedó sin existencias y **marcar como revisada** (con una nota opcional).
+- **Anular** pide un motivo, devuelve la existencia y saca el efectivo del **turno abierto de quien anula**; sin turno abierto y con
+  efectivo, lleva a abrir uno. Reintentar nunca anula dos veces (una llave por pantalla, ADR 0019).
 
 ### Pantallas de acceso y personas
 
@@ -459,6 +480,7 @@ naranja del logo (`#f97801`) solo como acento.**
 - Cómo se envía la cola sin conexión y qué dice la pantalla mientras tanto: [`docs/sincronizacion.md`](docs/sincronizacion.md).
 - Cómo se abre, se cierra y se ve el turno de caja sin conexión: [`docs/turno.md`](docs/turno.md).
 - Cómo se vende, se cobra y se da el comprobante sin conexión: [`docs/punto-de-venta.md`](docs/punto-de-venta.md).
+- Cómo se ven, se revisan y se anulan las ventas hechas: [`docs/ventas.md`](docs/ventas.md).
 - El recorrido de la aplicación completa con el que se cierra cada ciclo, paso a paso y con lo que debe pasar:
   [`docs/recorrido-del-ciclo-2.md`](docs/recorrido-del-ciclo-2.md).
 - Todos los ADR del proyecto, también los de este repositorio, viven en el backend:

@@ -122,7 +122,9 @@ de hoy en todas las cajas:** es lo que el servidor sabía a esa hora (ADR 0028, 
 
 - **No actualiza la copia por sí sola cada cierto tiempo:** si alguien deja el mostrador abierto un día sin enviar nada ni perder la
   conexión, el catálogo no cambia hasta que se toque «Actualizar» o se envíe algo.
-- **No hay pantalla para revisar lo que pidió atención** más allá del conteo; esa llega con el registro de ventas (C3-13).
+- **Una venta que el servidor no aceptó solo se puede ver, no descartar ni reintentar:** la lista de [`ventas.md`](ventas.md) la dice
+  («El servidor no la aceptó») y la bandeja «Atención» la muestra, pero no hay un botón para actuar sobre ella. Lo que pidió atención
+  de un turno lo dice la pantalla del turno.
 - **Una operación que no se puede abrir** (un registro alterado o cambiado de lugar, con la clave en su sitio) se salta al armar el
   lote y **nunca se envía**, pero **sigue contada como pendiente**: el indicador no miente sobre que hay algo guardado, pero hoy no
   hay pantalla para verla ni para descartarla. Si es toda la base la que no se puede abrir (la clave se perdió), `StorageNotice`

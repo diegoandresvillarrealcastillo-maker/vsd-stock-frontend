@@ -22,8 +22,8 @@ Todo esto funciona **sin conexión**: sale de lo guardado en el equipo, no del s
 
 El turno cuelga de **`/mostrador`**, no de la administración: `/mostrador/turno` y `/mostrador/turno/cerrar`. Es a propósito
 (ADR 0017): el marco de la administración necesita la cuenta cargada, que sin conexión no está; el **marco del mostrador**
-(`CounterShell`) solo necesita el espacio de trabajo local abierto. Trae su propia cabecera, un menú (Mostrador · Turno · Equipo) y el
-estado del envío en todas sus pantallas.
+(`CounterShell`) solo necesita el espacio de trabajo local abierto. Trae su propia cabecera, un menú (Mostrador · Turno · Ventas · Equipo)
+y el estado del envío en todas sus pantallas.
 
 ## Qué se guarda y cómo
 

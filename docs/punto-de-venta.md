@@ -90,8 +90,8 @@ presupuesto de 100 ms. Las cifras están en [`rendimiento.md`](rendimiento.md#el
   Bluetooth o por cable).
 - **La venta en curso no sobrevive a recargar la página:** el carrito está en memoria. Una venta ya cobrada sí: está en la base
   cifrada.
-- **Ver las ventas hechas, anularlas y la bandeja «Requieren atención»** llegan en el siguiente paso (C3-13). Hasta entonces el
-  comprobante solo se ve al terminar la venta.
+- **El comprobante de una venta que todavía no llegó al servidor** solo se ve al terminar la venta: la lista de ventas la muestra
+  («Por enviar»), pero su detalle es de las que el servidor ya tiene. Verlas, revisarlas y anularlas está en [`ventas.md`](ventas.md).
 - **Varias formas de pago en una venta** (mitad en efectivo y mitad con tarjeta). El servidor las acepta (hasta 10 pagos por venta);
   la pantalla todavía ofrece uno.
 - **Un teléfono real.** Que cobrar sea fluido en un Android de gama baja se midió con la CPU limitada, no en un aparato (C3-16).
