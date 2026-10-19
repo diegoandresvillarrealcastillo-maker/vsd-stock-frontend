@@ -80,9 +80,45 @@ Reglas que no se negocian:
   envío. No borra nada.
 - El color acompaña, nunca es lo único: cada tono tiene su icono y su texto.
 
+## La copia de lectura: el catálogo y la existencia en este equipo
+
+Para vender sin conexión, el dispositivo guarda el catálogo y la existencia de su negocio (C3-10,
+[ADR 0028](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0028-lote-de-sincronizacion-y-copia-de-lectura.md)).
+Se baja de `GET /v1/sync/products` y `GET /v1/sync/stock`, se guarda **cifrada** en la base de quien trabaja y se tiene en memoria para
+buscar sin esperar a nadie.
+
+- **Qué se guarda y cómo:** un registro por producto (`product:<id>`) y uno por existencia (`stock:<id>`), cada uno cifrado como todo
+  lo demás (ADR 0018), más un registro `copy-checkpoint` con la hora de la última descarga de cada una. Los nombres de los registros
+  llevan solo el identificador: **el nombre del producto, su código y su precio van dentro del cifrado**.
+- **Cuándo baja:** cuando el servidor confirma que hay conexión, cuando alguien empieza a trabajar, cuando el dispositivo acaba de
+  enviar algo (la existencia se movió) y cuando la persona toca «Actualizar». No hay un reloj que lo repita solo: si nadie lo pide, no
+  baja. Una sola descarga a la vez.
+- **Solo lo que cambió:** la primera vez pide todo; las siguientes piden lo que cambió desde **un minuto antes** de la hora del
+  servidor de la **primera página** de la descarga anterior (`COPY_MARGIN_MS`): una transacción que empezó antes de esa hora puede
+  confirmarse después con una hora anterior y sin el margen se perdería. Aplicar dos veces el mismo producto no hace daño: **gana el de
+  `updatedAt` mayor**. La existencia se **reemplaza** por la de ahora.
+- **De a 200 por página** (el máximo del servidor). La hora de la descarga **solo se mueve cuando termina completa**: si falla a la
+  mitad, lo que llegó se guarda igual y la próxima vez se pide desde el mismo punto.
+- **Los archivados viajan** (con `active: false`): el dispositivo se entera de que ya no se venden. La búsqueda no los ofrece.
+- **Un fallo no borra lo que ya había:** se dice por qué (`sin conexión`, `sesión caducada` u otro) y se sigue con esa copia. Nada de
+  esto lanza: la copia de lectura nunca rompe una pantalla.
+- **Nunca mezcla personas:** la copia en memoria es de quien trabaja; si cambia, se olvida y se lee la de la otra persona. Una
+  descarga que llega cuando la persona ya cambió no toca nada.
+
+**La búsqueda** (`searchProducts`): en cualquier orden de palabras, sin importar mayúsculas ni tildes, por el nombre, el código del
+negocio o el código de barras (completo, con o sin el cero que vuelve un UPC en EAN). Un código exacto va primero; luego lo que
+empieza como se escribió, luego una palabra que empieza así y al final lo que solo lo contiene; dentro de cada grupo, por nombre. No
+ofrece archivados ni más de 20. No busca nada si no se escribió nada.
+
+**Lo que la pantalla dice** (`CopyStatus`, «Catálogo en este equipo» en `/mostrador`): cuántos productos hay y **de cuándo** son el
+catálogo y la existencia, o que todavía no hay catálogo y que sin él no se puede vender sin conexión. **Nada de esto es la existencia
+de hoy en todas las cajas:** es lo que el servidor sabía a esa hora (ADR 0028, punto 12). Quien muestre una existencia debe decir «al
+[hora]» y restar lo que este dispositivo vendió y todavía no envió (C3-12).
+
 ## Lo que no hace (todavía)
 
-- **No baja datos.** La copia de lectura del catálogo y de la existencia (`GET /v1/sync/products` y `/stock`) es C3-10.
+- **No actualiza la copia por sí sola cada cierto tiempo:** si alguien deja el mostrador abierto un día sin enviar nada ni perder la
+  conexión, el catálogo no cambia hasta que se toque «Actualizar» o se envíe algo.
 - **No hay pantalla para revisar lo que pidió atención** más allá del conteo; esa llega con el registro de ventas (C3-13).
 - **Una operación que no se puede abrir** (un registro alterado o cambiado de lugar, con la clave en su sitio) se salta al armar el
   lote y **nunca se envía**, pero **sigue contada como pendiente**: el indicador no miente sobre que hay algo guardado, pero hoy no
