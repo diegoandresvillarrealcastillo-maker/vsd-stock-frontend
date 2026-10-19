@@ -96,6 +96,16 @@ describe('searching the copy of the catalog', () => {
     ]);
   });
 
+  it('puts the barcode typed without the zero of its EAN before a name that starts with those digits', () => {
+    const upc = product({ name: 'Galleta', barcode: '012345678905' });
+    const noisy = product({ name: '12345678905 de regalo' });
+
+    expect(names(searchProducts([noisy, upc], '12345678905'))).toEqual([
+      'Galleta',
+      '12345678905 de regalo',
+    ]);
+  });
+
   it('puts what matches a code exactly before a name that starts with those digits', () => {
     const noisy = product({ name: '7701234567897 de regalo' });
 
@@ -364,6 +374,8 @@ describe('a code that is exactly the one of a product', () => {
   it('is not nothing: an empty text is not the code of anyone', () => {
     expect(isExactCode(arroz, '')).toBe(false);
     expect(isExactCode(arroz, '   ')).toBe(false);
+    // Un codigo de barras de solo ceros quedaria igual a un texto vacio una vez quitados los ceros: no cuenta.
+    expect(isExactCode(product({ sku: 'X', barcode: '0' }), '')).toBe(false);
   });
 
   it('is not the barcode of a product that has none', () => {

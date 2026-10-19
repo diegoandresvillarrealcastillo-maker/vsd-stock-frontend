@@ -106,6 +106,25 @@ describe('the cart of a sale', () => {
       expect(cart.lines[0]?.quantityMilli).toBe(MAX_QUANTITY_MILLI);
     });
 
+    it('takes as many lines as the server does: two hundred', () => {
+      expect(MAX_CART_LINES).toBe(200);
+      let cart = EMPTY_CART;
+      for (let n = 0; n < 200; n += 1) cart = addProduct(cart, product());
+
+      expect(cart.lines).toHaveLength(200);
+      expect(addProduct(cart, product()).lines).toHaveLength(200);
+    });
+
+    it('adds up to the largest quantity and no further when less than one unit is left to it', () => {
+      const kilos = product({ unit: 'kilogram', unitPrice: 8_000 });
+      let cart = setQuantity(addProduct(EMPTY_CART, kilos), kilos.id, MAX_QUANTITY_MILLI - 500);
+
+      expect(canAdd(cart, kilos)).toBe(true);
+      cart = addProduct(cart, kilos);
+
+      expect(cart.lines[0]?.quantityMilli).toBe(MAX_QUANTITY_MILLI);
+    });
+
     it('does not take more lines than a sale has room for, but still adds units to the ones it has', () => {
       let cart = EMPTY_CART;
       const first = product();
@@ -138,7 +157,7 @@ describe('the cart of a sale', () => {
       (quantity) => {
         const cart = addProduct(EMPTY_CART, arroz);
 
-        expect(() => setQuantity(cart, arroz.id, quantity)).toThrow(RangeError);
+        expect(() => setQuantity(cart, arroz.id, quantity)).toThrow(/Not a quantity/);
       },
     );
 
@@ -208,7 +227,7 @@ describe('the cart of a sale', () => {
     it('does nothing for a product that is not there', () => {
       const cart = addProduct(EMPTY_CART, arroz);
 
-      expect(removeLine(cart, 'no-esta')).toEqual(cart);
+      expect(removeLine(cart, 'no-esta')).toBe(cart);
     });
   });
 
@@ -289,6 +308,11 @@ describe('the cart of a sale', () => {
 
     it('does not take a number the system can not hold', () => {
       expect(parseDiscount(String(MAX_PESOS + 1), MAX_PESOS)).toMatchObject({ ok: false });
+      expect(parseDiscount(String(MAX_PESOS + 1), MAX_PESOS + 10)).toMatchObject({ ok: false });
+      expect(parseDiscount(String(MAX_PESOS), MAX_PESOS + 10)).toEqual({
+        ok: true,
+        value: MAX_PESOS,
+      });
     });
   });
 });

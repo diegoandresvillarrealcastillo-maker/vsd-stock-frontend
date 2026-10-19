@@ -66,6 +66,10 @@ describe('the cash that a customer hands over', () => {
       expect(parseReceived('0', 0)).toEqual({ ok: true, value: 0 });
     });
 
+    it('takes the most the system can hold, and not a peso more', () => {
+      expect(parseReceived(String(MAX_PESOS), 26_800)).toEqual({ ok: true, value: MAX_PESOS });
+    });
+
     it('does not take more than the system can hold', () => {
       expect(parseReceived(String(MAX_PESOS + 1), 26_800)).toEqual({
         ok: false,

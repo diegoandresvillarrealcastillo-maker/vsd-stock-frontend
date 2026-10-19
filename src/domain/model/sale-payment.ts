@@ -3,18 +3,20 @@ import { formatPesos, type Parsed } from './quantity';
 
 export type PaymentMethod = 'cash' | 'card' | 'transfer';
 
+const LABELS: Record<PaymentMethod, string> = {
+  cash: 'Efectivo',
+  card: 'Tarjeta',
+  transfer: 'Transferencia',
+};
+
 /** Las formas de pagar, en el orden en que se ofrecen: las mismas que acepta el servidor (ADR 0027). */
 export const PAYMENT_METHODS: readonly {
   readonly method: PaymentMethod;
   readonly label: string;
-}[] = [
-  { method: 'cash', label: 'Efectivo' },
-  { method: 'card', label: 'Tarjeta' },
-  { method: 'transfer', label: 'Transferencia' },
-];
+}[] = (['cash', 'card', 'transfer'] as const).map((method) => ({ method, label: LABELS[method] }));
 
 export function methodLabel(method: PaymentMethod): string {
-  return PAYMENT_METHODS.find((item) => item.method === method)?.label ?? method;
+  return LABELS[method];
 }
 
 /** Lo mas largo que acepta el servidor para la referencia de un cobro. */
