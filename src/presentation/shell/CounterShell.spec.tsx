@@ -101,6 +101,9 @@ describe('CounterShell', () => {
       expect(shift.getAttribute('href')).toBe('/mostrador/turno');
       expect(shift.getAttribute('aria-current')).toBe('page');
       expect(counter.getAttribute('aria-current')).toBeNull();
+      // Tambien se ve: la pagina actual tiene el color del tema, y las demas no.
+      expect(shift.className).toContain('bg-primary');
+      expect(counter.className).not.toContain('bg-primary');
     });
 
     it('offers what this device knows as well', async () => {

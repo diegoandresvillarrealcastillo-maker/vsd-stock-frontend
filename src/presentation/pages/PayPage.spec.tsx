@@ -1,5 +1,6 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { settle } from '../../../test/support/connection';
 import { deferred } from '../../../test/support/deferred';
 import { createTestSelling, item, type TestSelling } from '../../../test/support/fake-selling';
 import { renderScreen } from '../../../test/support/screens';
@@ -130,6 +131,19 @@ describe('PayPage', () => {
       expect(confirm().disabled).toBe(true);
     });
 
+    it('does not charge, and goes to the field, when the form is sent with cash that does not cover the total', async () => {
+      const { t } = await mount();
+      await screen.findByLabelText('Efectivo recibido');
+      typeReceived('1000');
+
+      fireEvent.submit(received().closest('form') as HTMLFormElement);
+      await settle();
+
+      expect(t.local.stores.dataOf('ana').queue).toHaveLength(1);
+      expect(t.selling.current().receipt).toBeNull();
+      expect(document.activeElement).toBe(received());
+    });
+
     it('says what is wrong with what was written, when it is not pesos', async () => {
       await mount();
       await screen.findByLabelText('Efectivo recibido');
@@ -215,6 +229,11 @@ describe('PayPage', () => {
       const busy = await screen.findByRole<HTMLButtonElement>('button', { name: 'Guardando…' });
       expect(busy.disabled).toBe(true);
       expect(received().hasAttribute('disabled')).toBe(true);
+      for (const radio of screen.getAllByRole('radio'))
+        expect(radio.matches(':disabled')).toBe(true);
+      for (const name of ['Exacto', '$ 30.000']) {
+        expect(screen.getByRole<HTMLButtonElement>('button', { name }).disabled).toBe(true);
+      }
       fireEvent.click(busy);
       expect(calls).toBe(1);
       await act(async () => {
@@ -281,7 +300,24 @@ describe('PayPage', () => {
         'true',
       );
       expect(screen.getByText('La referencia es muy larga: 100 letras como máximo.')).toBeDefined();
+      expect(document.activeElement).toBe(screen.getByLabelText('Referencia (opcional)'));
+      await settle();
       expect(t.local.stores.dataOf('ana').queue).toHaveLength(1);
+      expect(t.selling.current().receipt).toBeNull();
+    });
+
+    it('takes the mistake of the reference away as soon as it is written again', async () => {
+      await mount();
+      fireEvent.click(await screen.findByRole('radio', { name: 'Tarjeta' }));
+      const field = screen.getByLabelText('Referencia (opcional)');
+      fireEvent.change(field, { target: { value: 'x'.repeat(101) } });
+      fireEvent.click(confirm());
+      expect(screen.getByText('La referencia es muy larga: 100 letras como máximo.')).toBeDefined();
+
+      fireEvent.change(field, { target: { value: 'Visa 4455' } });
+
+      expect(screen.queryByText('La referencia es muy larga: 100 letras como máximo.')).toBeNull();
+      expect(field.getAttribute('aria-invalid')).toBeNull();
     });
 
     it('keeps what was written in each way to pay when the person goes back and forth', async () => {

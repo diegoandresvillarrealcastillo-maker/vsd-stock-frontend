@@ -116,7 +116,6 @@ export function SellPage() {
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key !== 'Enter') return;
-    event.preventDefault();
     // Un lector termina de escribir el codigo con Enter: se busca lo escrito ahora mismo, sin esperar a la lista de resultados.
     const [first, second] = searchCopy(query);
     if (first === undefined) return;
@@ -154,7 +153,7 @@ export function SellPage() {
         <p role="status" className="text-sm text-fg-muted">
           {searchMessage(settled, found.length)}
         </p>
-        {settled.trim() !== '' && found.length > 0 && (
+        {found.length > 0 && (
           <ul aria-label="Resultados de la búsqueda" className="flex flex-col">
             {found.map((product) => {
               const stock = stockOf(product.id);

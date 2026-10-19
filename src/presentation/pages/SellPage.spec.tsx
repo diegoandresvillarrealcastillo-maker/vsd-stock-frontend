@@ -36,6 +36,8 @@ const queso = item(5, {
 });
 const pan = item(6, { name: 'Pan tajado', sku: 'PAN-1', unitPrice: 2_800, taxRateBp: 500 });
 const viejo = item(7, { name: 'Aceite viejo', sku: 'ACE-OLD', active: false });
+// Su nombre trae dentro el codigo del arroz: leer ese codigo encuentra a los dos.
+const combo = item(8, { name: 'Combo ARR-500 de regalo', sku: 'COMBO-1', unitPrice: 9_000 });
 
 const CATALOG: Product[] = [arroz, aceite, aceiteOliva, aceiteCinco, queso, pan, viejo];
 const STOCK = {
@@ -47,9 +49,9 @@ const STOCK = {
   [pan.id]: 2_000,
 };
 
-async function mount(options: { shift?: 'open' | 'none' } = {}) {
+async function mount(options: { shift?: 'open' | 'none'; extra?: Product[] } = {}) {
   const t = await createTestSelling(options.shift === undefined ? {} : { shift: options.shift });
-  t.copy.hold(CATALOG, STOCK);
+  t.copy.hold([...CATALOG, ...(options.extra ?? [])], STOCK);
   const view = renderScreen(<SellPage />, {
     local: t.local,
     shifts: t.shifts,
@@ -110,13 +112,39 @@ describe('SellPage', () => {
       expect(await screen.findByText('Abre un turno para vender')).toBeDefined();
     });
 
-    it('waits while the shift is being read, and does not say there is none', () => {
+    it('waits while the shift is being read, and does not say there is none', async () => {
+      const t = await createTestSelling();
       renderScreen(<SellPage />, {
+        local: t.local,
         shifts: new FakeShifts({ status: 'loading' }),
+        selling: t.selling,
+        copy: t.copy,
+        sync: t.sync,
         path: '/mostrador',
       });
 
+      expect(await screen.findByText('Cargando el turno…')).toBeDefined();
       expect(screen.queryByText('Abre un turno para vender')).toBeNull();
+      expect(screen.queryByLabelText('Buscar o leer un código')).toBeNull();
+    });
+
+    it('says it could not read the shift, and leads to it instead of selling', async () => {
+      const t = await createTestSelling();
+      renderScreen(<SellPage />, {
+        local: t.local,
+        shifts: new FakeShifts({ status: 'failed' }),
+        selling: t.selling,
+        copy: t.copy,
+        sync: t.sync,
+        path: '/mostrador',
+      });
+
+      expect(await screen.findByText('No pudimos leer el turno de este equipo')).toBeDefined();
+      expect(screen.getByRole('link', { name: 'Ver el turno' }).getAttribute('href')).toBe(
+        '/mostrador/turno',
+      );
+      expect(screen.queryByText('Abre un turno para vender')).toBeNull();
+      expect(screen.queryByLabelText('Buscar o leer un código')).toBeNull();
     });
   });
 
@@ -234,6 +262,17 @@ describe('SellPage', () => {
       expect(screen.queryByRole('list', { name: 'Resultados de la búsqueda' })).toBeNull();
     });
 
+    it('adds the product that was touched, and not the first one of the list', async () => {
+      await mount();
+      await screen.findByLabelText('Buscar o leer un código');
+      write('aceite');
+
+      add('Aceite de oliva');
+
+      expect(within(cart()).getByText('Aceite de oliva 500 ml')).toBeDefined();
+      expect(within(cart()).queryByText('Aceite 1 L')).toBeNull();
+    });
+
     it('adds a unit more when the same product is added again, in the same line', async () => {
       await mount();
       await screen.findByLabelText('Buscar o leer un código');
@@ -333,6 +372,17 @@ describe('SellPage', () => {
         'value',
         '2',
       );
+    });
+
+    it('adds the product whose code was read, even when that code is also inside the name of another', async () => {
+      await mount({ extra: [combo] });
+      await screen.findByLabelText('Buscar o leer un código');
+
+      write('ARR-500');
+      enter();
+
+      expect(within(cart()).getByText('Arroz 500 g')).toBeDefined();
+      expect(within(cart()).queryByText('Combo ARR-500 de regalo')).toBeNull();
     });
 
     it('adds what is the only result when someone writes a name and presses enter', async () => {
@@ -527,6 +577,74 @@ describe('SellPage', () => {
       expect(within(lineOf('Arroz 500 g')).getByText('$ 3.200')).toBeDefined();
     });
 
+    it('opens and closes the panel of the discount with the same button, and says whether it is open', async () => {
+      await withRice();
+      const button = within(lineOf('Arroz 500 g')).getByRole('button', { name: 'Descuento' });
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+
+      fireEvent.click(button);
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      expect(screen.getByLabelText('Descuento en pesos de Arroz 500 g')).toBeDefined();
+
+      fireEvent.click(button);
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(screen.queryByLabelText('Descuento en pesos de Arroz 500 g')).toBeNull();
+    });
+
+    it('opens the panel with the discount the line has, and empty when it has none', async () => {
+      await withRice();
+      const button = within(lineOf('Arroz 500 g')).getByRole('button', { name: 'Descuento' });
+      const input = () => screen.getByLabelText('Descuento en pesos de Arroz 500 g');
+      fireEvent.click(button);
+      expect(input()).toHaveProperty('value', '');
+
+      fireEvent.change(input(), { target: { value: '200' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Aplicar descuento' }));
+      expect(screen.queryByLabelText('Descuento en pesos de Arroz 500 g')).toBeNull();
+      fireEvent.click(button);
+
+      expect(input()).toHaveProperty('value', '200');
+    });
+
+    it('offers to take the discount away only when the line has one, and closes the panel when it does', async () => {
+      await withRice();
+      const button = within(lineOf('Arroz 500 g')).getByRole('button', { name: 'Descuento' });
+      fireEvent.click(button);
+      expect(screen.queryByRole('button', { name: 'Quitar descuento' })).toBeNull();
+      fireEvent.change(screen.getByLabelText('Descuento en pesos de Arroz 500 g'), {
+        target: { value: '200' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Aplicar descuento' }));
+      fireEvent.click(button);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Quitar descuento' }));
+
+      expect(screen.queryByLabelText('Descuento en pesos de Arroz 500 g')).toBeNull();
+    });
+
+    it('forgets the mistake in a discount when the panel is opened again', async () => {
+      await withRice();
+      const button = within(lineOf('Arroz 500 g')).getByRole('button', { name: 'Descuento' });
+      fireEvent.click(button);
+      fireEvent.change(screen.getByLabelText('Descuento en pesos de Arroz 500 g'), {
+        target: { value: '3201' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Aplicar descuento' }));
+      expect(
+        screen.getByText('El descuento no puede pasar del valor de la línea: $ 3.200.'),
+      ).toBeDefined();
+
+      fireEvent.click(button);
+      fireEvent.click(button);
+
+      expect(
+        screen.queryByText('El descuento no puede pasar del valor de la línea: $ 3.200.'),
+      ).toBeNull();
+      expect(
+        screen.getByLabelText('Descuento en pesos de Arroz 500 g').getAttribute('aria-invalid'),
+      ).toBeNull();
+    });
+
     it('takes the line out of the sale', async () => {
       await withRice();
 
@@ -544,16 +662,33 @@ describe('SellPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Vaciar la venta' }));
       fireEvent.click(await screen.findByRole('button', { name: 'Seguir con la venta' }));
       expect(within(cart()).getByText('Arroz 500 g')).toBeDefined();
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: 'Seguir con la venta' })).toBeNull();
+      });
 
       fireEvent.click(screen.getByRole('button', { name: 'Vaciar la venta' }));
       fireEvent.click(await screen.findByRole('button', { name: 'Sí, vaciar' }));
       await waitFor(() => {
         expect(screen.queryByRole('list', { name: 'Venta en curso' })).toBeNull();
       });
+      expect(screen.queryByRole('button', { name: 'Sí, vaciar' })).toBeNull();
     });
   });
 
   describe('the bar to charge', () => {
+    it('leads to charging with a single product, which is already a sale', async () => {
+      await mount();
+      await screen.findByLabelText('Buscar o leer un código');
+      write('arroz');
+      add('Arroz 500 g');
+
+      const bar = screen.getByRole('region', { name: 'Cobro' });
+
+      expect(within(bar).getByRole('link', { name: 'Cobrar' }).getAttribute('href')).toBe(
+        '/mostrador/cobrar',
+      );
+    });
+
     it('says the total, and leads to charging', async () => {
       await mount();
       await screen.findByLabelText('Buscar o leer un código');

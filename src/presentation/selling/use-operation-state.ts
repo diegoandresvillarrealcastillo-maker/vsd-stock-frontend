@@ -8,7 +8,7 @@ import { useSync } from '../sync/SyncProvider';
  * (`null`). `undefined` mientras todavia no se miro. Se vuelve a mirar cuando el envio dice que algo se movio.
  */
 export function useOperationState(operationId: string): OperationState | null | undefined {
-  const { workspace, active } = useLocal();
+  const { workspace } = useLocal();
   const { state: sync } = useSync();
   const [state, setState] = useState<OperationState | null | undefined>(undefined);
   const moved = `${String(sync.pending)}/${String(sync.attention)}/${String(sync.lastSyncedAt?.getTime() ?? 0)}`;
@@ -28,7 +28,7 @@ export function useOperationState(operationId: string): OperationState | null | 
     return () => {
       cancelled = true;
     };
-  }, [workspace, active, operationId, moved]);
+  }, [workspace, operationId, moved]);
 
   return state;
 }

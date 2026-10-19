@@ -15,6 +15,7 @@ const arroz = item(1, { name: 'Arroz 500 g', unitPrice: 3_200, taxRateBp: 1_900 
 const aceite = item(2, { name: 'Aceite 1 L', unitPrice: 12_500, taxRateBp: 1_900 });
 const pan = item(3, { name: 'Pan tajado', unitPrice: 2_800, taxRateBp: 1_900 });
 const queso = item(4, { name: 'Queso', unit: 'kilogram', unitPrice: 20_000, taxRateBp: 5_00 });
+const harina = item(5, { name: 'Harina', unitPrice: 2_000, taxRateBp: 0 });
 
 /** La venta del diseno ya cobrada: 2 arroz, 1 aceite con $ 500 de descuento y 3 panes = $ 26.800. */
 async function sold(payment: SalePayment = { method: 'cash', received: 30_000 }) {
@@ -83,6 +84,61 @@ describe('ReceiptPage', () => {
       expect(await screen.findByText('Guardada y enviada al servidor.')).toBeDefined();
     });
 
+    it('looks again when only the number of operations waiting changes', async () => {
+      const t = await sold();
+      t.sync.set({ pending: 1 });
+      mount(t);
+      await screen.findByText('Guardada en este equipo. Se envía cuando haya conexión.');
+
+      await act(async () => {
+        await t.local.stores.lastStore.resolveOperations([saleId(1)]);
+        t.sync.set({ pending: 0 });
+      });
+
+      expect(await screen.findByText('Guardada y enviada al servidor.')).toBeDefined();
+    });
+
+    it('looks again when only the number of operations that need attention changes', async () => {
+      const t = await sold();
+      mount(t);
+      await screen.findByText('Guardada en este equipo. Se envía cuando haya conexión.');
+
+      await act(async () => {
+        await t.local.stores.lastStore.markAttention(saleId(1), {
+          class: 'permanent',
+          status: 400,
+          code: 'invalid',
+        });
+        t.sync.set({ attention: 1 });
+      });
+
+      expect(
+        await screen.findByText(
+          'Guardada en este equipo. El servidor no la aceptó: la gerencia puede revisarla.',
+        ),
+      ).toBeDefined();
+    });
+
+    it('looks at the new sale when the receipt changes under the same screen', async () => {
+      const t = await sold();
+      mount(t);
+      await act(async () => {
+        await t.local.stores.lastStore.resolveOperations([saleId(1)]);
+        t.sync.set({ lastSyncedAt: new Date('2026-10-19T14:00:00.000Z') });
+      });
+      await screen.findByText('Guardada y enviada al servidor.');
+
+      await act(async () => {
+        t.selling.newSale();
+        t.selling.add(arroz);
+        await t.selling.confirm({ method: 'cash', received: 3_200 });
+      });
+
+      expect(
+        await screen.findByText('Guardada en este equipo. Se envía cuando haya conexión.'),
+      ).toBeDefined();
+    });
+
     it('says when, who and in which shift', async () => {
       const t = await sold();
       mount(t);
@@ -143,6 +199,19 @@ describe('ReceiptPage', () => {
       const receipt = await screen.findByRole('group', { name: 'Comprobante' });
       expect(within(receipt).getByText('Pagado con transferencia')).toBeDefined();
       expect(within(receipt).queryByText('Referencia')).toBeNull();
+    });
+
+    it('leaves out the rate that has no tax, as the sale does', async () => {
+      const t = await createTestSelling();
+      t.selling.add(arroz);
+      t.selling.add(harina);
+      await t.selling.confirm({ method: 'cash', received: 10_000 });
+      mount(t);
+
+      const receipt = await screen.findByRole('group', { name: 'Comprobante' });
+
+      expect(within(receipt).getByText('IVA 19 % incluido')).toBeDefined();
+      expect(within(receipt).queryByText(/IVA 0 %/)).toBeNull();
     });
 
     it('says the unit of what is weighed', async () => {

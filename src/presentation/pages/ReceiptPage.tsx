@@ -1,4 +1,4 @@
-import { Navigate, useNavigate } from 'react-router';
+import { Navigate } from 'react-router';
 import { formatMoment, formatTime } from '../../domain/model/moment';
 import { formatPesos } from '../../domain/model/quantity';
 import { methodLabel } from '../../domain/model/sale-payment';
@@ -59,7 +59,6 @@ function rowsOf(receipt: SaleReceipt): SummaryRow[] {
 export function ReceiptPage() {
   const { active } = useLocal();
   const { state: sale, newSale } = useSelling();
-  const navigate = useNavigate();
   const receipt = sale.receipt;
   const operation = useOperationState(receipt?.operationId ?? '');
 
@@ -81,14 +80,8 @@ export function ReceiptPage() {
         <p className="text-base font-semibold text-fg">Comprobante de venta — no es factura</p>
         <p className="text-sm text-fg-muted">Es el comprobante de la venta en este equipo.</p>
       </div>
-      <Button
-        onClick={() => {
-          newSale();
-          void navigate('/mostrador');
-        }}
-      >
-        Nueva venta
-      </Button>
+      {/* Sin comprobante la pantalla vuelve sola a la venta: empezar otra es solo cerrar este. */}
+      <Button onClick={newSale}>Nueva venta</Button>
     </>
   );
 }
