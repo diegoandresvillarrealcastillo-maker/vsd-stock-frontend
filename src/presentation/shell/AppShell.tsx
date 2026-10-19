@@ -5,6 +5,7 @@ import { NeedsConnection } from '../components/NeedsConnection';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { SessionControls } from '../local/SessionControls';
 import { StorageNotice } from '../local/StorageNotice';
+import { SyncStatus } from '../sync/SyncStatus';
 
 const LINK =
   'inline-flex min-h-touch items-center whitespace-nowrap rounded-md px-4 text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
@@ -66,6 +67,9 @@ export function AppShell() {
       <main id="contenido" tabIndex={-1} className="mx-auto max-w-5xl px-gutter py-6">
         <div className="mb-4 empty:hidden">
           <StorageNotice />
+        </div>
+        <div className="mb-4">
+          <SyncStatus />
         </div>
         {needsConnection ? (
           <NeedsConnection>

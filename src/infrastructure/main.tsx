@@ -12,6 +12,7 @@ import { resolveAuthConfig } from './auth-config';
 import { createAuth } from './create-auth';
 import { createConnectionMonitor } from './create-connection-monitor';
 import { createLocalWorkspace } from './create-local-workspace';
+import { createSyncEngine } from './create-sync-engine';
 import { createThemePreference } from './create-theme-preference';
 
 // Punto de arranque: cablea los adaptadores del navegador, arma los casos de
@@ -53,6 +54,15 @@ const local = createLocalWorkspace({
   fillRandom: (bytes) => window.crypto.getRandomValues(bytes),
 });
 
+// El motor de sincronizacion: envia la cola de quien trabaja cuando hay conexion, de a un lote y una pestaña a la vez (ADR 0009 y 0028).
+const sync = createSyncEngine({
+  api: auth.api,
+  workspace: local,
+  connection,
+  locks: 'locks' in window.navigator ? window.navigator.locks : undefined,
+  now: () => new Date(),
+});
+
 const people = new BusinessPeopleUseCase(auth.api);
 const catalog = new CatalogUseCase(auth.api);
 const inventory = new InventoryUseCase(auth.api);
@@ -66,6 +76,7 @@ createRoot(container).render(
         connection={connection}
         auth={auth}
         local={local}
+        sync={sync}
         people={people}
         catalog={catalog}
         inventory={inventory}

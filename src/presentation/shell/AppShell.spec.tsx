@@ -6,11 +6,13 @@ import type { Role } from '../../domain/model/permissions';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createTestConnection } from '../../../test/support/connection';
 import { createTestLocal } from '../../../test/support/local';
+import { FakeSyncEngine } from '../../../test/support/sync-engine';
 import { createTestThemePreference } from '../../../test/support/theme';
 import { AuthProvider } from '../auth/AuthProvider';
 import { ConnectionProvider } from '../connection/ConnectionProvider';
 import { LocalWorkspaceProvider } from '../local/LocalWorkspaceProvider';
 import { MotionProvider } from '../motion/MotionProvider';
+import { SyncProvider } from '../sync/SyncProvider';
 import { ThemeProvider } from '../theme/ThemeProvider';
 import { AppShell } from './AppShell';
 
@@ -18,11 +20,14 @@ async function setup({
   role = 'owner',
   at = '/',
   businessName = 'Tienda La Esquina',
+  sync = new FakeSyncEngine(),
   prepare,
 }: {
   role?: Role;
   at?: string;
   businessName?: string;
+  /** Lo que el motor de sincronizacion dice del envio. Por omision, nada que decir. */
+  sync?: FakeSyncEngine;
   /** Deja el espacio de trabajo local como la prueba lo necesita, antes de que la persona entre. */
   prepare?: (local: ReturnType<typeof createTestLocal>) => void;
 } = {}) {
@@ -40,7 +45,9 @@ async function setup({
           <MotionProvider>
             <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
               <LocalWorkspaceProvider workspace={local.workspace}>
-                <MemoryRouter initialEntries={[at]}>{children}</MemoryRouter>
+                <SyncProvider engine={sync}>
+                  <MemoryRouter initialEntries={[at]}>{children}</MemoryRouter>
+                </SyncProvider>
               </LocalWorkspaceProvider>
             </AuthProvider>
           </MotionProvider>
@@ -61,7 +68,7 @@ async function setup({
   );
   // Espera a que se sepa quien es la persona.
   await waitFor(() => expect(screen.queryByText(/cargando tu cuenta/i)).toBeNull());
-  return { auth, connection, theme, local };
+  return { auth, connection, theme, local, sync };
 }
 
 const nav = () => screen.getByRole('navigation', { name: 'Principal' });
@@ -145,6 +152,12 @@ describe('AppShell', () => {
       expect(
         await screen.findByText('Este navegador no puede guardar datos de forma segura'),
       ).toBeDefined();
+    });
+
+    it('says in the frame, on any page, what the device has sent and what it has not', async () => {
+      await setup({ at: '/personas', sync: new FakeSyncEngine({ attention: 1 }) });
+
+      expect(within(screen.getByRole('main')).getByText('1 requiere atención')).toBeDefined();
     });
 
     it('has the theme button', async () => {

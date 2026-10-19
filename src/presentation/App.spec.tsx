@@ -9,6 +9,7 @@ import { createFakeCatalog } from '../../test/support/catalog';
 import { createFakeInventory } from '../../test/support/inventory';
 import { createFakePeople } from '../../test/support/people';
 import { createFakePurchasing } from '../../test/support/purchasing';
+import { FakeSyncEngine } from '../../test/support/sync-engine';
 import { createTestThemePreference } from '../../test/support/theme';
 import { App } from './App';
 
@@ -16,11 +17,13 @@ function renderApp({
   theme = createTestThemePreference().preference,
   connection = createTestConnection(),
   auth = createTestAuth(),
+  sync = new FakeSyncEngine(),
   path = '/ingresar',
 }: {
   theme?: ReturnType<typeof createTestThemePreference>['preference'];
   connection?: ReturnType<typeof createTestConnection>;
   auth?: TestAuth;
+  sync?: FakeSyncEngine;
   path?: string;
 } = {}) {
   render(
@@ -30,6 +33,7 @@ function renderApp({
         connection={connection.monitor}
         auth={auth}
         local={createTestLocal().workspace}
+        sync={sync}
         people={createFakePeople()}
         catalog={createFakeCatalog()}
         inventory={createFakeInventory()}
@@ -64,6 +68,15 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Inicio' }));
 
     expect(auth.loads).toEqual(['ana']);
+  });
+
+  it('gives the whole interface the sync engine, starts it, and tells the person what is left to send', async () => {
+    const sync = new FakeSyncEngine({ pending: 2 });
+    renderApp({ auth: signedIn('owner'), sync, path: '/catalogo' });
+    await screen.findByText('Tienda La Esquina');
+
+    expect(sync.starts).toBeGreaterThan(0);
+    expect(screen.getByText('2 registros por enviar.')).toBeDefined();
   });
 
   it('asks whoever has not signed in to sign in', () => {

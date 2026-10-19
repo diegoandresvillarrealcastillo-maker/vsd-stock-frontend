@@ -10,6 +10,7 @@ import { LocalWorkspaceProvider } from '../../src/presentation/local/LocalWorksp
 import { CatalogProvider } from '../../src/presentation/catalog/CatalogProvider';
 import { InventoryProvider } from '../../src/presentation/inventory/InventoryProvider';
 import { PurchasingProvider } from '../../src/presentation/purchasing/PurchasingProvider';
+import { SyncProvider } from '../../src/presentation/sync/SyncProvider';
 import { ConnectionProvider } from '../../src/presentation/connection/ConnectionProvider';
 import { MotionProvider } from '../../src/presentation/motion/MotionProvider';
 import { PeopleProvider } from '../../src/presentation/people/PeopleProvider';
@@ -21,6 +22,7 @@ import { createTestLocal, type TestLocal } from './local';
 import { createFakeInventory } from './inventory';
 import { createFakePeople } from './people';
 import { createFakePurchasing } from './purchasing';
+import { FakeSyncEngine } from './sync-engine';
 import { createTestThemePreference } from './theme';
 
 /** Donde esta la aplicacion ahora y con que estado de navegacion llego: las pruebas lo leen en `data-testid="ruta"` y `"estado"`. */
@@ -46,6 +48,8 @@ interface Options {
   catalog?: Catalog;
   inventory?: Inventory;
   purchasing?: Purchasing;
+  /** El motor de sincronizacion de mentira. Por omision, uno que no tiene nada que decir. */
+  sync?: FakeSyncEngine;
   connection?: ReturnType<typeof createTestConnection>;
 }
 
@@ -57,6 +61,7 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
   const catalog = options.catalog ?? createFakeCatalog();
   const inventory = options.inventory ?? createFakeInventory();
   const purchasing = options.purchasing ?? createFakePurchasing();
+  const sync = options.sync ?? new FakeSyncEngine();
   const connection = options.connection ?? createTestConnection();
   const view = render(
     <ThemeProvider preference={createTestThemePreference().preference}>
@@ -64,25 +69,27 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
         <MotionProvider>
           <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
             <LocalWorkspaceProvider workspace={local.workspace}>
-              <PeopleProvider people={people}>
-                <CatalogProvider catalog={catalog}>
-                  <InventoryProvider inventory={inventory}>
-                    <PurchasingProvider purchasing={purchasing}>
-                      <MemoryRouter
-                        initialEntries={[{ pathname: options.path ?? '/', state: options.state }]}
-                      >
-                        <Where />
-                        {ui}
-                      </MemoryRouter>
-                    </PurchasingProvider>
-                  </InventoryProvider>
-                </CatalogProvider>
-              </PeopleProvider>
+              <SyncProvider engine={sync}>
+                <PeopleProvider people={people}>
+                  <CatalogProvider catalog={catalog}>
+                    <InventoryProvider inventory={inventory}>
+                      <PurchasingProvider purchasing={purchasing}>
+                        <MemoryRouter
+                          initialEntries={[{ pathname: options.path ?? '/', state: options.state }]}
+                        >
+                          <Where />
+                          {ui}
+                        </MemoryRouter>
+                      </PurchasingProvider>
+                    </InventoryProvider>
+                  </CatalogProvider>
+                </PeopleProvider>
+              </SyncProvider>
             </LocalWorkspaceProvider>
           </AuthProvider>
         </MotionProvider>
       </ConnectionProvider>
     </ThemeProvider>,
   );
-  return { ...view, auth, local, people, catalog, inventory, purchasing, connection };
+  return { ...view, auth, local, people, catalog, inventory, purchasing, sync, connection };
 }
