@@ -10,6 +10,7 @@ import { LocalWorkspaceProvider } from '../../src/presentation/local/LocalWorksp
 import { CatalogProvider } from '../../src/presentation/catalog/CatalogProvider';
 import { InventoryProvider } from '../../src/presentation/inventory/InventoryProvider';
 import { PurchasingProvider } from '../../src/presentation/purchasing/PurchasingProvider';
+import { ReadCopyProvider } from '../../src/presentation/copy/ReadCopyProvider';
 import { SyncProvider } from '../../src/presentation/sync/SyncProvider';
 import { ConnectionProvider } from '../../src/presentation/connection/ConnectionProvider';
 import { MotionProvider } from '../../src/presentation/motion/MotionProvider';
@@ -22,6 +23,7 @@ import { createTestLocal, type TestLocal } from './local';
 import { createFakeInventory } from './inventory';
 import { createFakePeople } from './people';
 import { createFakePurchasing } from './purchasing';
+import { FakeReadCopy } from './read-copy';
 import { FakeSyncEngine } from './sync-engine';
 import { createTestThemePreference } from './theme';
 
@@ -50,6 +52,8 @@ interface Options {
   purchasing?: Purchasing;
   /** El motor de sincronizacion de mentira. Por omision, uno que no tiene nada que decir. */
   sync?: FakeSyncEngine;
+  /** La copia de lectura de mentira. Por omision, una vacia que no tiene nada que decir. */
+  copy?: FakeReadCopy;
   connection?: ReturnType<typeof createTestConnection>;
 }
 
@@ -62,6 +66,7 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
   const inventory = options.inventory ?? createFakeInventory();
   const purchasing = options.purchasing ?? createFakePurchasing();
   const sync = options.sync ?? new FakeSyncEngine();
+  const copy = options.copy ?? new FakeReadCopy();
   const connection = options.connection ?? createTestConnection();
   const view = render(
     <ThemeProvider preference={createTestThemePreference().preference}>
@@ -70,20 +75,24 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
           <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
             <LocalWorkspaceProvider workspace={local.workspace}>
               <SyncProvider engine={sync}>
-                <PeopleProvider people={people}>
-                  <CatalogProvider catalog={catalog}>
-                    <InventoryProvider inventory={inventory}>
-                      <PurchasingProvider purchasing={purchasing}>
-                        <MemoryRouter
-                          initialEntries={[{ pathname: options.path ?? '/', state: options.state }]}
-                        >
-                          <Where />
-                          {ui}
-                        </MemoryRouter>
-                      </PurchasingProvider>
-                    </InventoryProvider>
-                  </CatalogProvider>
-                </PeopleProvider>
+                <ReadCopyProvider copy={copy}>
+                  <PeopleProvider people={people}>
+                    <CatalogProvider catalog={catalog}>
+                      <InventoryProvider inventory={inventory}>
+                        <PurchasingProvider purchasing={purchasing}>
+                          <MemoryRouter
+                            initialEntries={[
+                              { pathname: options.path ?? '/', state: options.state },
+                            ]}
+                          >
+                            <Where />
+                            {ui}
+                          </MemoryRouter>
+                        </PurchasingProvider>
+                      </InventoryProvider>
+                    </CatalogProvider>
+                  </PeopleProvider>
+                </ReadCopyProvider>
               </SyncProvider>
             </LocalWorkspaceProvider>
           </AuthProvider>
@@ -91,5 +100,5 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
       </ConnectionProvider>
     </ThemeProvider>,
   );
-  return { ...view, auth, local, people, catalog, inventory, purchasing, sync, connection };
+  return { ...view, auth, local, people, catalog, inventory, purchasing, sync, copy, connection };
 }
