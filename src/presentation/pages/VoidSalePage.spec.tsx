@@ -101,7 +101,24 @@ describe('VoidSalePage', () => {
     expect((await heading()).textContent).toBe('Anular la venta AA-000141');
   });
 
+  it('keeps the folio in one piece, so a narrow screen does not break it at the hyphen', async () => {
+    mount();
+
+    const title = await heading();
+
+    expect(within(title).getByText('AA-000141').className).toContain('whitespace-nowrap');
+  });
+
   describe('what happens when it is voided', () => {
+    it('keeps each amount in one piece, even when what it says is long', async () => {
+      mount();
+
+      const receipt = await card();
+
+      expect(within(receipt).getByText('2 productos').className).toContain('whitespace-nowrap');
+      expect(within(receipt).getByText('$ 14.800').className).toContain('whitespace-nowrap');
+    });
+
     it('says that the stock goes back, and of how many products', async () => {
       mount();
 

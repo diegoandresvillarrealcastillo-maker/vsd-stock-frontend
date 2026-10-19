@@ -95,8 +95,9 @@ anulada) se dice con sus palabras y el botón sigue disponible.
 
 ## Lo que todavía no se mide
 
-- **Un navegador real a 375 px y un teléfono.** Lo que jsdom no ve (el diseño, los colores de las etiquetas en claro y oscuro, el menú
-  con el número) se mira en un navegador real (C3-15) y en un Android (C3-16).
+- **La pila completa y un teléfono.** Las pantallas se miraron en Chromium a 375 px, en tema claro y oscuro, con **axe-core sin
+  violaciones** y sin desborde horizontal, pero con una API de mentira en memoria: no contra el servidor y la base reales (C3-15) ni
+  en un Android (C3-16). Firefox y Safari no se probaron.
 - **Que el contador se refresque solo.** El número del menú se pregunta al abrir, al enviar y al revisar o anular; no se vuelve a
   preguntar mientras nadie hace nada.
 - **Anular parte de una venta.** Solo se anula la venta entera; las devoluciones parciales quedan para después de la entrega.

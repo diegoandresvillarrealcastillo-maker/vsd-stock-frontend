@@ -10,7 +10,7 @@ const LINK =
   'inline-flex min-h-touch min-w-touch items-center justify-center rounded-full border border-border bg-surface-raised px-3 text-sm font-medium text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 const TAB =
-  'inline-flex min-h-touch items-center whitespace-nowrap rounded-md px-4 text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
+  'inline-flex min-h-touch items-center whitespace-nowrap rounded-md px-2.5 text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 /**
  * Lo que la persona hace en el mostrador. Todo funciona sin conexion: sale de lo guardado en este equipo. Vender, cobrar y el

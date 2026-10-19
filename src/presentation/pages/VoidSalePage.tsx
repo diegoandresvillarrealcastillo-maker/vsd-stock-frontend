@@ -69,7 +69,10 @@ function VoidForm({ sale }: { sale: SaleDetail }) {
   return (
     <>
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-semibold text-fg">{`Anular la venta ${sale.folio}`}</h1>
+        {/* El folio va entero: a 375 px el titulo se parte, y partido en el guion («AB-» / «000007») no se lee. */}
+        <h1 className="text-3xl font-semibold text-fg">
+          Anular la venta <span className="whitespace-nowrap">{sale.folio}</span>
+        </h1>
         <p className="text-base text-fg-muted">La venta no se borra: queda escrita como anulada.</p>
       </div>
       <SummaryCard name="Qué pasa al anular" rows={rows} />
