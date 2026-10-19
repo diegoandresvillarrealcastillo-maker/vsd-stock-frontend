@@ -22,7 +22,15 @@ const wireProblem = (code: string, status: number) =>
   new ApiError({
     class: 'permanent',
     status,
-    problem: { type: 'about:blank', title: code, status, code },
+    problem: {
+      type: `urn:vsd-stock:problem:${code}`,
+      title: code,
+      status,
+      detail: 'texto del servidor',
+      instance: '/v1/sales/sale-1',
+      code,
+      traceId: 't-1',
+    },
     retryAfterMs: null,
   });
 
@@ -221,6 +229,28 @@ describe('SaleDetailPage', () => {
       ).toBeDefined();
     });
 
+    it('does not repeat the full stop when what they wrote already ends with one', async () => {
+      const voidedAt = new Date(2026, 9, 19, 16, 20);
+      mount({
+        sale: {
+          voided: {
+            voidedAt,
+            voidedByUserId: 'u-luis',
+            operationId: 'op-void',
+            reason: 'Se equivocó el cajero.',
+          },
+        },
+      });
+
+      await heading();
+
+      expect(
+        screen.getByText(
+          `Anulada el ${formatMoment(voidedAt)} por Luis Pérez. Motivo: Se equivocó el cajero.`,
+        ),
+      ).toBeDefined();
+    });
+
     it('says who reviewed it even when they wrote nothing', async () => {
       const reviewedAt = new Date(2026, 9, 19, 16, 0);
       mount({ sale: { review: { reviewedAt, reviewedByUserId: 'u-luis', note: null } } });
@@ -328,6 +358,50 @@ describe('SaleDetailPage', () => {
 
       expect(await screen.findByRole('button', { name: 'Marcar como revisada' })).toBeDefined();
       expect(screen.queryByRole('link', { name: /Ajustar la existencia/ })).toBeNull();
+    });
+
+    it('offers only the products it does not know when the others are known to have stock', async () => {
+      mount({
+        sale: { attention: true, needsAdjustment: true },
+        stock: { 'p-arroz': 12_000 },
+      });
+
+      expect(
+        await screen.findByRole('link', { name: 'Ajustar la existencia de Pan tajado' }),
+      ).toBeDefined();
+      expect(screen.queryByRole('link', { name: /Arroz/ })).toBeNull();
+    });
+
+    it('offers a product once, even when it was sold in two lines', async () => {
+      mount({
+        sale: {
+          attention: true,
+          needsAdjustment: true,
+          lines: [
+            {
+              productId: 'p-pan',
+              quantityMilli: 1_000,
+              unitPrice: 2_800,
+              discount: 0,
+              taxRateBp: 0,
+            },
+            {
+              productId: 'p-pan',
+              quantityMilli: 2_000,
+              unitPrice: 2_800,
+              discount: 0,
+              taxRateBp: 0,
+            },
+          ],
+          payments: [{ method: 'cash', amount: 8_400, reference: null }],
+          total: 8_400,
+          summary: { total: 8_400, base: 8_400, tax: 0, byRate: [] },
+        },
+      });
+
+      await screen.findByRole('link', { name: 'Ajustar la existencia de Pan tajado' });
+
+      expect(screen.getAllByRole('link', { name: /Ajustar la existencia/ })).toHaveLength(1);
     });
 
     it('does not offer to adjust the stock of a sale that did not go below zero', async () => {
