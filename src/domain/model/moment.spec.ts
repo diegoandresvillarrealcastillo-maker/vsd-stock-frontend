@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { formatDay, formatMoment } from './moment';
+import { formatDay, formatMoment, formatTime } from './moment';
+
+describe('formatTime', () => {
+  it.each([
+    [new Date(2026, 9, 17, 15, 12), '3:12 p. m.'],
+    [new Date(2026, 9, 16, 11, 2), '11:02 a. m.'],
+    [new Date(2026, 9, 16, 0, 5), '12:05 a. m.'],
+    [new Date(2026, 9, 16, 12, 0), '12:00 p. m.'],
+    [new Date(2026, 0, 1, 23, 59), '11:59 p. m.'],
+  ])('writes %s as «%s»', (date, text) => {
+    expect(formatTime(date)).toBe(text);
+  });
+});
 
 describe('formatMoment', () => {
   it.each([
