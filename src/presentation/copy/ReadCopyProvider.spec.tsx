@@ -15,6 +15,11 @@ function Probe() {
           .map((item) => item.name)
           .join(',')}
       </p>
+      <p data-testid="limitados">
+        {search('producto', { limit: 1 })
+          .map((item) => item.name)
+          .join(',')}
+      </p>
       <p data-testid="uno">{product(copiedProduct(1).id)?.name ?? 'ninguno'}</p>
       <p data-testid="existencia">{String(stockOf(copiedProduct(1).id))}</p>
       <button type="button" onClick={refresh}>
@@ -73,6 +78,7 @@ describe('ReadCopyProvider', () => {
     mount(copy);
 
     expect(screen.getByTestId('encontrados').textContent).toBe('Producto 1,Producto 2');
+    expect(screen.getByTestId('limitados').textContent).toBe('Producto 1');
     expect(screen.getByTestId('uno').textContent).toBe('Producto 1');
     expect(screen.getByTestId('existencia').textContent).toBe('4000');
   });

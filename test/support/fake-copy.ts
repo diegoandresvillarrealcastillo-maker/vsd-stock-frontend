@@ -1,6 +1,8 @@
 import type { ApiError } from '../../src/domain/model/api-error';
 import type { Product } from '../../src/domain/model/catalog';
 import type { CopyPage, StockLevel } from '../../src/domain/model/read-copy';
+import type { CopyStorage } from '../../src/domain/ports/in/copy-storage';
+import type { LocalWorkspace } from '../../src/domain/ports/in/local-workspace';
 import type { CopyRequest, ReadCopyApi } from '../../src/domain/ports/out/read-copy-api';
 import { ReadCopyUseCase } from '../../src/application/usecases/read-copy.usecase';
 import { testMe } from './auth';
@@ -83,6 +85,43 @@ export const stockOfProduct = (n: number, quantityMilli: number): StockLevel => 
   quantityMilli,
 });
 
+/** La copia guardada de la persona, con lo que la prueba quiera cambiarle: lo demas pasa tal cual a la real. */
+export function overStorage(real: CopyStorage, patch: Partial<CopyStorage>): CopyStorage {
+  return {
+    putProducts: (products) => real.putProducts(products),
+    readProducts: () => real.readProducts(),
+    putStock: (levels) => real.putStock(levels),
+    readStock: () => real.readStock(),
+    readCheckpoint: () => real.readCheckpoint(),
+    writeCheckpoint: (checkpoint) => real.writeCheckpoint(checkpoint),
+    ...patch,
+  };
+}
+
+/**
+ * Un espacio de trabajo cuyo `copy()` pasa por la prueba: en cada llamada (la 1.ª, la 2.ª...) puede dar otra copia guardada, o
+ * lanzar. Sirve para ver que pasa cuando una lectura tarda, una escritura falla o la persona cambia justo en medio.
+ */
+export function hooking(
+  change: (storage: CopyStorage, call: number) => CopyStorage,
+): (real: LocalWorkspace) => LocalWorkspace {
+  return (real) => {
+    let calls = 0;
+    return new Proxy(real, {
+      get(target, property) {
+        if (property === 'copy') {
+          return () => {
+            calls += 1;
+            return change(target.copy(), calls);
+          };
+        }
+        const value = Reflect.get(target, property) as unknown;
+        return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
+      },
+    });
+  };
+}
+
 export interface TestCopy {
   readonly copy: ReadCopyUseCase;
   readonly api: FakeReadCopyApi;
@@ -94,7 +133,12 @@ export interface TestCopy {
 
 /** El caso de uso real de la copia, con su espacio de trabajo local real (bases en memoria) y una persona trabajando. */
 export async function createTestCopy(
-  options: { status?: 'online' | 'offline' | 'checking'; working?: boolean } = {},
+  options: {
+    status?: 'online' | 'offline' | 'checking';
+    working?: boolean;
+    /** Cambia el espacio de trabajo que ve el caso de uso, sin cambiar el que ve la prueba. */
+    wrap?: (workspace: LocalWorkspace) => LocalWorkspace;
+  } = {},
 ): Promise<TestCopy> {
   const clock = new MutableClock(new Date('2026-10-19T12:00:00.000Z'));
   const local = createTestLocal(clock.now());
@@ -102,6 +146,11 @@ export async function createTestCopy(
   const api = new FakeReadCopyApi(clock);
   const connection = new FakeConnection(options.status ?? 'online');
   const sync = new FakeSyncEngine();
-  const copy = new ReadCopyUseCase({ workspace: local.workspace, api, connection, sync });
+  const copy = new ReadCopyUseCase({
+    workspace: options.wrap?.(local.workspace) ?? local.workspace,
+    api,
+    connection,
+    sync,
+  });
   return { copy, api, connection, sync, clock, local };
 }

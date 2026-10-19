@@ -89,6 +89,57 @@ describe('searching the copy of the catalog', () => {
     ]);
   });
 
+  it('puts what matches a code exactly before a name that starts with those digits', () => {
+    const noisy = product({ name: '7701234567897 de regalo' });
+
+    expect(names(searchProducts([noisy, rice], '7701234567897'))).toEqual([
+      'Arroz 500 g',
+      '7701234567897 de regalo',
+    ]);
+  });
+
+  it('puts the code of the business before a name that starts with it', () => {
+    const named = product({ name: 'ARR-1K especial', sku: 'X-1' });
+
+    expect(names(searchProducts([named, bigRice], 'arr-1k'))).toEqual([
+      'Arroz 1 kg',
+      'ARR-1K especial',
+    ]);
+  });
+
+  it('finds by a part of the barcode, as a person types the last digits', () => {
+    expect(names(searchProducts(catalog, '4567'))).toEqual(['Arroz 500 g']);
+  });
+
+  it('finds by a part of the code of the business, even when the name has nothing of it', () => {
+    expect(names(searchProducts(catalog, 'arr-1'))).toEqual(['Arroz 1 kg']);
+  });
+
+  it('does not take a product without a barcode for the one that was typed as zeros', () => {
+    expect(searchProducts([product({ name: 'Sal', sku: 'SAL', barcode: null })], '0')).toEqual([]);
+    expect(searchProducts([product({ name: 'Sal', sku: 'SAL', barcode: null })], '000')).toEqual(
+      [],
+    );
+  });
+
+  it('puts a word that starts with what was typed before one that only has it inside, even against the alphabet', () => {
+    const found = searchProducts(
+      [product({ name: 'Pasalacio' }), product({ name: 'Zeta sal' })],
+      'sal',
+    );
+
+    expect(names(found)).toEqual(['Zeta sal', 'Pasalacio']);
+  });
+
+  it('wants every word to start a word before a product counts as one that starts like it', () => {
+    const found = searchProducts(
+      [product({ name: 'Almacen sal minimarket' }), product({ name: 'Zeta mar sal' })],
+      'sal mar',
+    );
+
+    expect(names(found)).toEqual(['Zeta mar sal', 'Almacen sal minimarket']);
+  });
+
   it('does not offer what is archived, which can not be sold, unless it is asked for', () => {
     const old = product({ name: 'Arroz viejo', active: false });
 

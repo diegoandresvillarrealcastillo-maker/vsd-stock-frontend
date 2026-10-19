@@ -37,6 +37,17 @@ describe('CopyStatus', () => {
     expect(region().textContent).toContain('Se descarga solo cuando hay conexión.');
   });
 
+  it.each([
+    ['ready', READY, 'ok'],
+    ['nothing yet', {}, 'info'],
+    ['downloading', { ...READY, downloading: true }, 'info'],
+    ['a failure', { ...READY, fault: 'network' as const }, 'warn'],
+  ])('is the tone of what it says: %s', (_name, state, tone) => {
+    mount(state);
+
+    expect(region().getAttribute('data-tone')).toBe(tone);
+  });
+
   it('lets the person update it, and asks the copy to', () => {
     const { copy } = mount(READY);
 

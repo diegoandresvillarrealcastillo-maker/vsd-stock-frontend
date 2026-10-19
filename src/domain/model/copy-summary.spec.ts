@@ -28,6 +28,10 @@ describe('what the device says about the catalog it keeps', () => {
       });
     });
 
+    it('talks in the plural when there are none', () => {
+      expect(summarizeCopy(facts({ productCount: 0 })).headline).toBe('0 productos en este equipo');
+    });
+
     it('talks in the singular when there is one product', () => {
       expect(summarizeCopy(facts({ productCount: 1 })).headline).toBe('1 producto en este equipo');
     });

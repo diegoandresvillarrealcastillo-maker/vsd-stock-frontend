@@ -35,6 +35,7 @@ export function StatusCard({
   return (
     <div
       role="status"
+      data-tone={tone}
       className="flex flex-col items-start gap-3 rounded-lg border border-border/45 bg-surface-raised p-4 shadow-sm"
     >
       <div className="flex w-full items-start gap-3">

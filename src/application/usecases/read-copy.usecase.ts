@@ -93,8 +93,9 @@ export class ReadCopyUseCase implements ReadCopy {
       this.deps.workspace.subscribe(() => {
         void this.adopt().then(() => this.request());
       }),
-      this.deps.connection.subscribe((connection) => {
-        if (connection.status === 'online') this.request();
+      // `request` mira si hay conexion: un cambio a «sin conexion» o «comprobando» no baja nada.
+      this.deps.connection.subscribe(() => {
+        this.request();
       }),
       this.deps.sync.subscribe(() => {
         const at = this.deps.sync.current().lastSyncedAt?.getTime() ?? null;
@@ -148,6 +149,8 @@ export class ReadCopyUseCase implements ReadCopy {
       return;
     }
     await this.download(id);
+    // Alguien llego mientras tanto y su pedido se junto con este: la descarga de quien se fue no es la suya.
+    if (this.adoptedId !== id) await this.run();
   }
 
   /** Deja en memoria la copia de quien trabaja ahora, y solo la suya. Quien llega a la vez espera a que termine de leerse. */
@@ -214,7 +217,8 @@ export class ReadCopyUseCase implements ReadCopy {
       if (error instanceof NoWorkspaceError) return;
       if (this.adoptedId === id) this.update({ fault: faultOf(error) });
     } finally {
-      if (this.adoptedId === id) this.update({ downloading: false });
+      // Se baja de a una persona a la vez (`run`): al terminar, nadie mas esta bajando.
+      this.update({ downloading: false });
     }
   }
 

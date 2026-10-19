@@ -33,13 +33,12 @@ function tierOf(
   name: string,
   query: string,
   tokens: readonly string[],
-  digits: boolean,
 ): Tier | null {
   const sku = normalizeForSearch(product.sku);
   const barcode = product.barcode ?? '';
   const code =
     sku === query ||
-    (digits && barcode !== '' && withoutLeadingZeros(barcode) === withoutLeadingZeros(query));
+    (barcode !== '' && withoutLeadingZeros(barcode) === withoutLeadingZeros(query));
   if (code) return 0;
   const haystack = `${name} ${sku} ${barcode}`;
   if (!tokens.every((token) => haystack.includes(token))) return null;
@@ -64,12 +63,11 @@ export function searchProducts(
   const wanted = normalizeForSearch(query);
   if (wanted === '') return [];
   const tokens = wanted.split(' ');
-  const digits = /^\d+$/.test(wanted);
   const candidates: Candidate[] = [];
   for (const product of products) {
     if (!product.active && options.includeArchived !== true) continue;
     const name = normalizeForSearch(product.name);
-    const tier = tierOf(product, name, wanted, tokens, digits);
+    const tier = tierOf(product, name, wanted, tokens);
     if (tier !== null) candidates.push({ product, name, tier });
   }
   candidates.sort(

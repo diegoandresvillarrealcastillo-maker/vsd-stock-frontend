@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Product } from '../../domain/model/catalog';
+import { NoWorkspaceError } from '../../domain/model/local-errors';
 import { NO_DOWNLOADS, type CopyPage } from '../../domain/model/read-copy';
 import { testMe } from '../../../test/support/auth';
 import { settle } from '../../../test/support/connection';
@@ -7,6 +8,8 @@ import { deferred } from '../../../test/support/deferred';
 import {
   copiedProduct,
   createTestCopy,
+  hooking,
+  overStorage,
   page,
   stockOfProduct,
   type TestCopy,
@@ -522,6 +525,305 @@ describe('ReadCopyUseCase', () => {
       await settle();
 
       expect(t.copy.current()).toBe(before);
+    });
+  });
+
+  describe('what the interface sees while it works', () => {
+    it('shows the products that already arrived while the rest are coming', async () => {
+      const t = await createTestCopy();
+      const gate = deferred<CopyPage<Product>>();
+      t.api
+        .serveProducts(page([copiedProduct(1)], FIRST, 'p2'), () => gate.promise)
+        .serveStock(page([], SECOND));
+
+      const downloading = t.copy.refresh();
+      await settle();
+
+      expect(t.copy.current()).toMatchObject({ downloading: true, productCount: 1 });
+      gate.resolve(page([copiedProduct(2)], LATER));
+      await downloading;
+      expect(t.copy.current().productCount).toBe(2);
+    });
+
+    it('goes through every page of the stock as well, and keeps the hour of the first one', async () => {
+      const t = await createTestCopy();
+      t.api
+        .serveProducts(page([], FIRST))
+        .serveStock(
+          page([stockOfProduct(1, 4_000)], SECOND, 's2'),
+          page([stockOfProduct(2, 9_000)], LATER),
+        );
+
+      await t.copy.refresh();
+
+      expect(t.api.stockCalls.map((call) => call.cursor)).toEqual([null, 's2']);
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(4_000);
+      expect(t.copy.stockOf(copiedProduct(2).id)).toBe(9_000);
+      expect(t.copy.current().stockAsOf).toEqual(SECOND);
+    });
+
+    it('keeps no flash of an empty catalog while it updates one that is already there', async () => {
+      const t = await createTestCopy();
+      await saved(t, [1, 2]);
+      const seen: number[] = [];
+      t.copy.subscribe(() => seen.push(t.copy.current().productCount));
+      t.copy.start();
+      await settle();
+
+      await t.copy.refresh();
+
+      expect(seen.length).toBeGreaterThan(0);
+      expect(seen.every((count) => count === 2)).toBe(true);
+    });
+
+    it('finds, after an update, a product that arrived once the list had already been used', async () => {
+      const t = await createTestCopy();
+      await saved(t, [1]);
+      t.copy.start();
+      await settle();
+      expect(t.copy.search('producto')).toHaveLength(1);
+      t.api.serveProducts(page([copiedProduct(2)], LATER));
+
+      await t.copy.refresh();
+
+      expect(t.copy.search('producto')).toHaveLength(2);
+    });
+
+    it('searches with what it was asked: the size of the list and the archived ones', async () => {
+      const t = await createTestCopy();
+      await saved(t, [1, 2, 3]);
+      await t.local.workspace.copy().putProducts([copiedProduct(4, { active: false })]);
+      t.copy.start();
+      await settle();
+
+      expect(t.copy.search('producto', { limit: 1 })).toHaveLength(1);
+      expect(t.copy.search('producto')).toHaveLength(3);
+      expect(t.copy.search('producto', { includeArchived: true })).toHaveLength(4);
+    });
+
+    it('tells again when only the hour of the catalog changed, and not when nothing did', async () => {
+      const t = await createTestCopy();
+      t.api
+        .serveProducts(page([], FIRST), page([], LATER))
+        .serveStock(page([], SECOND), page([], SECOND));
+      await t.copy.refresh();
+      const listener = vi.fn();
+      t.copy.subscribe(listener);
+
+      await t.copy.refresh();
+
+      expect(t.copy.current().productsAsOf).toEqual(LATER);
+      expect(listener).toHaveBeenCalled();
+    });
+
+    it('does not tell, nor change, when asked again and nothing changed', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await t.copy.refresh();
+      const before = t.copy.current();
+      const listener = vi.fn();
+      t.copy.subscribe(listener);
+
+      await t.copy.refresh();
+
+      expect(t.copy.current()).toBe(before);
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('forgetting the person who left', () => {
+    it('forgets their stock and the list that was ready to search', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await saved(t, [1, 2], [[1, 5_000]]);
+      t.copy.start();
+      await settle();
+      expect(t.copy.search('producto')).toHaveLength(2);
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(5_000);
+
+      await t.local.workspace.leave();
+      await settle();
+
+      expect(t.copy.search('producto')).toEqual([]);
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBeNull();
+      expect(t.copy.product(copiedProduct(1).id)).toBeUndefined();
+    });
+
+    it('asks the next person for everything when what they had saved can not be read: the hour of the one who left is not theirs', async () => {
+      const t = await createTestCopy({
+        wrap: hooking((storage, call) =>
+          call === 3
+            ? overStorage(storage, { readCheckpoint: () => Promise.reject(new Error('boom')) })
+            : storage,
+        ),
+      });
+      t.api.serveProducts(page([copiedProduct(1)], FIRST)).serveStock(page([], SECOND));
+      await t.copy.refresh();
+      await t.local.workspace.leave();
+      await t.local.workspace.begin(testMe('luis', 'cashier'));
+
+      await t.copy.refresh();
+
+      expect(t.api.productCalls[1]?.since).toBeNull();
+      expect(t.api.stockCalls[1]?.since).toBeNull();
+    });
+  });
+
+  describe('when something goes wrong with what is saved', () => {
+    it('says it could not read it, and goes on without throwing', async () => {
+      const t = await createTestCopy({
+        status: 'offline',
+        wrap: hooking((storage) =>
+          overStorage(storage, { readProducts: () => Promise.reject(new Error('boom')) }),
+        ),
+      });
+      t.copy.start();
+      await settle();
+
+      expect(t.copy.current().fault).toBe('other');
+      await expect(t.copy.refresh()).resolves.toBeUndefined();
+    });
+
+    it('stops quietly when the person leaves between being looked at and downloading', async () => {
+      const t = await createTestCopy({
+        wrap: hooking((storage, call) => {
+          if (call === 2) throw new NoWorkspaceError();
+          return storage;
+        }),
+      });
+
+      await expect(t.copy.refresh()).resolves.toBeUndefined();
+
+      expect(t.copy.current()).toMatchObject({ fault: null, downloading: false });
+    });
+
+    it('does not let a slow read of what was saved land on the person who arrived', async () => {
+      const gate = deferred<Product[]>();
+      const t = await createTestCopy({
+        status: 'offline',
+        wrap: hooking((storage, call) =>
+          call === 1 ? overStorage(storage, { readProducts: () => gate.promise }) : storage,
+        ),
+      });
+      await saved(t, [1, 2]);
+      t.copy.start();
+      await settle();
+
+      await t.local.workspace.leave();
+      await t.local.workspace.begin(testMe('luis', 'cashier'));
+      await settle();
+      gate.resolve([copiedProduct(1), copiedProduct(2)]);
+      await settle();
+
+      expect(t.copy.current().productCount).toBe(0);
+      expect(t.copy.search('producto')).toEqual([]);
+    });
+  });
+
+  describe('when the person changes in the middle of a download', () => {
+    it('does not put what arrived in the memory of the person who came, although it was already saved', async () => {
+      const t = await createTestCopy({
+        wrap: hooking((storage, call) =>
+          call === 2
+            ? overStorage(storage, {
+                putProducts: async (products) => {
+                  await storage.putProducts(products);
+                  await t.local.workspace.leave();
+                  await t.local.workspace.begin(testMe('luis', 'cashier'));
+                },
+                putStock: async (levels) => {
+                  await storage.putStock(levels);
+                },
+              })
+            : storage,
+        ),
+      });
+      t.local.stores.dataOf('luis').checkpoint = { productsAsOf: FIRST, stockAsOf: SECOND };
+      t.api.serveProducts(page([copiedProduct(1)], FIRST)).serveStock(page([], SECOND));
+
+      t.copy.start();
+      await settle();
+
+      expect(t.copy.product(copiedProduct(1).id)).toBeUndefined();
+      expect(t.copy.search('producto')).toEqual([]);
+      // Lo que se pide para quien llego parte de SUS horas, no de las de quien se fue.
+      expect(t.api.productCalls[1]?.since).toEqual(new Date('2026-10-19T11:59:00.000Z'));
+    });
+
+    it('does not put the stock that arrived in the memory of the person who came either', async () => {
+      const t = await createTestCopy({
+        wrap: hooking((storage, call) =>
+          call === 2
+            ? overStorage(storage, {
+                putStock: async (levels) => {
+                  await storage.putStock(levels);
+                  await t.local.workspace.leave();
+                  await t.local.workspace.begin(testMe('luis', 'cashier'));
+                },
+              })
+            : storage,
+        ),
+      });
+      t.local.stores.dataOf('luis').checkpoint = { productsAsOf: FIRST, stockAsOf: SECOND };
+      t.api.serveProducts(page([], FIRST)).serveStock(page([stockOfProduct(1, 4_000)], SECOND));
+
+      t.copy.start();
+      await settle();
+
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBeNull();
+      expect(t.api.stockCalls[1]?.since).toEqual(new Date('2026-10-19T11:59:07.000Z'));
+    });
+
+    it('gives the person who came their own download as soon as the other one ends, with their own hours', async () => {
+      const t = await createTestCopy();
+      t.local.stores.dataOf('luis').products.set(copiedProduct(9).id, copiedProduct(9));
+      t.local.stores.dataOf('luis').checkpoint = { productsAsOf: FIRST, stockAsOf: SECOND };
+      const gate = deferred<CopyPage<Product>>();
+      t.api.serveProducts(() => gate.promise).serveStock(page([], SECOND));
+      const faults: (string | null)[] = [];
+      t.copy.subscribe(() => faults.push(t.copy.current().fault));
+
+      t.copy.start();
+      await settle();
+      await t.local.workspace.leave();
+      await t.local.workspace.begin(testMe('luis', 'cashier'));
+      await settle();
+      gate.resolve(page([copiedProduct(1)], FIRST));
+      await settle();
+
+      // El fallo de la descarga de quien se fue no se le cuenta a quien llego, ni un instante.
+      expect(faults.filter((fault) => fault !== null)).toEqual([]);
+
+      expect(t.api.productCalls).toHaveLength(2);
+      expect(t.api.productCalls[1]).toEqual({
+        since: new Date('2026-10-19T11:59:00.000Z'),
+        cursor: null,
+        limit: 200,
+      });
+      expect(t.copy.product(copiedProduct(9).id)).toBeDefined();
+      expect(t.copy.product(copiedProduct(1).id)).toBeUndefined();
+      expect(t.copy.current()).toMatchObject({ fault: null, downloading: false });
+    });
+  });
+
+  describe('when the device sends something', () => {
+    it('does not download again until something new went through: other changes of the sending are not news', async () => {
+      const t = await createTestCopy();
+      t.sync.set({ lastSyncedAt: new Date('2026-10-19T11:00:00.000Z') });
+      t.copy.start();
+      await settle();
+      expect(t.api.productCalls).toHaveLength(1);
+
+      t.sync.set({ pending: 3 });
+      t.sync.set({ phase: 'sending' });
+      await settle();
+      expect(t.api.productCalls).toHaveLength(1);
+
+      t.sync.set({ lastSyncedAt: new Date('2026-10-19T12:10:00.000Z') });
+      await settle();
+      expect(t.api.productCalls).toHaveLength(2);
+
+      t.sync.set({ pending: 1 });
+      await settle();
+      expect(t.api.productCalls).toHaveLength(2);
     });
   });
 });
