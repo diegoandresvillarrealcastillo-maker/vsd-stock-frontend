@@ -4,6 +4,7 @@ import type { Action } from '../../domain/model/permissions';
 import { AdjustStockPage } from '../pages/AdjustStockPage';
 import { CatalogPage } from '../pages/CatalogPage';
 import { CategoriesPage } from '../pages/CategoriesPage';
+import { CloseShiftPage } from '../pages/CloseShiftPage';
 import { CounterPage } from '../pages/CounterPage';
 import { EditProductPage } from '../pages/EditProductPage';
 import { HomePage } from '../pages/HomePage';
@@ -16,12 +17,14 @@ import { PeoplePage } from '../pages/PeoplePage';
 import { PersonPage } from '../pages/PersonPage';
 import { PurchasesPage } from '../pages/PurchasesPage';
 import { RedeemPage } from '../pages/RedeemPage';
+import { ShiftPage } from '../pages/ShiftPage';
 import { SignInPage } from '../pages/SignInPage';
 import { SignUpPage } from '../pages/SignUpPage';
 import { StockHistoryPage } from '../pages/StockHistoryPage';
 import { StockPage } from '../pages/StockPage';
 import { SuppliersPage } from '../pages/SuppliersPage';
 import { AppShell } from '../shell/AppShell';
+import { CounterShell } from '../shell/CounterShell';
 import {
   RequireMembership,
   RequireNoMembership,
@@ -79,10 +82,16 @@ export function AppRoutes() {
         path="/mostrador"
         element={
           <RequireWorkspace>
-            <CounterPage />
+            <CounterShell />
           </RequireWorkspace>
         }
-      />
+      >
+        <Route index element={<CounterPage />} />
+        <Route path="turno">
+          <Route index element={<ShiftPage />} />
+          <Route path="cerrar" element={<CloseShiftPage />} />
+        </Route>
+      </Route>
       <Route
         element={
           <RequireMembership>

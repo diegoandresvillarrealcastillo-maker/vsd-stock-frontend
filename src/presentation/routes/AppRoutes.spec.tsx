@@ -240,6 +240,46 @@ describe('AppRoutes', () => {
       expect(await heading('Crea tu negocio')).toBeDefined();
     });
 
+    it('has the shift inside the frame of the counter, with its own menu', async () => {
+      renderAt('/mostrador/turno', { role: 'cashier' });
+
+      expect(await heading('Turno de caja')).toBeDefined();
+      expect(screen.getByRole('navigation', { name: 'Mostrador' })).toBeDefined();
+      expect(screen.queryByRole('navigation', { name: 'Principal' })).toBeNull();
+    });
+
+    it('closes the shift one level down, still inside the counter', async () => {
+      renderAt('/mostrador/turno/cerrar', { role: 'cashier' });
+
+      expect(await heading('Cerrar turno')).toBeDefined();
+      expect(screen.getByRole('navigation', { name: 'Mostrador' })).toBeDefined();
+    });
+
+    it('opens the shift without a session for the person who resumed the counter without a connection', async () => {
+      const local = createTestLocal();
+      rememberPerson(local, {
+        authUserId: 'ana',
+        email: 'ana@example.com',
+        userId: 'u-ana',
+        businessId: 'b-1',
+        businessName: 'Tienda La Esquina',
+        role: 'cashier',
+        fullName: 'Ana Gómez',
+        verifiedAt: '2026-10-17T10:00:00.000Z',
+      });
+      await local.workspace.resume();
+
+      renderAt('/mostrador/turno', undefined, local);
+
+      expect(await heading('Turno de caja')).toBeDefined();
+    });
+
+    it('sends someone who has not entered, and has nothing saved here, from the shift to sign in', async () => {
+      renderAt('/mostrador/turno');
+
+      expect(await heading('Ingresar')).toBeDefined();
+    });
+
     it('is reached from the home page', async () => {
       renderAt('/', { role: 'cashier' });
 
