@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
 import { formatMoment, formatTime } from '../../domain/model/moment';
 import { can } from '../../domain/model/permissions';
 import { formatPesos } from '../../domain/model/quantity';
@@ -213,6 +213,8 @@ function SaleDetailLoader({ saleId }: { saleId: string }) {
   const { history, refreshAttention } = useSales();
   const { state, reload } = useLoad(() => history.get(saleId), [saleId]);
   const [reviewed, setReviewed] = useState(false);
+  const left = (useLocation().state as { notice?: unknown } | null)?.notice;
+  const notice = reviewed ? 'La venta quedó revisada.' : typeof left === 'string' ? left : null;
 
   return (
     <>
@@ -220,9 +222,9 @@ function SaleDetailLoader({ saleId }: { saleId: string }) {
         Volver a las ventas
       </Link>
       {/* El aviso espera a la venta ya actualizada: se dice junto con lo que cambio, no sobre un esqueleto. */}
-      {reviewed && state.status === 'ready' && (
+      {notice !== null && state.status === 'ready' && (
         <p role="status" className="text-sm font-medium text-success">
-          La venta quedó revisada.
+          {notice}
         </p>
       )}
       {state.status === 'loading' && <RowsSkeleton label="Cargando la venta…" rows={3} />}

@@ -42,6 +42,8 @@ interface MountOptions {
   shifts?: FakeShifts;
   /** El servidor no da la venta. */
   failWith?: ApiError;
+  /** Lo que la pantalla anterior le dejo dicho al llegar (por ejemplo, que la venta quedo anulada). */
+  state?: unknown;
 }
 
 function mount(options: MountOptions = {}) {
@@ -71,6 +73,7 @@ function mount(options: MountOptions = {}) {
       people,
       shifts: options.shifts ?? new FakeShifts(openState()),
       path: '/mostrador/ventas/sale-1',
+      ...(options.state === undefined ? {} : { state: options.state }),
     },
   );
   return { ...view, sales };
@@ -184,6 +187,22 @@ describe('SaleDetailPage', () => {
 
     expect(row(receipt, 'Efectivo')).toBe('$ 10.000');
     expect(row(receipt, 'Tarjeta · Visa 4455')).toBe('$ 4.800');
+  });
+
+  it('says what the screen before it left said, once the sale shows', async () => {
+    mount({ state: { notice: 'La venta quedó anulada.' } });
+
+    await heading();
+
+    expect(screen.getByRole('status').textContent).toBe('La venta quedó anulada.');
+  });
+
+  it('says nothing when nobody left anything said', async () => {
+    mount();
+
+    await heading();
+
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   describe('what happened to it', () => {
