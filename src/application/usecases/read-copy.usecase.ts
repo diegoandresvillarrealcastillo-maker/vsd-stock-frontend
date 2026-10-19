@@ -142,7 +142,9 @@ export class ReadCopyUseCase implements ReadCopy {
   }
 
   stockOf(productId: string): number | null {
-    return this.levels.get(productId) ?? null;
+    // El servidor solo dice la existencia de lo que tuvo movimientos: de un producto que nunca los tuvo no dice nada, y eso es cero.
+    // Mientras la existencia nunca se haya bajado, en cambio, no se sabe nada de nadie.
+    return this.levels.get(productId) ?? (this.checkpoint.stockAsOf === null ? null : 0);
   }
 
   async sold(items: readonly { productId: string; quantityMilli: number }[]): Promise<void> {
@@ -150,9 +152,9 @@ export class ReadCopyUseCase implements ReadCopy {
     if (id === null || id === undefined) return;
     const changed: StockLevel[] = [];
     for (const { productId, quantityMilli } of items) {
-      const left = this.levels.get(productId);
-      // Lo que el servidor nunca dijo no se inventa: sin existencia conocida, no hay con que descontar.
-      if (left === undefined) continue;
+      const left = this.stockOf(productId);
+      // Mientras la existencia nunca se haya bajado no se inventa una: no hay de donde descontar.
+      if (left === null) continue;
       const level = { productId, quantityMilli: left - quantityMilli };
       this.levels.set(productId, level.quantityMilli);
       changed.push(level);

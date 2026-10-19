@@ -60,7 +60,19 @@ describe('ReadCopyUseCase', () => {
       expect(t.copy.stockOf(copiedProduct(1).id)).toBe(-2_000);
     });
 
-    it('does not invent a stock for a product the server never said anything about', async () => {
+    it('does not invent a stock while the stock was never downloaded: there is nothing to take it out of', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await t.local.workspace.copy().putProducts([copiedProduct(1)]);
+      await t.local.workspace.copy().writeCheckpoint({ productsAsOf: FIRST, stockAsOf: null });
+      t.copy.start();
+      await settle();
+
+      await t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 1_000 }]);
+
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBeNull();
+    });
+
+    it('takes it from nothing for a product the server has no stock of, once the stock was downloaded', async () => {
       const t = await createTestCopy({ status: 'offline' });
       await saved(t, [1], []);
       t.copy.start();
@@ -68,7 +80,7 @@ describe('ReadCopyUseCase', () => {
 
       await t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 1_000 }]);
 
-      expect(t.copy.stockOf(copiedProduct(1).id)).toBeNull();
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(-1_000);
     });
 
     it('adds up what is sold of the same product twice in a row', async () => {
@@ -132,6 +144,7 @@ describe('ReadCopyUseCase', () => {
       await selling;
       await settle();
 
+      // Luis no bajo nunca la existencia: no se sabe nada, y menos lo de Ana.
       expect(t.copy.stockOf(copiedProduct(1).id)).toBeNull();
       expect(t.local.stores.dataOf('luis').stock.size).toBe(0);
     });
@@ -176,7 +189,8 @@ describe('ReadCopyUseCase', () => {
       ]);
       expect(t.copy.product(copiedProduct(1).id)).toEqual(copiedProduct(1));
       expect(t.copy.stockOf(copiedProduct(1).id)).toBe(12_500);
-      expect(t.copy.stockOf(copiedProduct(2).id)).toBeNull();
+      // El servidor ya dijo la existencia y de este producto no dijo nada: nunca se movio, y sin movimientos no hay existencia.
+      expect(t.copy.stockOf(copiedProduct(2).id)).toBe(0);
       expect(t.api.productCalls).toEqual([]);
     });
 
@@ -876,7 +890,8 @@ describe('ReadCopyUseCase', () => {
       t.copy.start();
       await settle();
 
-      expect(t.copy.stockOf(copiedProduct(1).id)).toBeNull();
+      // Lo que se bajo para Ana no llega a Luis: para el, el producto no tiene existencia.
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(0);
       expect(t.api.stockCalls[1]?.since).toEqual(new Date('2026-10-19T11:59:07.000Z'));
     });
 
