@@ -21,9 +21,12 @@ pantalla dice «guardado» está guardado.
 1. **Cuándo.** Cuando hay conexión **confirmada por el servidor** (`GET /health`, no lo que el navegador cree de la red), cuando
    se agrega una operación, cuando entra una persona y cuando vence una espera. La persona también puede pedirlo con
    «Reintentar ahora».
-2. **De a un lote.** La operación **más antigua primero**, hasta **20 operaciones o 64 KB** de cuerpos, lo que llegue antes
+2. **De a un lote.** Las operaciones **en el orden en que se agregaron**, hasta **20 operaciones o 64 KB** de cuerpos, lo que llegue antes
    (`BATCH_SIZE`, `BATCH_BYTES`). El servidor acepta hasta 50; el dispositivo manda menos porque un teléfono con mala red pierde
-   menos si un envío se cae. Una operación sola siempre sale, pese lo que pese.
+   menos si un envío se cae. Una operación sola siempre sale, pese lo que pese. **El orden es el de entrada a la cola, no el de la hora
+   del reloj** (cada operación recibe un número al agregarse, dentro de la misma transacción que la escribe): una operación puede
+   depender de la de antes —la venta, de la apertura de su turno— y el reloj de un teléfono se corrige o repite el milisegundo. Las que
+   se guardaron antes de que existiera el número van primero, por su hora.
 3. **Una pestaña a la vez.** Con un candado del navegador (Web Locks, nombre `vsd-stock-sync`) que **no espera**: la pestaña que
    llega cuando otra ya está enviando no envía, solo mira la cola. En un navegador sin Web Locks el candado funciona dentro de la
    página (una vez a la vez), pero no puede ver a las otras pestañas; el servidor lo resuelve con la idempotencia.
