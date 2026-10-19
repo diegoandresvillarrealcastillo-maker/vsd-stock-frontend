@@ -1,5 +1,5 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { Route, Routes } from 'react-router';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { Link, Route, Routes } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../domain/model/api-error';
 import type { Product } from '../../domain/model/catalog';
@@ -12,7 +12,7 @@ import { createFakePeople, testPerson } from '../../../test/support/people';
 import { FakeReadCopy } from '../../../test/support/read-copy';
 import { createFakeSalesHistory, testSaleDetail } from '../../../test/support/sales';
 import { renderScreen } from '../../../test/support/screens';
-import { FakeShifts, openState } from '../../../test/support/shifts';
+import { closedState, FakeShifts, openState } from '../../../test/support/shifts';
 import { SaleDetailPage } from './SaleDetailPage';
 
 const arroz: Product = copiedProduct(1, { id: 'p-arroz', name: 'Arroz 500 g', unit: 'unit' });
@@ -44,6 +44,8 @@ interface MountOptions {
   failWith?: ApiError;
   /** Lo que la pantalla anterior le dejo dicho al llegar (por ejemplo, que la venta quedo anulada). */
   state?: unknown;
+  /** Un enlace a otra venta junto a la pantalla, para probar que al cambiar de venta no queda nada de la anterior. */
+  withLinkToAnother?: boolean;
 }
 
 function mount(options: MountOptions = {}) {
@@ -63,9 +65,12 @@ function mount(options: MountOptions = {}) {
     testPerson({ id: 'u-luis', fullName: 'Luis Pérez' }),
   ]);
   const view = renderScreen(
-    <Routes>
-      <Route path="/mostrador/ventas/:saleId" element={<SaleDetailPage />} />
-    </Routes>,
+    <>
+      <Routes>
+        <Route path="/mostrador/ventas/:saleId" element={<SaleDetailPage />} />
+      </Routes>
+      {options.withLinkToAnother === true && <Link to="/mostrador/ventas/sale-2">Otra venta</Link>}
+    </>,
     {
       auth,
       sales,
@@ -98,6 +103,17 @@ describe('SaleDetailPage', () => {
 
     expect((await heading()).textContent).toBe('Venta AA-000141');
     expect(screen.getByText('Enviada')).toBeDefined();
+    expect(screen.getByText('3:10 p. m. · Ana Gómez · Turno de las 8:02 a. m.')).toBeDefined();
+  });
+
+  it('says the shift of the sale also when that shift is already closed', async () => {
+    mount({
+      sale: { shiftId: openState().shift.shiftId },
+      shifts: new FakeShifts(closedState()),
+    });
+
+    await heading();
+
     expect(screen.getByText('3:10 p. m. · Ana Gómez · Turno de las 8:02 a. m.')).toBeDefined();
   });
 
@@ -173,6 +189,27 @@ describe('SaleDetailPage', () => {
     expect(within(receipt).queryByText(/IVA 0 %/)).toBeNull();
   });
 
+  it('names no rate that carries no tax, next to one that does', async () => {
+    mount({
+      sale: {
+        summary: {
+          total: 15_800,
+          base: 13_437,
+          tax: 2_363,
+          byRate: [
+            { rateBp: 0, total: 1_000, base: 1_000, tax: 0 },
+            { rateBp: 1_900, total: 14_800, base: 12_437, tax: 2_363 },
+          ],
+        },
+      },
+    });
+
+    const receipt = await card();
+
+    expect(row(receipt, 'IVA 19 % incluido')).toBe('$ 2.363');
+    expect(within(receipt).queryByText(/IVA 0 %/)).toBeNull();
+  });
+
   it('says how it was paid, with the reference of a card or a transfer', async () => {
     mount({
       sale: {
@@ -228,6 +265,60 @@ describe('SaleDetailPage', () => {
       expect(screen.getByText('Se vendió después de que el turno se cerró.')).toBeDefined();
       expect(screen.getByText('Requiere atención')).toBeDefined();
     });
+
+    it('asks to be looked at with the warning colour while it is in the tray', async () => {
+      mount({ sale: { attention: true, needsAdjustment: true } });
+
+      await heading();
+
+      expect(screen.getByText('Qué pasó').closest('[data-tone]')?.getAttribute('data-tone')).toBe(
+        'warn',
+      );
+    });
+
+    it('says it calmly once nobody has to look at it any more', async () => {
+      mount({
+        sale: {
+          needsAdjustment: true,
+          review: {
+            reviewedAt: new Date(2026, 9, 19, 16, 0),
+            reviewedByUserId: 'u-luis',
+            note: null,
+          },
+        },
+      });
+
+      await heading();
+
+      expect(screen.getByText('Qué pasó').closest('[data-tone]')?.getAttribute('data-tone')).toBe(
+        'info',
+      );
+    });
+
+    it.each(['!', '?', '…'])(
+      'does not repeat the stop when what they wrote already ends with «%s»',
+      async (mark) => {
+        const voidedAt = new Date(2026, 9, 19, 16, 20);
+        mount({
+          sale: {
+            voided: {
+              voidedAt,
+              voidedByUserId: 'u-luis',
+              operationId: 'op-void',
+              reason: `Se arrepintió${mark}`,
+            },
+          },
+        });
+
+        await heading();
+
+        expect(
+          screen.getByText(
+            `Anulada el ${formatMoment(voidedAt)} por Luis Pérez. Motivo: Se arrepintió${mark}`,
+          ),
+        ).toBeDefined();
+      },
+    );
 
     it('says who reviewed it and what they wrote, once it was reviewed', async () => {
       const reviewedAt = new Date(2026, 9, 19, 16, 0);
@@ -391,6 +482,30 @@ describe('SaleDetailPage', () => {
       expect(screen.queryByRole('link', { name: /Arroz/ })).toBeNull();
     });
 
+    it('offers a product that has exactly none left, not only the ones below zero', async () => {
+      mount({
+        sale: { attention: true, needsAdjustment: true },
+        stock: { 'p-arroz': 12_000, 'p-pan': 0 },
+      });
+
+      expect(
+        await screen.findByRole('link', { name: 'Ajustar la existencia de Pan tajado' }),
+      ).toBeDefined();
+      expect(screen.queryByRole('link', { name: /Arroz/ })).toBeNull();
+    });
+
+    it('offers only what is known to be left without when another product is not known', async () => {
+      mount({
+        sale: { attention: true, needsAdjustment: true },
+        stock: { 'p-arroz': -1_000 },
+      });
+
+      expect(
+        await screen.findByRole('link', { name: 'Ajustar la existencia de Arroz 500 g' }),
+      ).toBeDefined();
+      expect(screen.queryByRole('link', { name: /Pan/ })).toBeNull();
+    });
+
     it('offers a product once, even when it was sold in two lines', async () => {
       mount({
         sale: {
@@ -489,7 +604,45 @@ describe('SaleDetailPage', () => {
 
       expect(screen.getByText('Es muy largo: 200 letras como máximo.')).toBeDefined();
       expect(screen.getByLabelText('Nota (opcional)').getAttribute('aria-invalid')).toBe('true');
+      expect(document.activeElement).toBe(screen.getByLabelText('Nota (opcional)'));
       expect(sales.review).not.toHaveBeenCalled();
+    });
+
+    it('says it was reviewed together with the updated sale, not over the wait for it', async () => {
+      const { sales } = mount({ sale: { attention: true } });
+      await screen.findByRole('button', { name: 'Marcar como revisada' });
+      let answer: (sale: SaleDetail) => void = () => undefined;
+      // La recarga que sigue a la revision tarda hasta que la prueba la deja contestar.
+      sales.get.mockImplementation(
+        () =>
+          new Promise<SaleDetail>((resolve) => {
+            answer = resolve;
+          }),
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Marcar como revisada' }));
+
+      await screen.findByText('Cargando la venta…');
+      expect(screen.queryByText('La venta quedó revisada.')).toBeNull();
+      await act(async () => {
+        answer(testSaleDetail({ attention: false }));
+        await Promise.resolve();
+      });
+      expect(await screen.findByText('La venta quedó revisada.')).toBeDefined();
+    });
+
+    it('forgets that it was reviewed when the person moves to another sale', async () => {
+      mount({ sale: { attention: true }, withLinkToAnother: true });
+      fireEvent.click(await screen.findByRole('button', { name: 'Marcar como revisada' }));
+      await screen.findByText('La venta quedó revisada.');
+
+      fireEvent.click(screen.getByRole('link', { name: 'Otra venta' }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('ruta').textContent).toBe('/mostrador/ventas/sale-2');
+      });
+      await screen.findByRole('button', { name: 'Marcar como revisada' });
+      expect(screen.queryByText('La venta quedó revisada.')).toBeNull();
     });
 
     it('says what went wrong when the server did not take it, and lets it be tried again', async () => {

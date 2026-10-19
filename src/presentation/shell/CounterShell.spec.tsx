@@ -174,6 +174,13 @@ describe('CounterShell', () => {
       const link = await screen.findByRole('link', { name: 'Ventas 3' });
 
       expect(link.getAttribute('href')).toBe('/mostrador/ventas');
+      // El número es de las ventas: ningún otro elemento del menú lo lleva.
+      const menu = screen.getByRole('navigation', { name: 'Mostrador' });
+      expect(
+        within(menu)
+          .getAllByRole('link')
+          .map((item) => item.textContent),
+      ).toEqual(['Mostrador', 'Turno', 'Ventas 3', 'Equipo']);
     });
 
     it('says it to an administrator too', async () => {

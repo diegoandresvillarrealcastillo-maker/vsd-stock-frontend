@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { Route, Routes } from 'react-router';
+import { Link, Route, Routes } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../domain/model/api-error';
 import type { SaleDetail } from '../../domain/model/sales-history';
@@ -44,6 +44,8 @@ interface MountOptions {
   failWith?: ApiError;
   /** El servidor no contesta nunca: la pantalla se queda cargando. */
   neverAnswers?: boolean;
+  /** Un enlace a anular otra venta junto a la pantalla, para probar que al cambiar de venta no queda nada de la anterior. */
+  withLinkToAnother?: boolean;
 }
 
 function mount(options: MountOptions = {}) {
@@ -58,10 +60,15 @@ function mount(options: MountOptions = {}) {
   const auth = createTestAuth({ stored: testSession('ana') });
   auth.answer(testMe('ana', 'owner'));
   const view = renderScreen(
-    <Routes>
-      <Route path="/mostrador/ventas/:saleId/anular" element={<VoidSalePage />} />
-      <Route path="/mostrador/ventas/:saleId" element={<p>el detalle</p>} />
-    </Routes>,
+    <>
+      <Routes>
+        <Route path="/mostrador/ventas/:saleId/anular" element={<VoidSalePage />} />
+        <Route path="/mostrador/ventas/:saleId" element={<p>el detalle</p>} />
+      </Routes>
+      {options.withLinkToAnother === true && (
+        <Link to="/mostrador/ventas/sale-2/anular">Anular otra</Link>
+      )}
+    </>,
     {
       auth,
       sales,
@@ -151,6 +158,27 @@ describe('VoidSalePage', () => {
         'true',
       );
       expect(sales.voidSale).not.toHaveBeenCalled();
+    });
+
+    it('is where the keyboard goes when it is missing', async () => {
+      mount();
+      await reasonField();
+
+      fireEvent.click(submit());
+
+      expect(document.activeElement).toBe(screen.getByLabelText('Motivo (obligatorio)'));
+    });
+
+    it('is not kept when the person moves to the voiding of another sale', async () => {
+      mount({ withLinkToAnother: true });
+      fireEvent.change(await reasonField(), { target: { value: 'Error de la primera' } });
+
+      fireEvent.click(screen.getByRole('link', { name: 'Anular otra' }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('ruta').textContent).toBe('/mostrador/ventas/sale-2/anular');
+      });
+      expect(((await reasonField()) as HTMLInputElement).value).toBe('');
     });
 
     it('can not be too long, and nothing is sent with it', async () => {
@@ -283,6 +311,16 @@ describe('VoidSalePage', () => {
         ),
       ).toBeDefined();
       expect(submit().hasAttribute('disabled')).toBe(true);
+      expect(sales.voidSale).not.toHaveBeenCalled();
+    });
+
+    it('sends nothing either when the form is sent by other means than the button', async () => {
+      const { sales } = mount({ shifts: new FakeShifts({ status: 'none' }) });
+      const field = await reasonField();
+      fireEvent.change(field, { target: { value: 'Error' } });
+
+      fireEvent.submit(field.closest('form') as HTMLFormElement);
+
       expect(sales.voidSale).not.toHaveBeenCalled();
     });
 

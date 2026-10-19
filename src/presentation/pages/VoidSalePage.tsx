@@ -145,6 +145,6 @@ function VoidSaleLoader({ saleId }: { saleId: string }) {
  */
 export function VoidSalePage() {
   const { saleId = '' } = useParams();
-  // Con otra venta empieza de cero: ni el motivo ni la llave de la anterior valen.
-  return <VoidSaleLoader key={saleId} saleId={saleId} />;
+  // Con otra venta, `useLoad` vuelve a «cargando» y el formulario se monta de nuevo: ni el motivo ni la llave de la anterior valen.
+  return <VoidSaleLoader saleId={saleId} />;
 }

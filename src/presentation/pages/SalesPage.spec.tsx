@@ -109,6 +109,18 @@ describe('SalesPage', () => {
       expect(screen.getByText('Las de tu turno de hoy.')).toBeDefined();
     });
 
+    it('says there are more than it counts, when there are', async () => {
+      const sales = createFakeSalesHistory([sale(1)]);
+      sales.attentionCount.mockResolvedValue({ count: 50, more: true });
+      mount({ sales });
+
+      const tab = await screen.findByRole('link', { name: /Atención/ });
+
+      await waitFor(() => {
+        expect(tab.textContent).toBe('Atención 50+');
+      });
+    });
+
     it('says how many ask for attention in its tab', async () => {
       const sales = createFakeSalesHistory([sale(1)]);
       sales.attentionCount.mockResolvedValue({ count: 3, more: false });
