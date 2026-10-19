@@ -129,6 +129,21 @@ export function searchIndex(
   return best.map(({ entry }) => entry.product);
 }
 
+/**
+ * Si lo escrito es EXACTAMENTE el codigo de este producto (el del negocio o el de barras, con o sin el cero que vuelve un UPC en
+ * EAN): lo que hace un lector de codigos, que escribe el codigo entero y termina con Enter. Una parte de un codigo o un nombre
+ * no cuenta.
+ */
+export function isExactCode(product: Product, query: string): boolean {
+  const text = normalizeForSearch(query);
+  if (text === '') return false;
+  const barcode = product.barcode ?? '';
+  return (
+    normalizeForSearch(product.sku) === text ||
+    (barcode !== '' && withoutLeadingZeros(barcode) === withoutLeadingZeros(text))
+  );
+}
+
 /** Lo mismo con la lista a secas: arma el indice y busca. Para una sola busqueda; quien busca muchas veces arma el indice una vez. */
 export function searchProducts(
   products: readonly Product[],

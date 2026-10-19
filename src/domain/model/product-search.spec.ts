@@ -3,6 +3,7 @@ import type { Product } from './catalog';
 import {
   DEFAULT_SEARCH_LIMIT,
   indexProducts,
+  isExactCode,
   normalizeForSearch,
   searchIndex,
   searchProducts,
@@ -337,5 +338,35 @@ describe('searching with an index made once', () => {
 
   it('does not ask for more than the limit: a limit of zero gives nothing', () => {
     expect(searchIndex(indexProducts(catalog(5, 50)), 'a', { limit: 0 })).toEqual([]);
+  });
+});
+
+describe('a code that is exactly the one of a product', () => {
+  const arroz = product({ sku: 'ARR-500', barcode: '7701234567897' });
+
+  it('is the code of the business, whatever its capitals', () => {
+    expect(isExactCode(arroz, 'arr-500')).toBe(true);
+    expect(isExactCode(arroz, ' ARR-500 ')).toBe(true);
+  });
+
+  it('is the barcode as the reader types it, with or without the zero that turns a UPC into an EAN', () => {
+    expect(isExactCode(arroz, '7701234567897')).toBe(true);
+    const upc = product({ barcode: '0123456789012' });
+    expect(isExactCode(upc, '123456789012')).toBe(true);
+  });
+
+  it('is not a part of a code, nor a name', () => {
+    expect(isExactCode(arroz, 'ARR')).toBe(false);
+    expect(isExactCode(arroz, '4567897')).toBe(false);
+    expect(isExactCode(product({ name: 'ARR-500 especial', sku: 'X' }), 'arr-500')).toBe(false);
+  });
+
+  it('is not nothing: an empty text is not the code of anyone', () => {
+    expect(isExactCode(arroz, '')).toBe(false);
+    expect(isExactCode(arroz, '   ')).toBe(false);
+  });
+
+  it('is not the barcode of a product that has none', () => {
+    expect(isExactCode(product({ barcode: null }), '0000')).toBe(false);
   });
 });

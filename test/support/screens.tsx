@@ -5,12 +5,15 @@ import type { BusinessPeople } from '../../src/domain/ports/in/business-people';
 import type { Catalog } from '../../src/domain/ports/in/catalog';
 import type { Inventory } from '../../src/domain/ports/in/inventory';
 import type { Purchasing } from '../../src/domain/ports/in/purchasing';
+import type { Selling } from '../../src/domain/ports/in/selling';
+import type { Shifts } from '../../src/domain/ports/in/shifts';
 import { AuthProvider } from '../../src/presentation/auth/AuthProvider';
 import { LocalWorkspaceProvider } from '../../src/presentation/local/LocalWorkspaceProvider';
 import { CatalogProvider } from '../../src/presentation/catalog/CatalogProvider';
 import { InventoryProvider } from '../../src/presentation/inventory/InventoryProvider';
 import { PurchasingProvider } from '../../src/presentation/purchasing/PurchasingProvider';
 import { ReadCopyProvider } from '../../src/presentation/copy/ReadCopyProvider';
+import { SellingProvider } from '../../src/presentation/selling/SellingProvider';
 import { ShiftProvider } from '../../src/presentation/shift/ShiftProvider';
 import { SyncProvider } from '../../src/presentation/sync/SyncProvider';
 import { ConnectionProvider } from '../../src/presentation/connection/ConnectionProvider';
@@ -26,6 +29,7 @@ import { createFakePeople } from './people';
 import { createFakePurchasing } from './purchasing';
 import { FakeReadCopy } from './read-copy';
 import { FakeShifts } from './shifts';
+import { FakeSelling } from './selling';
 import { FakeSyncEngine } from './sync-engine';
 import { createTestThemePreference } from './theme';
 
@@ -57,7 +61,9 @@ interface Options {
   /** La copia de lectura de mentira. Por omision, una vacia que no tiene nada que decir. */
   copy?: FakeReadCopy;
   /** El turno de caja de mentira. Por omision, uno sin turno. */
-  shifts?: FakeShifts;
+  shifts?: Shifts;
+  /** El punto de venta. Por omision, uno de mentira vacio. */
+  selling?: Selling;
   connection?: ReturnType<typeof createTestConnection>;
 }
 
@@ -72,6 +78,7 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
   const sync = options.sync ?? new FakeSyncEngine();
   const copy = options.copy ?? new FakeReadCopy();
   const shifts = options.shifts ?? new FakeShifts();
+  const selling = options.selling ?? new FakeSelling();
   const connection = options.connection ?? createTestConnection();
   const view = render(
     <ThemeProvider preference={createTestThemePreference().preference}>
@@ -82,22 +89,24 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
               <SyncProvider engine={sync}>
                 <ReadCopyProvider copy={copy}>
                   <ShiftProvider shifts={shifts}>
-                    <PeopleProvider people={people}>
-                      <CatalogProvider catalog={catalog}>
-                        <InventoryProvider inventory={inventory}>
-                          <PurchasingProvider purchasing={purchasing}>
-                            <MemoryRouter
-                              initialEntries={[
-                                { pathname: options.path ?? '/', state: options.state },
-                              ]}
-                            >
-                              <Where />
-                              {ui}
-                            </MemoryRouter>
-                          </PurchasingProvider>
-                        </InventoryProvider>
-                      </CatalogProvider>
-                    </PeopleProvider>
+                    <SellingProvider selling={selling}>
+                      <PeopleProvider people={people}>
+                        <CatalogProvider catalog={catalog}>
+                          <InventoryProvider inventory={inventory}>
+                            <PurchasingProvider purchasing={purchasing}>
+                              <MemoryRouter
+                                initialEntries={[
+                                  { pathname: options.path ?? '/', state: options.state },
+                                ]}
+                              >
+                                <Where />
+                                {ui}
+                              </MemoryRouter>
+                            </PurchasingProvider>
+                          </InventoryProvider>
+                        </CatalogProvider>
+                      </PeopleProvider>
+                    </SellingProvider>
                   </ShiftProvider>
                 </ReadCopyProvider>
               </SyncProvider>
@@ -118,6 +127,7 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
     sync,
     copy,
     shifts,
+    selling,
     connection,
   };
 }
