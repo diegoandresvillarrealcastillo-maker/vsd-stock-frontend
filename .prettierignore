@@ -3,6 +3,8 @@ coverage/
 node_modules/
 package-lock.json
 .lighthouseci/
+reports/
+.stryker-tmp/
 
 # Generados o copiados tal cual: darles formato los separaria de su origen.
 # contract/openapi.json y contract/permissions.json son los del backend, byte por byte; schema.d.ts lo escribe

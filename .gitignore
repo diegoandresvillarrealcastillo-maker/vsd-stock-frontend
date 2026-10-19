@@ -35,6 +35,9 @@ coverage/
 test-results/
 # Informes de Lighthouse (npm run lighthouse); el CI los guarda como artefacto.
 .lighthouseci/
+# Informe de las roturas a proposito (npm run mutation) y la copia temporal donde Stryker rompe el codigo.
+/reports/
+.stryker-tmp/
 
 # ---------- Cache de herramientas ----------
 .cache/

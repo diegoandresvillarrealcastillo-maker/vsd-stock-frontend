@@ -1,7 +1,7 @@
 # ============================================================
 #  VSD Stock (frontend) - Integracion continua
 # ============================================================
-#  Barrera automatica del proyecto. Este archivo cubre cinco cosas:
+#  Barrera automatica del proyecto. Este archivo cubre seis cosas:
 #
 #    1. que no entre ningun secreto al repositorio;
 #    2. que todo commit siga Conventional Commits y cite su Issue;
@@ -10,7 +10,9 @@
 #       contrato) y compilacion;
 #    4. que la copia del contrato OpenAPI coincida con la del backend;
 #    5. que la compilacion pase Lighthouse: accesibilidad perfecta y buen
-#       rendimiento en un movil de gama media con red lenta (simulado).
+#       rendimiento en un movil de gama media con red lenta (simulado);
+#    6. que las pruebas del dominio y de la aplicacion noten el codigo roto a
+#       proposito (Stryker). Es informativo: no bloquea hasta que se marque.
 #
 #  CodeQL (codeql.yml) y las vulnerabilidades de las dependencias
 #  (dependencias.yml) van en archivos aparte para poder programarlos.
@@ -166,6 +168,65 @@ jobs:
           # Evita el limite de consultas anonimas de la API de GitHub.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/contract.ts check
+
+  roturas:
+    name: Roturas a proposito (Stryker)
+    runs-on: ubuntu-24.04
+    # Informativo (C3-17): rompe a proposito el codigo del dominio y de la aplicacion
+    # y mira si alguna prueba lo nota. El puntaje tiene un piso en
+    # stryker.config.json y el trabajo queda en rojo si baja de el, pero NO esta en
+    # el conjunto de reglas de las ramas: no bloquea ningun Pull Request hasta que
+    # Diego lo marque como obligatorio. Por eso no lleva
+    # `continue-on-error`: marcado como obligatorio, tiene que poder fallar.
+    # Ningun otro trabajo lo espera (`needs`).
+    #
+    # La primera corrida, sin nada guardado, rompe unas 2.100 cosas y tarda mas de una
+    # hora en un ejecutor de pocos nucleos (28 minutos con ocho). Por eso Stryker corre en
+    # modo incremental: guarda lo que aprendio en reports/stryker-incremental.json y la
+    # siguiente corrida solo repite lo que cambio. La memoria se busca primero en la rama
+    # del Pull Request y despues en la base (`desarrollo`), donde la deja cada push.
+    timeout-minutes: 120
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Recuperar lo que aprendio la corrida anterior
+        uses: actions/cache/restore@v6
+        with:
+          path: reports/stryker-incremental.json
+          key: roturas-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            roturas-${{ github.head_ref || github.ref_name }}-
+            roturas-${{ github.base_ref || github.ref_name }}-
+
+      - name: Romper el codigo a proposito y ver si las pruebas lo notan
+        run: npm run mutation
+
+      # Se guarda aunque el puntaje haya bajado del piso: lo aprendido sirve igual.
+      - name: Guardar lo que aprendio esta corrida
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: reports/stryker-incremental.json
+          key: roturas-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
+
+      - name: Guardar el informe
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informes-roturas
+          path: reports/mutation/
+          if-no-files-found: ignore
+          retention-days: 14
 
   accesibilidad:
     name: Accesibilidad y rendimiento (Lighthouse)
