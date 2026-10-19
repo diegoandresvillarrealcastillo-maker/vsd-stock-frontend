@@ -17,3 +17,10 @@ useDefault = true
 [[allowlists]]
 description = "Valores falsos de las pruebas del cliente de identidad"
 regexes = ['''^(S3cretoLargo123|sb_publishable_FALSA1234567890)$''']
+
+# El identificador de persona de las pruebas del almacenamiento local (C3-08): un UUID inventado que no es de ninguna cuenta. La
+# regla de claves genericas lo toma por una clave porque se escribe junto a un nombre como `authUserId` o `AUTH_ID`. Se nombra el
+# valor exacto; no se perdona ninguna regla.
+[[allowlists]]
+description = "Identificador falso de una persona en las pruebas del almacenamiento local"
+regexes = ['''^9b2f6c1e-0d5a-4c1b-8f3e-2a7d6e5c4b3a$''']
