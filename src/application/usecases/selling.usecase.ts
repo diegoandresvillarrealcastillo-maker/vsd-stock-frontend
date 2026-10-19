@@ -92,26 +92,28 @@ export class SellingUseCase implements Selling {
     this.stops = [];
   }
 
+  // El comprobante solo existe con el carrito vacio (se cobro y no se empezo otra venta): agregar un producto empieza otra y lo cierra,
+  // y lo demas solo cambia un carrito que ya tiene lineas, o sea, uno que ya no tiene comprobante.
   add(product: Product): void {
     const next = addProduct(this.state.cart, product);
     if (next !== this.state.cart) this.update(next, null);
   }
 
   setQuantity(productId: string, quantityMilli: number): void {
-    this.update(setQuantity(this.state.cart, productId, quantityMilli), this.state.receipt);
+    this.update(setQuantity(this.state.cart, productId, quantityMilli), null);
   }
 
   setDiscount(productId: string, discount: number): void {
-    this.update(setDiscount(this.state.cart, productId, discount), this.state.receipt);
+    this.update(setDiscount(this.state.cart, productId, discount), null);
   }
 
   remove(productId: string): void {
     const next = removeLine(this.state.cart, productId);
-    if (next !== this.state.cart) this.update(next, this.state.receipt);
+    if (next !== this.state.cart) this.update(next, null);
   }
 
   clear(): void {
-    if (this.state.cart.lines.length > 0) this.update(EMPTY_CART, this.state.receipt);
+    if (this.state.cart.lines.length > 0) this.update(EMPTY_CART, null);
   }
 
   newSale(): void {

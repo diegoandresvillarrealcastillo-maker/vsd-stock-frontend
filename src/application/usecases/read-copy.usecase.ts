@@ -148,8 +148,6 @@ export class ReadCopyUseCase implements ReadCopy {
   }
 
   async sold(items: readonly { productId: string; quantityMilli: number }[]): Promise<void> {
-    const id = this.adoptedId;
-    if (id === null || id === undefined) return;
     const changed: StockLevel[] = [];
     for (const { productId, quantityMilli } of items) {
       const left = this.stockOf(productId);

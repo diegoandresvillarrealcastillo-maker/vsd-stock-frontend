@@ -162,6 +162,7 @@ describe('SellingUseCase', () => {
     it('gives back the receipt, with the change, and keeps it until another sale starts', async () => {
       const t = await createTestSelling();
       fill(t);
+      t.clock.set(new Date('2026-10-19T15:30:00.000Z'));
 
       const receipt = await t.selling.confirm({ method: 'cash', received: 20_000 });
 
@@ -169,6 +170,7 @@ describe('SellingUseCase', () => {
         folio: 'AA-000001',
         operationId: saleId(1),
         cashier: 'Ana Gómez',
+        occurredAt: '2026-10-19T15:30:00.000Z',
         shiftOpenedAt: '2026-10-19T13:02:00.000Z',
         summary: { total: 18_400 },
         payment: { method: 'cash', received: 20_000, change: 1_600 },
@@ -360,6 +362,24 @@ describe('SellingUseCase', () => {
       expect(t.copy.soldItems).toEqual([]);
     });
 
+    it('charges the next one after a charge that failed: one failure does not stop the sales that come after', async () => {
+      const t = await createTestSelling();
+      fill(t);
+      t.local.stores.failShift = new Error('disco lleno');
+      await expect(t.selling.confirm({ method: 'cash', received: 18_400 })).rejects.toThrow(
+        'disco lleno',
+      );
+
+      t.local.stores.failShift = null;
+      const receipt = await t.selling.confirm({ method: 'cash', received: 18_400 });
+
+      expect(receipt.folio).toMatch(/^AA-/);
+      expect(t.local.stores.dataOf(ANA).queue.map((operation) => operation.kind)).toEqual([
+        'shift-open',
+        'sale',
+      ]);
+    });
+
     it('charges only once when it is asked twice at once: the second tap finds the cart empty', async () => {
       const t = await createTestSelling();
       fill(t);
@@ -378,6 +398,50 @@ describe('SellingUseCase', () => {
   });
 
   describe('after the sale', () => {
+    it('closes the receipt as soon as a product is added: another sale has started', async () => {
+      const t = await createTestSelling();
+      t.selling.add(arroz);
+      await t.selling.confirm({ method: 'cash', received: 3_200 });
+
+      t.selling.add(aceite);
+
+      expect(t.selling.current().receipt).toBeNull();
+    });
+
+    it('keeps the receipt through what changes nothing, and does not tell anyone about it', async () => {
+      const t = await createTestSelling();
+      t.selling.add(arroz);
+      const receipt = await t.selling.confirm({ method: 'cash', received: 3_200 });
+      const listener = vi.fn();
+      t.selling.subscribe(listener);
+
+      t.selling.add(item(9, { active: false }));
+      t.selling.remove('no-esta');
+      t.selling.clear();
+
+      expect(t.selling.current().receipt).toEqual(receipt);
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('does not tell anyone that a new sale started when the sale was already new', async () => {
+      const t = await createTestSelling();
+      const listener = vi.fn();
+      t.selling.subscribe(listener);
+
+      t.selling.newSale();
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('throws away what was being sold when a new sale is asked for', async () => {
+      const t = await createTestSelling();
+      t.selling.add(arroz);
+
+      t.selling.newSale();
+
+      expect(t.selling.current().cart.lines).toEqual([]);
+    });
+
     it('closes the receipt when another sale starts', async () => {
       const t = await createTestSelling();
       t.selling.add(arroz);
@@ -427,8 +491,11 @@ describe('SellingUseCase', () => {
     it('listens once, however many times it is started, and no more after it stops', async () => {
       const t = await createTestSelling();
 
+      const watch = vi.spyOn(t.local.workspace, 'subscribe');
+
       t.selling.start();
       t.selling.start();
+      expect(watch).toHaveBeenCalledTimes(1);
       t.selling.stop();
       t.selling.add(arroz);
       await t.local.workspace.leave();

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Product } from '../../domain/model/catalog';
 import { NoWorkspaceError } from '../../domain/model/local-errors';
+import { indexProducts } from '../../domain/model/product-search';
 import { NO_DOWNLOADS, type CopyPage } from '../../domain/model/read-copy';
 import { testMe } from '../../../test/support/auth';
 import { settle } from '../../../test/support/connection';
@@ -15,6 +16,12 @@ import {
   type TestCopy,
 } from '../../../test/support/fake-copy';
 import { failure } from '../../../test/support/fake-sync';
+
+// Se cuenta cuantas veces se arma el indice de busqueda, sin cambiar lo que hace.
+vi.mock('../../domain/model/product-search', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../domain/model/product-search')>();
+  return { ...actual, indexProducts: vi.fn(actual.indexProducts) };
+});
 
 const FIRST = new Date('2026-10-19T12:00:00.000Z');
 const SECOND = new Date('2026-10-19T12:00:07.000Z');
@@ -119,6 +126,45 @@ describe('ReadCopyUseCase', () => {
       await t.copy.refresh();
 
       expect(t.copy.stockOf(copiedProduct(1).id)).toBe(2_000);
+    });
+
+    it('does not touch what is saved when there is nothing to take out of the stock', async () => {
+      const putStock = vi.fn(() => Promise.resolve());
+      let armed = false;
+      const t = await createTestCopy({
+        status: 'offline',
+        wrap: hooking((storage) => (armed ? overStorage(storage, { putStock }) : storage)),
+      });
+      await saved(t, [1], [[1, 5_000]]);
+      t.copy.start();
+      await settle();
+      armed = true;
+
+      await t.copy.sold([]);
+
+      expect(putStock).not.toHaveBeenCalled();
+    });
+
+    it('still shows the new stock when it could not be saved: it is a calculation and the sale is already kept', async () => {
+      let armed = false;
+      const t = await createTestCopy({
+        status: 'offline',
+        wrap: hooking((storage) =>
+          armed
+            ? overStorage(storage, { putStock: () => Promise.reject(new Error('disco lleno')) })
+            : storage,
+        ),
+      });
+      await saved(t, [1], [[1, 5_000]]);
+      t.copy.start();
+      await settle();
+      armed = true;
+
+      await expect(
+        t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 2_000 }]),
+      ).resolves.toBeUndefined();
+
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(3_000);
     });
 
     it('does nothing, and says nothing, when nobody works any more', async () => {
@@ -924,6 +970,29 @@ describe('ReadCopyUseCase', () => {
       expect(t.copy.product(copiedProduct(9).id)).toBeDefined();
       expect(t.copy.product(copiedProduct(1).id)).toBeUndefined();
       expect(t.copy.current()).toMatchObject({ fault: null, downloading: false });
+    });
+  });
+
+  describe('the index of the search', () => {
+    it('is made once for any number of searches, and again only when the catalog changes', async () => {
+      const t = await createTestCopy();
+      t.api
+        .serveProducts(page([copiedProduct(1), copiedProduct(2), copiedProduct(3)], FIRST))
+        .serveStock(page([], FIRST));
+      await t.copy.refresh();
+      vi.mocked(indexProducts).mockClear();
+
+      t.copy.search('producto 1');
+      t.copy.search('producto 2');
+      t.copy.search('producto 3');
+      expect(indexProducts).toHaveBeenCalledTimes(1);
+
+      t.api.serveProducts(page([copiedProduct(4)], LATER)).serveStock(page([], LATER));
+      await t.copy.refresh();
+      t.copy.search('producto 4');
+      t.copy.search('producto 1');
+
+      expect(indexProducts).toHaveBeenCalledTimes(2);
     });
   });
 
