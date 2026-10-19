@@ -78,7 +78,7 @@ describe('CounterPage', () => {
     it('shows who works here, with what role, the code of the device and that nothing waits', async () => {
       await online();
 
-      expect(await screen.findByRole('heading', { level: 1, name: 'Mostrador' })).toBeDefined();
+      expect(await screen.findByRole('heading', { level: 1, name: 'Este equipo' })).toBeDefined();
       expect(screen.getByText('Cajero')).toBeDefined();
       expect(screen.getByText('AA')).toBeDefined();
       expect(screen.queryByRole('button', { name: 'Registrar' })).toBeNull();
@@ -98,7 +98,7 @@ describe('CounterPage', () => {
     it('does not claim to be offline', async () => {
       await online();
 
-      await screen.findByRole('heading', { name: 'Mostrador' });
+      await screen.findByRole('heading', { name: 'Este equipo' });
       expect(screen.queryByText(/sin conexión\. Puedes seguir hasta/)).toBeNull();
     });
   });

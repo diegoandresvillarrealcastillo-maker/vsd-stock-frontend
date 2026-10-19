@@ -13,6 +13,7 @@ import { createAuth } from './create-auth';
 import { createConnectionMonitor } from './create-connection-monitor';
 import { createLocalWorkspace } from './create-local-workspace';
 import { createReadCopy } from './create-read-copy';
+import { createSelling } from './create-selling';
 import { createShifts } from './create-shifts';
 import { createSyncEngine } from './create-sync-engine';
 import { createThemePreference } from './create-theme-preference';
@@ -76,6 +77,16 @@ const shifts = createShifts({
   fillRandom: (bytes) => window.crypto.getRandomValues(bytes),
 });
 
+// El punto de venta: arma la venta y la cobra sin conexion; la guarda con su folio y el turno en una sola transaccion (ADR 0027).
+const selling = createSelling({
+  workspace: local,
+  sync,
+  shifts,
+  copy,
+  now: () => new Date(),
+  fillRandom: (bytes) => window.crypto.getRandomValues(bytes),
+});
+
 const people = new BusinessPeopleUseCase(auth.api);
 const catalog = new CatalogUseCase(auth.api);
 const inventory = new InventoryUseCase(auth.api);
@@ -92,6 +103,7 @@ createRoot(container).render(
         sync={sync}
         copy={copy}
         shifts={shifts}
+        selling={selling}
         people={people}
         catalog={catalog}
         inventory={inventory}

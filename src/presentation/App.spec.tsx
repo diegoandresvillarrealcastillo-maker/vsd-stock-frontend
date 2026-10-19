@@ -10,6 +10,7 @@ import { createFakeInventory } from '../../test/support/inventory';
 import { createFakePeople } from '../../test/support/people';
 import { createFakePurchasing } from '../../test/support/purchasing';
 import { FakeReadCopy } from '../../test/support/read-copy';
+import { FakeSelling } from '../../test/support/selling';
 import { FakeShifts } from '../../test/support/shifts';
 import { FakeSyncEngine } from '../../test/support/sync-engine';
 import { createTestThemePreference } from '../../test/support/theme';
@@ -22,6 +23,7 @@ function renderApp({
   sync = new FakeSyncEngine(),
   copy = new FakeReadCopy(),
   shifts = new FakeShifts(),
+  selling = new FakeSelling(),
   path = '/ingresar',
 }: {
   theme?: ReturnType<typeof createTestThemePreference>['preference'];
@@ -30,6 +32,7 @@ function renderApp({
   sync?: FakeSyncEngine;
   copy?: FakeReadCopy;
   shifts?: FakeShifts;
+  selling?: FakeSelling;
   path?: string;
 } = {}) {
   render(
@@ -42,6 +45,7 @@ function renderApp({
         sync={sync}
         copy={copy}
         shifts={shifts}
+        selling={selling}
         people={createFakePeople()}
         catalog={createFakeCatalog()}
         inventory={createFakeInventory()}
@@ -94,6 +98,19 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Turno de caja' })).toBeDefined();
     expect(shifts.starts).toBeGreaterThan(0);
+  });
+
+  it('gives the whole interface the point of sale, and starts it', async () => {
+    const selling = new FakeSelling();
+    renderApp({
+      auth: signedIn('cashier'),
+      selling,
+      shifts: new FakeShifts({ status: 'none' }),
+      path: '/mostrador',
+    });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Vender' })).toBeDefined();
+    expect(selling.starts).toBeGreaterThan(0);
   });
 
   it('asks whoever has not signed in to sign in', () => {

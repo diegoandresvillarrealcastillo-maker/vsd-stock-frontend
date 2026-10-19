@@ -13,10 +13,13 @@ import { NewProductPage } from '../pages/NewProductPage';
 import { NewPurchasePage } from '../pages/NewPurchasePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { OnboardingPage } from '../pages/OnboardingPage';
+import { PayPage } from '../pages/PayPage';
 import { PeoplePage } from '../pages/PeoplePage';
 import { PersonPage } from '../pages/PersonPage';
 import { PurchasesPage } from '../pages/PurchasesPage';
+import { ReceiptPage } from '../pages/ReceiptPage';
 import { RedeemPage } from '../pages/RedeemPage';
+import { SellPage } from '../pages/SellPage';
 import { ShiftPage } from '../pages/ShiftPage';
 import { SignInPage } from '../pages/SignInPage';
 import { SignUpPage } from '../pages/SignUpPage';
@@ -86,7 +89,10 @@ export function AppRoutes() {
           </RequireWorkspace>
         }
       >
-        <Route index element={<CounterPage />} />
+        <Route index element={<SellPage />} />
+        <Route path="cobrar" element={<PayPage />} />
+        <Route path="comprobante" element={<ReceiptPage />} />
+        <Route path="equipo" element={<CounterPage />} />
         <Route path="turno">
           <Route index element={<ShiftPage />} />
           <Route path="cerrar" element={<CloseShiftPage />} />

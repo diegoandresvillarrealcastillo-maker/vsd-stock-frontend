@@ -199,7 +199,7 @@ describe('AppRoutes', () => {
   });
 
   describe('the counter', () => {
-    const counter = () => screen.findByRole('heading', { level: 1, name: 'Mostrador' });
+    const counter = () => screen.findByRole('heading', { level: 1, name: 'Este equipo' });
 
     it('sends someone who has not entered, and has nothing saved here, to sign in', async () => {
       renderAt('/mostrador');
@@ -208,7 +208,7 @@ describe('AppRoutes', () => {
     });
 
     it('opens for a person who came in with a connection, outside of the menu of the administration', async () => {
-      renderAt('/mostrador', { role: 'cashier' });
+      renderAt('/mostrador/equipo', { role: 'cashier' });
 
       expect(await counter()).toBeDefined();
       expect(screen.queryByRole('navigation', { name: 'Principal' })).toBeNull();
@@ -228,7 +228,7 @@ describe('AppRoutes', () => {
       });
       await local.workspace.resume();
 
-      renderAt('/mostrador', undefined, local);
+      renderAt('/mostrador/equipo', undefined, local);
 
       expect(await counter()).toBeDefined();
       expect(screen.getByText(/Estás trabajando sin conexión/)).toBeDefined();
@@ -238,6 +238,26 @@ describe('AppRoutes', () => {
       renderAt('/mostrador', { role: 'owner', membership: false });
 
       expect(await heading('Crea tu negocio')).toBeDefined();
+    });
+
+    it('sells at the counter itself: it is the first thing the person sees', async () => {
+      renderAt('/mostrador', { role: 'cashier' });
+
+      expect(await heading('Vender')).toBeDefined();
+      expect(screen.getByRole('navigation', { name: 'Mostrador' })).toBeDefined();
+    });
+
+    it('charges one level down, still inside the counter', async () => {
+      renderAt('/mostrador/cobrar', { role: 'cashier' });
+
+      // Sin venta no hay nada que cobrar: vuelve a la venta.
+      expect(await heading('Vender')).toBeDefined();
+    });
+
+    it('shows the receipt one level down, and goes back to the sale when there is none', async () => {
+      renderAt('/mostrador/comprobante', { role: 'cashier' });
+
+      expect(await heading('Vender')).toBeDefined();
     });
 
     it('has the shift inside the frame of the counter, with its own menu', async () => {

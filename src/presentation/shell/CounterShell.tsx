@@ -1,19 +1,36 @@
-import { Link, NavLink, Outlet, useNavigate } from 'react-router';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useOptionalAccount } from '../auth/AuthProvider';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useLocal } from '../local/LocalWorkspaceProvider';
 import { SyncStatus } from '../sync/SyncStatus';
 
 const LINK =
-  'inline-flex min-h-touch min-w-touch items-center justify-center rounded-full border border-border bg-surface-raised px-4 text-base font-medium text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
+  'inline-flex min-h-touch min-w-touch items-center justify-center rounded-full border border-border bg-surface-raised px-3 text-sm font-medium text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 const TAB =
   'inline-flex min-h-touch items-center whitespace-nowrap rounded-md px-4 text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
-/** Lo que la persona hace en el mostrador. Todo funciona sin conexion: sale de lo guardado en este equipo. */
+/**
+ * Lo que la persona hace en el mostrador. Todo funciona sin conexion: sale de lo guardado en este equipo. Vender, cobrar y el
+ * comprobante son una sola cosa, la venta, y por eso las tres marcan «Mostrador».
+ */
 const COUNTER_MENU = [
-  { path: '/mostrador', label: 'Mostrador', end: true },
-  { path: '/mostrador/turno', label: 'Turno', end: false },
+  {
+    path: '/mostrador',
+    label: 'Mostrador',
+    current: (path: string) =>
+      path === '/mostrador' || path === '/mostrador/cobrar' || path === '/mostrador/comprobante',
+  },
+  {
+    path: '/mostrador/turno',
+    label: 'Turno',
+    current: (path: string) => path === '/mostrador/turno' || path.startsWith('/mostrador/turno/'),
+  },
+  {
+    path: '/mostrador/equipo',
+    label: 'Equipo',
+    current: (path: string) => path === '/mostrador/equipo',
+  },
 ] as const;
 
 /**
@@ -25,6 +42,7 @@ export function CounterShell() {
   const { active, workspace } = useLocal();
   const account = useOptionalAccount();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   if (active === null) return null;
   const { profile } = active;
@@ -43,14 +61,17 @@ export function CounterShell() {
       >
         Saltar al contenido
       </a>
-      <header className="bg-band px-gutter py-3 text-on-band">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-lg font-semibold">{profile.businessName}</p>
-            <p className="truncate text-sm opacity-90">{profile.fullName}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <header className="bg-band px-gutter py-2 text-on-band">
+        <div className="mx-auto flex max-w-3xl flex-col gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-lg font-semibold">{profile.businessName}</p>
+              <p className="truncate text-sm opacity-90">{profile.fullName}</p>
+            </div>
             <ThemeToggle />
+          </div>
+          {/* Las dos acciones de quien trabaja sin conexion caben en una sola fila a 375 px: en la caja el alto es lo que mas falta. */}
+          <div className="flex flex-wrap items-center gap-2">
             {online ? (
               <Link to="/" className={LINK}>
                 Administración
@@ -71,19 +92,20 @@ export function CounterShell() {
 
       <nav aria-label="Mostrador" className="border-b border-border bg-surface-raised">
         <ul className="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-gutter py-2">
-          {COUNTER_MENU.map((item) => (
-            <li key={item.path}>
-              <NavLink
-                to={item.path}
-                end={item.end}
-                className={({ isActive }) =>
-                  `${TAB} ${isActive ? 'bg-primary text-on-primary' : 'text-fg hover:bg-surface'}`
-                }
-              >
-                {item.label}
-              </NavLink>
-            </li>
-          ))}
+          {COUNTER_MENU.map((item) => {
+            const current = item.current(pathname);
+            return (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  {...(current ? { 'aria-current': 'page' as const } : {})}
+                  className={`${TAB} ${current ? 'bg-primary text-on-primary' : 'text-fg hover:bg-surface'}`}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 

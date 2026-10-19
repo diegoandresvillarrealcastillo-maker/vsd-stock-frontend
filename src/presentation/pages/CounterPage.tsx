@@ -41,17 +41,17 @@ export function CounterPage() {
   return (
     <>
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold text-fg">Mostrador</h1>
+        <h1 className="text-3xl font-semibold text-fg">Este equipo</h1>
         <p className="text-base text-fg-muted">
           {resumed
             ? `Estás trabajando sin conexión. Puedes seguir hasta el ${until}; después hay que entrar con la contraseña.`
-            : 'Abre y cierra la caja en «Turno»; aquí vas a vender. Lo que hagas se guarda en este equipo, cifrado, y se envía cuando haya conexión.'}
+            : 'Lo que hagas en el mostrador se guarda en este equipo, cifrado, y se envía cuando haya conexión. Aquí ves qué sabe y qué guarda.'}
         </p>
       </div>
 
       <section aria-labelledby="equipo-titulo" className="flex flex-col gap-3">
         <h2 id="equipo-titulo" className="text-xl font-semibold text-fg">
-          Este equipo
+          Datos del equipo
         </h2>
         <dl className="grid grid-cols-1 gap-3 rounded-md border border-border bg-surface-raised p-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
