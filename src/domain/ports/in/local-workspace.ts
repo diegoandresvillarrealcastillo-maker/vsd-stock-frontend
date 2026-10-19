@@ -1,5 +1,6 @@
 import type { LocalProfile, CounterAccess } from '../../model/local-profile';
 import type { Me } from '../../model/me';
+import type { CopyStorage } from './copy-storage';
 import type { Outbox } from './outbox';
 
 /** Quien trabaja ahora en este dispositivo, con su base local abierta. */
@@ -52,6 +53,8 @@ export interface LocalWorkspace {
   pendingCount(): Promise<number>;
   /** La cola de operaciones de quien trabaja ahora (C3-09). Lanza `NoWorkspaceError`. */
   outbox(): Outbox;
+  /** La copia de lectura del catalogo y de la existencia de quien trabaja ahora (C3-10). Lanza `NoWorkspaceError`. */
+  copy(): CopyStorage;
   /** «Cambiar de persona»: suelta la base y conserva todo lo guardado, para que la persona vuelva a por ello. */
   leave(): Promise<void>;
   /** «Cerrar sesion»: borra la base de la persona con todo lo que tiene, y olvida quien era. No hace nada si no hay nadie. */

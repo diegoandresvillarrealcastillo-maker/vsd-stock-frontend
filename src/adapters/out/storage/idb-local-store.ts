@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { parseProduct, type Product } from '../../../domain/model/catalog';
 import { LocalKeyLostError } from '../../../domain/model/local-errors';
 import { parseProfile, type LocalProfile } from '../../../domain/model/local-profile';
 import {
@@ -8,6 +9,12 @@ import {
   type OperationKind,
   type QueuedOperation,
 } from '../../../domain/model/outbox';
+import {
+  NO_DOWNLOADS,
+  parseStockLevel,
+  type CopyCheckpoint,
+  type StockLevel,
+} from '../../../domain/model/read-copy';
 import type { DeviceRegistration, LocalStore } from '../../../domain/ports/out/local-store';
 import { AesGcmCipher, RecordUnreadableError, type Sealed } from './aes-gcm-cipher';
 
@@ -55,6 +62,9 @@ function isCryptoKey(value: unknown): value is CryptoKey {
 }
 
 const KEY = 'key';
+const CHECKPOINT = 'copy-checkpoint';
+const PRODUCT_PREFIX = 'product:';
+const STOCK_PREFIX = 'stock:';
 const SERIAL = 'serial';
 const PROFILE = 'profile';
 const DEVICE = 'device';
@@ -222,8 +232,73 @@ export class IdbLocalStore implements LocalStore {
     }
   }
 
+  async putProducts(products: readonly Product[]): Promise<void> {
+    const sealed: SealedRecord[] = [];
+    for (const product of products) {
+      const name = productName(product.id);
+      const existing = await this.db.get('records', name);
+      if (existing !== undefined) {
+        const current = parseProduct(await this.openOrUndefined(name, existing));
+        // Gana el que cambio despues: la pagina de un minuto antes puede llegar otra vez y no debe deshacer nada.
+        if (current !== null && current.updatedAt.getTime() > product.updatedAt.getTime()) continue;
+      }
+      sealed.push({ name, ...(await this.cipher.seal(name, product)) });
+    }
+    await this.putAll(sealed);
+  }
+
+  async readProducts(): Promise<Product[]> {
+    const products: Product[] = [];
+    for (const record of await this.recordsStartingWith(PRODUCT_PREFIX)) {
+      const product = parseProduct(await this.openOrUndefined(record.name, record));
+      if (product !== null) products.push(product);
+    }
+    return products;
+  }
+
+  async putStock(levels: readonly StockLevel[]): Promise<void> {
+    const sealed: SealedRecord[] = [];
+    for (const level of levels) {
+      const name = stockName(level.productId);
+      sealed.push({ name, ...(await this.cipher.seal(name, level)) });
+    }
+    await this.putAll(sealed);
+  }
+
+  async readStock(): Promise<StockLevel[]> {
+    const levels: StockLevel[] = [];
+    for (const record of await this.recordsStartingWith(STOCK_PREFIX)) {
+      const level = parseStockLevel(await this.openOrUndefined(record.name, record));
+      if (level !== null) levels.push(level);
+    }
+    return levels;
+  }
+
+  async readCheckpoint(): Promise<CopyCheckpoint> {
+    return parseCheckpoint(await this.readRecord(CHECKPOINT));
+  }
+
+  async writeCheckpoint(checkpoint: CopyCheckpoint): Promise<void> {
+    await this.writeRecord(CHECKPOINT, {
+      productsAsOf: checkpoint.productsAsOf?.toISOString() ?? null,
+      stockAsOf: checkpoint.stockAsOf?.toISOString() ?? null,
+    });
+  }
+
   close(): void {
     this.db.close();
+  }
+
+  /** Todos los registros cuyo nombre empieza por el prefijo, que es la clave de `records`. */
+  private async recordsStartingWith(prefix: string): Promise<SealedRecord[]> {
+    return await this.db.getAll('records', IDBKeyRange.bound(prefix, `${prefix}\uffff`));
+  }
+
+  /** Guarda varios registros ya cifrados en una sola transaccion: dentro de una de IndexedDB solo se espera a IndexedDB. */
+  private async putAll(records: readonly SealedRecord[]): Promise<void> {
+    const tx = this.db.transaction('records', 'readwrite');
+    for (const record of records) await tx.store.put(record);
+    await tx.done;
   }
 
   /** Las operaciones de un estado, de la mas antigua a la mas nueva, abriendo solo las que hacen falta. */
@@ -311,6 +386,32 @@ interface OperationContent {
   readonly body: Readonly<Record<string, unknown>>;
   readonly attempts: number;
   readonly attention: AttentionReason | null;
+}
+
+/** El nombre bajo el que se cifra un producto de la copia: lleva su identificador, asi uno copiado al lugar de otro no se abre. */
+function productName(productId: string): string {
+  return `${PRODUCT_PREFIX}${productId}`;
+}
+
+function stockName(productId: string): string {
+  return `${STOCK_PREFIX}${productId}`;
+}
+
+function readDate(value: unknown): Date | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== 'string') return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+/** Lo que se bajo, tal como se guardo. Si no tiene la forma, es como si nada se hubiera bajado: se baja todo otra vez. */
+function parseCheckpoint(value: unknown): CopyCheckpoint {
+  if (typeof value !== 'object' || value === null) return NO_DOWNLOADS;
+  const { productsAsOf, stockAsOf } = value as Record<string, unknown>;
+  const products = readDate(productsAsOf);
+  const stock = readDate(stockAsOf);
+  if (products === undefined || stock === undefined) return NO_DOWNLOADS;
+  return { productsAsOf: products, stockAsOf: stock };
 }
 
 /** El nombre bajo el que se cifra una operacion: lleva su identificador, asi una copiada al lugar de otra no se abre. */
