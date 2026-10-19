@@ -22,6 +22,14 @@ describe('LocalStoragePersonPointer', () => {
     expect(window.localStorage.getItem(PERSON_POINTER_KEY)).toBe(ANA);
   });
 
+  it('keeps the person under the key that the application has always used, or an update would forget everybody', () => {
+    new LocalStoragePersonPointer(browserStorage).set(ANA);
+    expect(window.localStorage.getItem('vsd-stock-person')).toBe(ANA);
+
+    window.localStorage.setItem('vsd-stock-person', ANA.replace('9b2f', '1a2b'));
+    expect(new LocalStoragePersonPointer(browserStorage).get()).toBe(ANA.replace('9b2f', '1a2b'));
+  });
+
   it('forgets the person', () => {
     const pointer = new LocalStoragePersonPointer(browserStorage);
     pointer.set(ANA);
@@ -32,14 +40,19 @@ describe('LocalStoragePersonPointer', () => {
     expect(window.localStorage.getItem(PERSON_POINTER_KEY)).toBeNull();
   });
 
-  it.each(['', 'a', '../otra', 'ana@ejemplo.co', 'x'.repeat(65), 'con espacios y mas cosas'])(
-    'does not believe a value that is not an identifier: %j',
-    (value) => {
-      window.localStorage.setItem(PERSON_POINTER_KEY, value);
+  it.each([
+    '',
+    'a',
+    '../otra',
+    'ana@ejemplo.co',
+    'ana@ejemplo',
+    'x'.repeat(65),
+    'con espacios y mas cosas',
+  ])('does not believe a value that is not an identifier: %j', (value) => {
+    window.localStorage.setItem(PERSON_POINTER_KEY, value);
 
-      expect(new LocalStoragePersonPointer(browserStorage).get()).toBeNull();
-    },
-  );
+    expect(new LocalStoragePersonPointer(browserStorage).get()).toBeNull();
+  });
 
   describe('when the browser blocks storage (private window, blocked site data)', () => {
     const blocked = () => ({

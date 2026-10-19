@@ -21,7 +21,11 @@ export interface PersonData {
 class FakeLocalStore implements LocalStore {
   closed = false;
 
-  constructor(private readonly data: PersonData) {}
+  constructor(
+    private readonly data: PersonData,
+    readonly person: string,
+    private readonly owner: FakeLocalStores,
+  ) {}
 
   readProfile(): Promise<LocalProfile | null> {
     return Promise.resolve(this.data.profile);
@@ -36,9 +40,10 @@ class FakeLocalStore implements LocalStore {
     return Promise.resolve(this.data.device);
   }
 
-  claimDevice(candidate: DeviceRegistration): Promise<DeviceRegistration> {
+  async claimDevice(candidate: DeviceRegistration): Promise<DeviceRegistration> {
+    if (this.owner.holdClaim !== null) await this.owner.holdClaim;
     this.data.device ??= candidate;
-    return Promise.resolve(this.data.device);
+    return this.data.device;
   }
 
   completeDevice(device: DeviceRegistration): Promise<void> {
@@ -65,9 +70,13 @@ export class FakeLocalStores implements LocalStores {
   readonly people = new Map<string, PersonData>();
   readonly opened: string[] = [];
   readonly forgotten: string[] = [];
+  /** Las personas que tenian su base abierta en el momento de olvidar a alguien (una por cada `forget`). */
+  readonly openAtForget: string[][] = [];
   readonly stores: FakeLocalStore[] = [];
   /** Si se pone, abrir una base espera a que esta promesa se cumpla (para ver el estado «abriendo»). */
   holdOpen: Promise<void> | null = null;
+  /** Si se pone, reclamar el dispositivo espera a que esta promesa se cumpla (para cambiar de persona a la mitad). */
+  holdClaim: Promise<void> | null = null;
   /** Si se pone, abrir la base de esa persona falla con este error. */
   failOpen: Error | null = null;
   /** Si se pone, abrir la base de esa persona dice que la clave se perdio y quedan operaciones. */
@@ -89,13 +98,16 @@ export class FakeLocalStores implements LocalStores {
       return Promise.reject(new LocalKeyLostError(this.dataOf(authUserId).pending));
     }
     this.opened.push(authUserId);
-    const store = new FakeLocalStore(this.dataOf(authUserId));
+    const store = new FakeLocalStore(this.dataOf(authUserId), authUserId, this);
     this.stores.push(store);
     return Promise.resolve(store);
   }
 
   forget(authUserId: string): Promise<void> {
     this.forgotten.push(authUserId);
+    this.openAtForget.push(
+      this.stores.filter((store) => !store.closed).map((store) => store.person),
+    );
     this.people.delete(authUserId);
     return Promise.resolve();
   }
@@ -133,20 +145,29 @@ export class FakeDeviceRegistry implements DeviceRegistry {
   failNext: Error | null = null;
   /** Lo que el servidor contesta como codigo, para probar respuestas que no sirven. */
   forceCode: string | null = null;
+  /** Lo que el servidor contesta como identificador, para probar que no registro otro dispositivo. */
+  forceId: string | null = null;
+  /** Si se pone, el siguiente intento espera a que esta promesa se cumpla antes de contestar (y se apaga). */
+  holdNext: Promise<void> | null = null;
 
-  register(id: string): Promise<RegisteredDevice> {
+  async register(id: string): Promise<RegisteredDevice> {
     this.calls.push(id);
+    if (this.holdNext !== null) {
+      const hold = this.holdNext;
+      this.holdNext = null;
+      await hold;
+    }
     if (this.failNext !== null) {
       const error = this.failNext;
       this.failNext = null;
-      return Promise.reject(error);
+      throw error;
     }
     let code = this.known.get(id);
     if (code === undefined) {
       code = ['AA', 'AB', 'AC', 'AD'][this.known.size] ?? 'ZZ';
       this.known.set(id, code);
     }
-    return Promise.resolve({ id, code: this.forceCode ?? code });
+    return { id: this.forceId ?? id, code: this.forceCode ?? code };
   }
 }
 

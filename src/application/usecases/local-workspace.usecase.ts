@@ -126,11 +126,10 @@ export class LocalWorkspaceUseCase implements LocalWorkspace {
 
   async registerDevice(): Promise<void> {
     const active = this.requireOpen();
-    const known = await active.store.readDevice();
-    if (known?.code != null) return this.knowCode(active, known.code);
     // El identificador se guarda ANTES de preguntar: si la respuesta se pierde, se repite con el mismo y el servidor devuelve el
-    // mismo dispositivo. `claimDevice` decide con quien llega primero: dos pestañas terminan con el mismo.
-    const claimed = await active.store.claimDevice(known ?? { id: this.ids.newId(), code: null });
+    // mismo dispositivo. `claimDevice` decide con quien llega primero (un intento anterior o la otra pestaña): el candidato solo
+    // vale si no habia ninguno, y entonces todas terminan con el mismo.
+    const claimed = await active.store.claimDevice({ id: this.ids.newId(), code: null });
     if (claimed.code !== null) return this.knowCode(active, claimed.code);
 
     const registered = await this.registry.register(claimed.id);
@@ -188,7 +187,7 @@ export class LocalWorkspaceUseCase implements LocalWorkspace {
   private replace(next: Open | null): void {
     const previous = this.open;
     this.open = next;
-    if (previous !== null && previous.store !== next?.store) previous.store.close();
+    if (previous !== null) previous.store.close();
     this.notify();
   }
 

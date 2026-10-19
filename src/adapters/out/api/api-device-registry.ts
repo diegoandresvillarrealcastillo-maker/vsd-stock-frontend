@@ -4,7 +4,7 @@ import type { ApiGateway } from '../../../domain/ports/out/api-gateway';
 import type { DeviceRegistry, RegisteredDevice } from '../../../domain/ports/out/device-registry';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null;
 }
 
 /**

@@ -1,8 +1,8 @@
 // @vitest-environment node
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
-import { openDB } from 'idb';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { deleteDB, openDB } from 'idb';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   LocalKeyLostError,
   LocalStorageUnavailableError,
@@ -12,6 +12,12 @@ import type { LocalStore } from '../../../domain/ports/out/local-store';
 import { generateKey } from './aes-gcm-cipher';
 import { databaseName, openLocalDatabase, type LocalSchema } from './idb-local-store';
 import { IdbLocalStores } from './idb-local-stores';
+
+// Borrar la base es lo unico que se sustituye, y solo cuando una prueba lo pide: las demas usan el `deleteDB` de verdad.
+vi.mock('idb', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('idb')>();
+  return { ...actual, deleteDB: vi.fn(actual.deleteDB) };
+});
 
 const ANA = '9b2f6c1e-0d5a-4c1b-8f3e-2a7d6e5c4b3a';
 const LUIS = '7c7c7c7c-7c7c-4c7c-8c7c-7c7c7c7c7c7c';
@@ -119,6 +125,33 @@ describe('the local database of a person', () => {
       ).resolves.toBeDefined();
       a.db.close();
       b.db.close();
+    });
+
+    it('creates the base at version 1, so a later change of the schema is a migration', async () => {
+      (await stores.open(ANA)).close();
+
+      const db = await raw(ANA);
+      const version = db.version;
+      db.close();
+
+      expect(version).toBe(1);
+    });
+
+    it('wants an identifier of 8 to 64 characters, whole, and not one that only contains another', async () => {
+      await expect(stores.open('abcdefg')).rejects.toBeInstanceOf(RangeError);
+      await expect(stores.open('a'.repeat(65))).rejects.toBeInstanceOf(RangeError);
+      await expect(stores.open(`../${ANA}`)).rejects.toBeInstanceOf(RangeError);
+      await expect(stores.open(`${ANA}/..`)).rejects.toBeInstanceOf(RangeError);
+      (await stores.open('abcdefgh')).close();
+      (await stores.open('a'.repeat(64))).close();
+    });
+
+    it('lets go of the connection when it is closed', async () => {
+      const store = await stores.open(ANA);
+
+      store.close();
+
+      await expect(store.readProfile()).rejects.toThrow();
     });
 
     it('refuses an identifier that is not one: nobody names a base after anything', async () => {
@@ -393,6 +426,14 @@ describe('the local database of a person', () => {
       expect(await store.readDevice()).toBeNull();
       store.close();
     });
+
+    it('is nothing when the code that was kept is not text', async () => {
+      const store = await stores.open(ANA);
+      await store.completeDevice({ id: 'dev-1', code: 7 as unknown as string });
+
+      expect(await store.readDevice()).toBeNull();
+      store.close();
+    });
   });
 
   describe('what is waiting to be sent', () => {
@@ -434,7 +475,8 @@ describe('the local database of a person', () => {
       db.close();
     };
 
-    it('does not open with a new key if there are operations waiting: they would be lost without anyone knowing', async () => {
+    /** Una base con una operacion esperando y sin su clave. */
+    const waitingWithoutKey = async () => {
       const store = await stores.open(ANA);
       store.close();
       const db = await raw(ANA);
@@ -447,6 +489,23 @@ describe('the local database of a person', () => {
       });
       db.close();
       await loseTheKey();
+    };
+
+    it('lets go of the connection when it refuses to open the base', async () => {
+      await waitingWithoutKey();
+      const close = vi.spyOn(IDBDatabase.prototype, 'close');
+
+      try {
+        await expect(stores.open(ANA)).rejects.toBeInstanceOf(LocalKeyLostError);
+
+        expect(close).toHaveBeenCalledTimes(1);
+      } finally {
+        close.mockRestore();
+      }
+    });
+
+    it('does not open with a new key if there are operations waiting: they would be lost without anyone knowing', async () => {
+      await waitingWithoutKey();
 
       await expect(stores.open(ANA)).rejects.toMatchObject({
         name: 'LocalKeyLostError',
@@ -537,6 +596,56 @@ describe('the local database of a person', () => {
 
     it('is not an error to forget a person who never had a base', async () => {
       await expect(stores.forget(LUIS)).resolves.toBeUndefined();
+    });
+
+    it('refuses an identifier that is not one, as opening does', async () => {
+      await expect(stores.forget('../otra')).rejects.toBeInstanceOf(RangeError);
+    });
+
+    describe('when another tab does not let go', () => {
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      /** Lo que `forget` hace al final, mirado desde fuera: nada, un error o terminar. */
+      const watch = (promise: Promise<void>) => {
+        const outcome = vi.fn<(result: unknown) => void>();
+        void promise.then(
+          () => outcome('done'),
+          (error: unknown) => outcome(error),
+        );
+        return outcome;
+      };
+
+      it('gives up with an error after five seconds if another tab keeps the base open', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        vi.mocked(deleteDB).mockImplementationOnce((_name, callbacks) => {
+          callbacks?.blocked?.(1, new Event('blocked') as unknown as IDBVersionChangeEvent);
+          return new Promise<void>(() => undefined);
+        });
+        const outcome = watch(stores.forget(ANA));
+
+        await vi.advanceTimersByTimeAsync(4_999);
+        expect(outcome).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(2);
+
+        expect(outcome).toHaveBeenCalledTimes(1);
+        expect(outcome.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+        expect((outcome.mock.calls[0]?.[0] as Error).message).toMatch(/Another tab/);
+      });
+
+      it('keeps waiting while nothing blocks it, however long the browser takes', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        vi.mocked(deleteDB).mockImplementationOnce(
+          () => new Promise<void>((resolve) => setTimeout(resolve, 8_000)),
+        );
+        const outcome = watch(stores.forget(ANA));
+
+        await vi.advanceTimersByTimeAsync(8_001);
+
+        expect(outcome).toHaveBeenCalledTimes(1);
+        expect(outcome).toHaveBeenCalledWith('done');
+      });
     });
   });
 });

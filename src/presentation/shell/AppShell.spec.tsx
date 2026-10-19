@@ -18,12 +18,20 @@ async function setup({
   role = 'owner',
   at = '/',
   businessName = 'Tienda La Esquina',
-}: { role?: Role; at?: string; businessName?: string } = {}) {
+  prepare,
+}: {
+  role?: Role;
+  at?: string;
+  businessName?: string;
+  /** Deja el espacio de trabajo local como la prueba lo necesita, antes de que la persona entre. */
+  prepare?: (local: ReturnType<typeof createTestLocal>) => void;
+} = {}) {
   const auth = createTestAuth({ stored: testSession('ana') });
   auth.answer(testMe('ana', role, businessName));
   const connection = createTestConnection();
   const theme = createTestThemePreference();
   const local = createTestLocal();
+  prepare?.(local);
 
   function Providers({ children }: { children: ReactNode }) {
     return (
@@ -125,6 +133,18 @@ describe('AppShell', () => {
       await setup({ at: '/personas' });
 
       expect(within(screen.getByRole('main')).getByText('Pantalla de personas')).toBeDefined();
+    });
+
+    it('warns in the frame, on any page, when this browser can not keep encrypted data', async () => {
+      await setup({
+        prepare: (local) => {
+          local.stores.failOpen = new Error('sin IndexedDB');
+        },
+      });
+
+      expect(
+        await screen.findByText('Este navegador no puede guardar datos de forma segura'),
+      ).toBeDefined();
     });
 
     it('has the theme button', async () => {

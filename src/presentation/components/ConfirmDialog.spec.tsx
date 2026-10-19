@@ -116,4 +116,25 @@ describe('ConfirmDialog', () => {
 
     expect(document.activeElement).toBe(opener);
   });
+
+  it('keeps Escape for itself: whoever is behind the dialog does not hear it', () => {
+    const behind = vi.fn();
+    render(
+      <div onKeyDown={behind}>
+        <ConfirmDialog
+          title="Pregunta"
+          confirmLabel="Si"
+          cancelLabel="No"
+          onConfirm={() => undefined}
+          onCancel={() => undefined}
+        >
+          <p>Seguro.</p>
+        </ConfirmDialog>
+      </div>,
+    );
+
+    fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' });
+
+    expect(behind).not.toHaveBeenCalled();
+  });
 });

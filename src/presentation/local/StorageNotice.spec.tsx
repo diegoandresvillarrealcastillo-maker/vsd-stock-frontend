@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../domain/model/api-error';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
+import { deferred } from '../../../test/support/deferred';
 import { createTestLocal } from '../../../test/support/local';
 import { renderScreen } from '../../../test/support/screens';
 import { StorageNotice } from './StorageNotice';
@@ -116,5 +117,23 @@ describe('StorageNotice', () => {
         expect(screen.queryByRole('status')).toBeNull();
       });
     });
+  });
+
+  it('says nothing while the device is being registered: it has not failed yet', async () => {
+    const registering = deferred<undefined>();
+    const { local } = mount((prepared) => {
+      prepared.registry.holdNext = registering.promise.then(() => undefined);
+    });
+    await waitFor(() => {
+      expect(local.registry.calls).toHaveLength(1);
+    });
+
+    expect(screen.queryByRole('status')).toBeNull();
+
+    registering.resolve(undefined);
+    await waitFor(() => {
+      expect(local.workspace.current()?.deviceCode).toBe('AA');
+    });
+    expect(screen.queryByRole('status')).toBeNull();
   });
 });

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../domain/model/api-error';
 import {
-  CounterLockedError,
   DeviceNotRegisteredError,
   LocalKeyLostError,
   NoWorkspaceError,
@@ -261,6 +260,17 @@ describe('LocalWorkspaceUseCase', () => {
 
       expect(first.closed).toBe(true);
       expect(stores.forgotten).toEqual([AUTH_ID]);
+      // Se solto ANTES de borrar: una base con una conexion abierta no se deja borrar.
+      expect(stores.openAtForget).toEqual([[]]);
+    });
+
+    it('does not let go of the base of the person who is working when it is another one that is discarded', async () => {
+      const { workspace, stores } = setup();
+      await workspace.begin(me({ id: OTHER_AUTH_ID }));
+
+      await workspace.discard(me());
+
+      expect(stores.openAtForget).toEqual([[OTHER_AUTH_ID]]);
     });
   });
 
@@ -308,18 +318,34 @@ describe('LocalWorkspaceUseCase', () => {
       expect(stores.lastStore.closed).toBe(true);
     });
 
-    it('refuses when the clock was set back', async () => {
+    it('refuses when the clock was set back, and says so', async () => {
       const { workspace, pointer, stores } = setup();
       stores.dataOf(AUTH_ID).profile = profileAt(new Date(NOW.getTime() + HOUR));
       pointer.set(AUTH_ID);
 
-      await expect(workspace.resume()).rejects.toBeInstanceOf(CounterLockedError);
+      await expect(workspace.resume()).rejects.toMatchObject({
+        name: 'CounterLockedError',
+        reason: 'clock-behind',
+      });
     });
 
-    it('has nothing to resume when nobody worked here', async () => {
-      const { workspace } = setup();
+    it('refuses when the time of the last verification can not be read, and says so', async () => {
+      const { workspace, pointer, stores } = setup();
+      stores.dataOf(AUTH_ID).profile = { ...profileAt(NOW), verifiedAt: 'ayer' };
+      pointer.set(AUTH_ID);
+
+      await expect(workspace.resume()).rejects.toMatchObject({
+        name: 'CounterLockedError',
+        reason: 'unreadable',
+      });
+    });
+
+    it('has nothing to resume when nobody worked here, and opens no base to find out', async () => {
+      const { workspace, stores } = setup();
 
       await expect(workspace.resume()).rejects.toBeInstanceOf(NoWorkspaceError);
+
+      expect(stores.opened).toEqual([]);
     });
 
     it('has nothing to resume when the base of the last person has no profile', async () => {
@@ -379,6 +405,79 @@ describe('LocalWorkspaceUseCase', () => {
       await expect(workspace.registerDevice()).rejects.toBe(failure);
 
       expect(workspace.current()?.deviceCode).toBeNull();
+    });
+
+    it('does not accept that the server registered another device than the one that was asked for', async () => {
+      const { workspace, registry, stores } = setup();
+      await workspace.begin(me());
+      registry.forceId = '99999999-9999-4999-8999-999999999999';
+
+      await expect(workspace.registerDevice()).rejects.toThrow(/another device/);
+
+      expect(stores.dataOf(AUTH_ID).device?.code).toBeNull();
+      expect(workspace.current()?.deviceCode).toBeNull();
+    });
+
+    it('tells those who listen when it learns the code, and only then', async () => {
+      const { workspace } = setup();
+      await workspace.begin(me());
+      const listener = vi.fn();
+      workspace.subscribe(listener);
+
+      await workspace.registerDevice();
+      expect(listener).toHaveBeenCalledTimes(1);
+      await workspace.registerDevice();
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not keep a code that arrives after the person changed: the base is closed and it will be asked again', async () => {
+      const { workspace, registry, stores } = setup();
+      await workspace.begin(me());
+      let release = () => {};
+      registry.holdNext = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const registering = workspace.registerDevice();
+      await vi.waitFor(() => {
+        expect(registry.calls).toHaveLength(1);
+      });
+
+      await workspace.leave();
+      release();
+      await registering;
+
+      expect(stores.dataOf(AUTH_ID).device).toEqual({ id: registry.calls[0], code: null });
+    });
+
+    it('does not give the code of one person to another who started working meanwhile', async () => {
+      const { workspace, stores } = setup();
+      await workspace.begin(me());
+      // Otra pestaña ya registro el dispositivo mientras esta lo pedia.
+      stores.dataOf(AUTH_ID).device = { id: '77777777-7777-4777-8777-777777777777', code: 'AB' };
+      let release = () => {};
+      stores.holdClaim = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const registering = workspace.registerDevice();
+
+      await workspace.begin(me({ id: OTHER_AUTH_ID }));
+      release();
+      await registering;
+
+      expect(workspace.current()?.profile.authUserId).toBe(OTHER_AUTH_ID);
+      expect(workspace.current()?.deviceCode).toBeNull();
+    });
+
+    it('does not register again a device that another tab already registered', async () => {
+      const { workspace, registry, stores } = setup();
+      await workspace.begin(me());
+      stores.dataOf(AUTH_ID).device = { id: '77777777-7777-4777-8777-777777777777', code: 'AB' };
+
+      await workspace.registerDevice();
+
+      expect(registry.calls).toEqual([]);
+      expect(workspace.current()?.deviceCode).toBe('AB');
     });
 
     it('refuses a code that is not one', async () => {

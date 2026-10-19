@@ -66,7 +66,7 @@ export function profileOf(me: Me, verifiedAt: Date): LocalProfile | null {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null;
 }
 
 /**

@@ -22,7 +22,6 @@ export function StorageNotice() {
       await discard();
     } finally {
       setBusy(false);
-      setAsking(false);
     }
   }
 

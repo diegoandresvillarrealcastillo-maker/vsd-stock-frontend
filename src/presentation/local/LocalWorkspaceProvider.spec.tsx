@@ -1,16 +1,20 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../domain/model/api-error';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { deferred } from '../../../test/support/deferred';
 import { createTestLocal, type TestLocal } from '../../../test/support/local';
-import { AuthProvider } from '../auth/AuthProvider';
+import { AuthProvider, useAccount } from '../auth/AuthProvider';
 import { LocalWorkspaceProvider, useLocal } from './LocalWorkspaceProvider';
 
 function Probe() {
   const local = useLocal();
+  const { reload } = useAccount();
   return (
     <>
+      <button type="button" onClick={reload}>
+        Recargar
+      </button>
       <p data-testid="setup">{local.setup.status}</p>
       <p data-testid="pending">
         {local.setup.status === 'lost-key' ? String(local.setup.pending) : '-'}
@@ -68,7 +72,9 @@ describe('LocalWorkspaceProvider', () => {
 
     expect(text('setup')).toBe('ready');
     expect(text('active')).toBe('Ana Gómez');
-    expect(text('device')).toBe('idle');
+    await waitFor(() => {
+      expect(text('device')).toBe('idle');
+    });
     expect(local.stores.opened).toEqual(['ana']);
     expect(local.pointer.get()).toBe('ana');
     expect(local.registry.calls).toHaveLength(1);
@@ -220,5 +226,82 @@ describe('LocalWorkspaceProvider', () => {
 
   it('throws a clear error when used outside of the provider', () => {
     expect(() => render(<Probe />)).toThrow(/LocalWorkspaceProvider/);
+  });
+
+  describe('when the person is gone or changed before the base is ready', () => {
+    it('does not register the device of someone who left while their base was opening', async () => {
+      const auth = signedIn();
+      const local = createTestLocal();
+      const release = deferred<undefined>();
+      local.stores.holdOpen = release.promise.then(() => undefined);
+      mount({ auth, local });
+      await waitFor(() => {
+        expect(text('setup')).toBe('starting');
+      });
+
+      await act(async () => {
+        await auth.sessions.signOut();
+      });
+      local.stores.holdOpen = null;
+      release.resolve(undefined);
+      await waitFor(() => {
+        expect(local.stores.opened).toEqual(['ana']);
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+
+      expect(local.registry.calls).toEqual([]);
+      expect(text('setup')).toBe('idle');
+      expect(text('device')).toBe('idle');
+    });
+
+    it('is starting again when the account is loaded again, until the base opens for the new answer', async () => {
+      const auth = signedIn();
+      const local = createTestLocal();
+      mount({ auth, local });
+      await waitFor(() => {
+        expect(text('setup')).toBe('ready');
+      });
+      const release = deferred<undefined>();
+      local.stores.holdOpen = release.promise.then(() => undefined);
+      auth.answer(testMe('ana', 'cashier'));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Recargar' }));
+
+      await waitFor(() => {
+        expect(text('setup')).toBe('starting');
+      });
+      local.stores.holdOpen = null;
+      release.resolve(undefined);
+      await waitFor(() => {
+        expect(text('setup')).toBe('ready');
+      });
+    });
+  });
+
+  it('does not ask for the code of a device that already has it, not even when the person insists', async () => {
+    const local = createTestLocal();
+    local.stores.dataOf('ana').device = { id: 'dev-1', code: 'AB' };
+    const register = vi.spyOn(local.workspace, 'registerDevice');
+    mount({ auth: signedIn(), local });
+    await waitFor(() => {
+      expect(text('code')).toBe('AB');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+    expect(register).not.toHaveBeenCalled();
+    expect(text('device')).toBe('idle');
+  });
+
+  it('does nothing when asked to discard and nobody has entered', () => {
+    const { local } = mount();
+    const discard = vi.spyOn(local.workspace, 'discard');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Descartar' }));
+
+    expect(discard).not.toHaveBeenCalled();
+    expect(local.stores.forgotten).toEqual([]);
   });
 });

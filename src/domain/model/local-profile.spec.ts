@@ -66,6 +66,10 @@ describe('the window in which the counter can be resumed without a connection', 
     expect(counterAccess(profile, later)).toEqual({ state: 'locked', reason: 'expired' });
   });
 
+  it('forgives a clock up to five minutes behind the verification, and not a millisecond more', () => {
+    expect(CLOCK_TOLERANCE_MS).toBe(5 * 60 * 1000);
+  });
+
   it('forgives a clock that is a few minutes behind the verification, because clocks drift', () => {
     const slightlyBefore = new Date(VERIFIED.getTime() - CLOCK_TOLERANCE_MS);
 
@@ -92,6 +96,12 @@ describe('the window in which the counter can be resumed without a connection', 
 describe('the profile kept for the counter', () => {
   it('is made of who the person is, where they work, with what role and when the server last confirmed it', () => {
     expect(profileOf(me, VERIFIED)).toEqual(profile);
+  });
+
+  it('keeps the role that the server gave, whichever it is', () => {
+    const owner: Me = { ...me, membership: { ...me.membership!, role: 'owner' } };
+
+    expect(profileOf(owner, VERIFIED)?.role).toBe('owner');
   });
 
   it('does not exist for someone without a business: there is no counter for them', () => {
@@ -129,6 +139,10 @@ describe('reading a profile back from what was stored', () => {
     ]) {
       expect(parseProfile(broken)).toBeNull();
     }
+  });
+
+  it('reads a person who has no email', () => {
+    expect(parseProfile({ ...profile, email: null })).toEqual({ ...profile, email: null });
   });
 
   it('drops anything extra it did not ask for', () => {

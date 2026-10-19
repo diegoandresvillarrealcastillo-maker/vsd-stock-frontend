@@ -1,8 +1,10 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { NoWorkspaceError } from '../../domain/model/local-errors';
 import { COUNTER_RESUME_WINDOW_MS, type LocalProfile } from '../../domain/model/local-profile';
 import { formatMoment } from '../../domain/model/moment';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
+import { deferred } from '../../../test/support/deferred';
 import { createTestLocal, rememberPerson } from '../../../test/support/local';
 import { renderScreen } from '../../../test/support/screens';
 import { CounterPage } from './CounterPage';
@@ -46,7 +48,10 @@ describe('CounterPage', () => {
   it('shows nothing while nobody is working', () => {
     const { container } = renderScreen(<CounterPage />, { path: '/mostrador' });
 
-    expect(container.textContent).not.toContain('Mostrador');
+    // Nada de la pantalla: solo lo que el montaje de prueba pone para saber donde esta (la ruta y su estado).
+    expect(container.querySelectorAll('p')).toHaveLength(2);
+    expect(screen.queryByRole('main')).toBeNull();
+    expect(screen.queryByRole('banner')).toBeNull();
   });
 
   describe('for a person who came in with a connection', () => {
@@ -56,6 +61,7 @@ describe('CounterPage', () => {
       expect(await screen.findByRole('heading', { level: 1, name: 'Mostrador' })).toBeDefined();
       expect(screen.getByText('Cajero')).toBeDefined();
       expect(screen.getByText('AA')).toBeDefined();
+      expect(screen.queryByRole('button', { name: 'Registrar' })).toBeNull();
       expect(await screen.findByText('Nada')).toBeDefined();
     });
 
@@ -156,5 +162,59 @@ describe('CounterPage', () => {
       expect(local.workspace.current()?.deviceCode).toBe('AA');
     });
     expect(await screen.findByText('AA')).toBeDefined();
+  });
+
+  it('does not offer to register the device while it is being registered', async () => {
+    const auth = createTestAuth({ stored: testSession('ana') });
+    auth.answer(testMe('ana', 'cashier'));
+    const local = createTestLocal();
+    const registering = deferred<undefined>();
+    local.registry.holdNext = registering.promise.then(() => undefined);
+    renderScreen(<CounterPage />, { auth, local, path: '/mostrador' });
+    await waitFor(() => {
+      expect(local.registry.calls).toHaveLength(1);
+    });
+
+    expect(await screen.findByText('Sin registrar')).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Registrar' })).toBeNull();
+
+    registering.resolve(undefined);
+    expect(await screen.findByText('AA')).toBeDefined();
+  });
+
+  it('shows the count of the person who works now, not a late answer for the one before', async () => {
+    const local = createTestLocal();
+    rememberPerson(local, profile);
+    local.stores.dataOf('ana').device = { id: 'dev-1', code: 'AA' };
+    const late = deferred<number>();
+    // Una respuesta por cada vez que la pantalla pregunta; las que fallan se crean al preguntar, no antes.
+    const answers: (() => Promise<number>)[] = [
+      () => Promise.reject(new NoWorkspaceError()),
+      () => late.promise,
+      () => Promise.reject(new NoWorkspaceError()),
+      () => Promise.resolve(2),
+    ];
+    vi.spyOn(local.workspace, 'pendingCount').mockImplementation(
+      () => answers.shift()?.() ?? Promise.resolve(0),
+    );
+    renderScreen(<CounterPage />, { local, path: '/mostrador' });
+    await act(async () => {
+      await local.workspace.resume();
+    });
+    await act(async () => {
+      await local.workspace.leave();
+    });
+    await act(async () => {
+      await local.workspace.resume();
+    });
+    expect(await screen.findByText('2 registros')).toBeDefined();
+
+    await act(async () => {
+      late.resolve(7);
+      await late.promise;
+    });
+
+    expect(screen.queryByText('7 registros')).toBeNull();
+    expect(screen.getByText('2 registros')).toBeDefined();
   });
 });
