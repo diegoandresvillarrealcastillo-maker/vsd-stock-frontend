@@ -18,6 +18,7 @@ describe('the list of files the service worker saves', () => {
     'index.html',
     'manifest.webmanifest',
     'sw.js',
+    '_headers',
   ];
 
   it('saves the page as /, and everything the page needs to open', () => {
@@ -41,6 +42,11 @@ describe('the list of files the service worker saves', () => {
         left,
       ).toBe(false);
     }
+  });
+
+  it('leaves out the rules of the host: it reads them and does not serve them, and one request that fails stops the whole install', () => {
+    expect(shellPaths(dist).some((path) => path.includes('_headers'))).toBe(false);
+    expect(shellPaths(['index.html', '_redirects'])).toEqual(['/']);
   });
 });
 
