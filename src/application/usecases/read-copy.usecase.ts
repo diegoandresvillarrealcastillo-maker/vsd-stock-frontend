@@ -1,7 +1,12 @@
 import { ApiError } from '../../domain/model/api-error';
 import type { Product } from '../../domain/model/catalog';
 import { NoWorkspaceError } from '../../domain/model/local-errors';
-import { searchProducts, type SearchOptions } from '../../domain/model/product-search';
+import {
+  indexProducts,
+  searchIndex,
+  type SearchIndex,
+  type SearchOptions,
+} from '../../domain/model/product-search';
 import { NO_DOWNLOADS, sinceOf, type CopyCheckpoint } from '../../domain/model/read-copy';
 import type { ConnectionMonitor } from '../../domain/ports/in/connection-monitor';
 import type { CopyStorage } from '../../domain/ports/in/copy-storage';
@@ -69,7 +74,8 @@ export class ReadCopyUseCase implements ReadCopy {
   private checkpoint: CopyCheckpoint = NO_DOWNLOADS;
   private readonly products = new Map<string, Product>();
   private readonly levels = new Map<string, number>();
-  private listed: readonly Product[] | null = null;
+  /** El catalogo listo para buscar: se arma con la primera busqueda tras un cambio y sirve a todas las siguientes. */
+  private indexed: SearchIndex | null = null;
   private lastSyncedAt: number | null = null;
 
   constructor(private readonly deps: Dependencies) {}
@@ -123,7 +129,7 @@ export class ReadCopyUseCase implements ReadCopy {
   }
 
   search(query: string, options?: SearchOptions): readonly Product[] {
-    return searchProducts(this.all(), query, options);
+    return searchIndex(this.index(), query, options);
   }
 
   product(productId: string): Product | undefined {
@@ -167,7 +173,7 @@ export class ReadCopyUseCase implements ReadCopy {
   private forget(): void {
     this.products.clear();
     this.levels.clear();
-    this.listed = null;
+    this.indexed = null;
     this.checkpoint = NO_DOWNLOADS;
     this.update(INITIAL);
   }
@@ -271,12 +277,12 @@ export class ReadCopyUseCase implements ReadCopy {
         this.products.set(product.id, product);
       }
     }
-    this.listed = null;
+    this.indexed = null;
   }
 
-  private all(): readonly Product[] {
-    this.listed ??= [...this.products.values()];
-    return this.listed;
+  private index(): SearchIndex {
+    this.indexed ??= indexProducts([...this.products.values()]);
+    return this.indexed;
   }
 
   /** Lo que se dice de lo guardado: cuanto hay y de cuando es. */

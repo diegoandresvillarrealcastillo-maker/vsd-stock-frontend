@@ -22,30 +22,86 @@ function withoutLeadingZeros(code: string): string {
 /** Cuanto se parece lo encontrado a lo escrito: 0 es un codigo exacto y 3, que solo lo contiene. */
 type Tier = 0 | 1 | 2 | 3;
 
-interface Candidate {
+/** Un producto con todo lo que se compara ya preparado: asi buscar no vuelve a normalizar el catalogo entero en cada tecla. */
+interface Entry {
   readonly product: Product;
   readonly name: string;
+  readonly words: readonly string[];
+  readonly sku: string;
+  readonly barcode: string;
+  readonly bareBarcode: string;
+  /** Lo que se recorre para saber si una palabra esta: el nombre, el codigo del negocio y el de barras. */
+  readonly haystack: string;
+}
+
+/** La copia del catalogo lista para buscar. Se arma una vez por cambio del catalogo y sirve para todas las busquedas. */
+export interface SearchIndex {
+  readonly entries: readonly Entry[];
+}
+
+export function indexProducts(products: readonly Product[]): SearchIndex {
+  return {
+    entries: products.map((product) => {
+      const name = normalizeForSearch(product.name);
+      const sku = normalizeForSearch(product.sku);
+      const barcode = product.barcode ?? '';
+      return {
+        product,
+        name,
+        words: name.split(' '),
+        sku,
+        barcode,
+        bareBarcode: withoutLeadingZeros(barcode),
+        haystack: `${name} ${sku} ${barcode}`,
+      };
+    }),
+  };
+}
+
+interface Candidate {
+  readonly entry: Entry;
   readonly tier: Tier;
 }
 
-function tierOf(
-  product: Product,
-  name: string,
-  query: string,
-  tokens: readonly string[],
-): Tier | null {
-  const sku = normalizeForSearch(product.sku);
-  const barcode = product.barcode ?? '';
+interface Wanted {
+  readonly text: string;
+  readonly bare: string;
+  readonly tokens: readonly string[];
+}
+
+function tierOf(entry: Entry, wanted: Wanted): Tier | null {
   const code =
-    sku === query ||
-    (barcode !== '' && withoutLeadingZeros(barcode) === withoutLeadingZeros(query));
+    entry.sku === wanted.text || (entry.barcode !== '' && entry.bareBarcode === wanted.bare);
   if (code) return 0;
-  const haystack = `${name} ${sku} ${barcode}`;
-  if (!tokens.every((token) => haystack.includes(token))) return null;
-  if (name.startsWith(query)) return 1;
-  const words = name.split(' ');
-  if (tokens.every((token) => words.some((word) => word.startsWith(token)))) return 2;
+  if (!wanted.tokens.every((token) => entry.haystack.includes(token))) return null;
+  if (entry.name.startsWith(wanted.text)) return 1;
+  if (wanted.tokens.every((token) => entry.words.some((word) => word.startsWith(token)))) return 2;
   return 3;
+}
+
+// Un comparador creado una vez: `localeCompare` con un idioma lo crea en cada llamada y, con miles de productos, se nota.
+const collator = new Intl.Collator('es');
+
+function compare(a: Candidate, b: Candidate): number {
+  return (
+    a.tier - b.tier ||
+    collator.compare(a.entry.name, b.entry.name) ||
+    collator.compare(a.entry.product.id, b.entry.product.id)
+  );
+}
+
+/** Mete el candidato en su lugar de una lista ya ordenada y la deja con `limit` como mucho: solo se guardan los mejores. */
+function keepBest(best: Candidate[], candidate: Candidate, limit: number): void {
+  if (best.length === limit && compare(candidate, best[limit - 1] as Candidate) >= 0) return;
+  let low = 0;
+  let high = best.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (compare(best[middle] as Candidate, candidate) <= 0) low = middle + 1;
+    else high = middle;
+  }
+  best.splice(low, 0, candidate);
+  if (best.length > limit) best.pop();
 }
 
 /**
@@ -53,28 +109,31 @@ function tierOf(
  * en cualquier orden, sin importar mayusculas ni tildes; por el nombre, el codigo del negocio o el codigo de barras (completo,
  * con o sin el cero que vuelve un UPC en EAN). Un codigo exacto va primero; luego lo que empieza como se escribio, luego lo que
  * tiene una palabra que empieza asi y al final lo que solo lo contiene; dentro de cada grupo, por nombre. No busca nada si no se
- * escribio nada.
+ * escribio nada. Solo ordena los que se van a mostrar, no todo lo que coincide.
  */
+export function searchIndex(
+  index: SearchIndex,
+  query: string,
+  options: SearchOptions = {},
+): Product[] {
+  const text = normalizeForSearch(query);
+  const limit = options.limit ?? DEFAULT_SEARCH_LIMIT;
+  if (text === '' || limit <= 0) return [];
+  const wanted: Wanted = { text, bare: withoutLeadingZeros(text), tokens: text.split(' ') };
+  const best: Candidate[] = [];
+  for (const entry of index.entries) {
+    if (!entry.product.active && options.includeArchived !== true) continue;
+    const tier = tierOf(entry, wanted);
+    if (tier !== null) keepBest(best, { entry, tier }, limit);
+  }
+  return best.map(({ entry }) => entry.product);
+}
+
+/** Lo mismo con la lista a secas: arma el indice y busca. Para una sola busqueda; quien busca muchas veces arma el indice una vez. */
 export function searchProducts(
   products: readonly Product[],
   query: string,
   options: SearchOptions = {},
 ): Product[] {
-  const wanted = normalizeForSearch(query);
-  if (wanted === '') return [];
-  const tokens = wanted.split(' ');
-  const candidates: Candidate[] = [];
-  for (const product of products) {
-    if (!product.active && options.includeArchived !== true) continue;
-    const name = normalizeForSearch(product.name);
-    const tier = tierOf(product, name, wanted, tokens);
-    if (tier !== null) candidates.push({ product, name, tier });
-  }
-  candidates.sort(
-    (a, b) =>
-      a.tier - b.tier ||
-      a.name.localeCompare(b.name, 'es') ||
-      a.product.id.localeCompare(b.product.id),
-  );
-  return candidates.slice(0, options.limit ?? DEFAULT_SEARCH_LIMIT).map(({ product }) => product);
+  return searchIndex(indexProducts(products), query, options);
 }
