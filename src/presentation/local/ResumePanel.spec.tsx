@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { CounterLockedError } from '../../domain/model/local-errors';
 import { COUNTER_RESUME_WINDOW_MS, type LocalProfile } from '../../domain/model/local-profile';
 import { formatMoment } from '../../domain/model/moment';
 import { createTestLocal, rememberPerson, type TestLocal } from '../../../test/support/local';
@@ -152,6 +153,48 @@ describe('what the sign-in page offers to whoever worked here before', () => {
       const panel = await screen.findByRole('region', { name: 'Último en este equipo' });
 
       expect(panel.textContent).toContain('No pudimos leer cuándo fue la última vez');
+    });
+  });
+
+  describe('when resuming goes wrong', () => {
+    it('says why with the reason it really has: a clock that was set back is not an expired window', async () => {
+      const { local } = mount(new Date(NOW.getTime() - HOUR));
+      const button = await screen.findByRole('button', { name: 'Continuar sin conexión' });
+      local.setNow(new Date(NOW.getTime() - 3 * HOUR));
+
+      fireEvent.click(button);
+
+      const alert = await screen.findByRole('alert');
+      expect(alert.textContent).toContain('La hora de este equipo está atrasada');
+      expect(alert.textContent).not.toContain('Pasaron más de 72 horas');
+    });
+
+    it('says so, and goes nowhere, when it fails for a reason nobody foresaw', async () => {
+      const { local } = mount(new Date(NOW.getTime() - HOUR));
+      const button = await screen.findByRole('button', { name: 'Continuar sin conexión' });
+      vi.spyOn(local.workspace, 'resume').mockRejectedValue(new Error('algo raro'));
+
+      fireEvent.click(button);
+
+      const alert = await screen.findByRole('alert');
+      expect(alert.textContent).toContain('No pudimos abrir lo que tenías guardado');
+      expect(screen.getByTestId('ruta').textContent).toBe('/ingresar');
+    });
+
+    it('takes the old warning away when the person tries again', async () => {
+      const { local } = mount(new Date(NOW.getTime() - HOUR));
+      const button = await screen.findByRole('button', { name: 'Continuar sin conexión' });
+      vi.spyOn(local.workspace, 'resume')
+        .mockRejectedValueOnce(new CounterLockedError('expired'))
+        .mockReturnValueOnce(new Promise<void>(() => undefined));
+      fireEvent.click(button);
+      await screen.findByRole('alert');
+
+      fireEvent.click(button);
+
+      await waitFor(() => {
+        expect(screen.queryByRole('alert')).toBeNull();
+      });
     });
   });
 });

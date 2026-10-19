@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
+import { deferred } from '../../../test/support/deferred';
 import { createTestLocal } from '../../../test/support/local';
 import { renderScreen } from '../../../test/support/screens';
 import { SessionControls } from './SessionControls';
@@ -141,6 +142,42 @@ describe('SessionControls', () => {
         expect(signedIn(auth)).toBe(false);
       });
       expect(local.stores.forgotten).toEqual([]);
+    });
+  });
+
+  describe('when something goes wrong before leaving', () => {
+    it('does not delete or sign out when it could not count what is waiting: nobody knows what would be lost', async () => {
+      const { auth, local } = await mount({ pending: 3 });
+      vi.spyOn(local.workspace, 'pendingCount').mockRejectedValue(new Error('no se pudo leer'));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+
+      const alert = await screen.findByRole('alert');
+      expect(alert.textContent).toContain('No pudimos revisar si tienes registros sin enviar');
+      expect(local.stores.forgotten).toEqual([]);
+      expect(signedIn(auth)).toBe(true);
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('turns the buttons of the question off while the loss is confirmed and the base is deleted', async () => {
+      const { local } = await mount({ pending: 3 });
+      const deleting = deferred<undefined>();
+      vi.spyOn(local.workspace, 'forget').mockReturnValue(deleting.promise.then(() => undefined));
+      fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+      await screen.findByRole('alertdialog');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión y perderlos' }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole<HTMLButtonElement>('button', { name: 'Cerrar sesión y perderlos' })
+            .disabled,
+        ).toBe(true);
+      });
+      expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cancelar' }).disabled).toBe(
+        true,
+      );
+      deleting.resolve(undefined);
     });
   });
 });

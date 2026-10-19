@@ -26,7 +26,8 @@ export function SessionControls() {
   const { workspace } = useLocal();
   const [pending, setPending] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  // Que fallo, para decirlo: contar lo que espera, o borrar lo guardado. Nunca se sale a medias.
+  const [problem, setProblem] = useState<'count' | 'forget' | null>(null);
 
   async function forgetAndLeave() {
     setBusy(true);
@@ -36,20 +37,24 @@ export function SessionControls() {
       // Otra pestaña no suelta la base: no se sale a medias, porque la persona creeria que ya no queda nada en el equipo.
       setBusy(false);
       setPending(null);
-      setFailed(true);
+      setProblem('forget');
       return;
     }
     await signOut();
   }
 
   async function closeSession() {
-    setFailed(false);
+    setProblem(null);
     let waiting = 0;
     try {
       waiting = await workspace.pendingCount();
     } catch (error) {
-      // Sin nadie trabajando no hay nada que contar ni que perder.
-      if (!(error instanceof NoWorkspaceError)) throw error;
+      // Sin nadie trabajando no hay nada que contar ni que perder. Si no se pudo contar por otra causa, no se sabe que se
+      // pierde: no se borra nada ni se sale.
+      if (!(error instanceof NoWorkspaceError)) {
+        setProblem('count');
+        return;
+      }
     }
     if (waiting > 0) {
       setPending(waiting);
@@ -68,10 +73,11 @@ export function SessionControls() {
       <button type="button" onClick={() => void closeSession()} className={BUTTON}>
         Cerrar sesión
       </button>
-      {failed && (
+      {problem !== null && (
         <p role="alert" className="basis-full text-sm font-medium text-on-band">
-          No pudimos borrar lo guardado en este equipo. Cierra las otras pestañas de VSD Stock e
-          inténtalo de nuevo.
+          {problem === 'forget'
+            ? 'No pudimos borrar lo guardado en este equipo. Cierra las otras pestañas de VSD Stock e inténtalo de nuevo.'
+            : 'No pudimos revisar si tienes registros sin enviar, así que no cerramos tu sesión. Inténtalo de nuevo.'}
         </p>
       )}
       {phrase !== null && (

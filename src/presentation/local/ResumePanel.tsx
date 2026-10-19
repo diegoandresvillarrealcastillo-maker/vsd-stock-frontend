@@ -53,7 +53,9 @@ export function ResumePanel({ last }: { last: Resumption | null }) {
         setProblem('No encontramos lo que tenías guardado en este equipo.');
         return;
       }
-      throw error;
+      // Cualquier otra causa: no se va al mostrador como si se hubiera abierto.
+      setProblem('No pudimos abrir lo que tenías guardado en este equipo. Inténtalo de nuevo.');
+      return;
     }
     void navigate('/mostrador');
   }
