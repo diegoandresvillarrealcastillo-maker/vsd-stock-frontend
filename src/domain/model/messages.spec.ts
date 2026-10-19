@@ -111,6 +111,17 @@ describe('what the person is told when the API refuses', () => {
       'operation-id-reused',
       'Esto ya se había registrado con otros datos. Revisa lo que ya quedó guardado antes de repetirlo.',
     ],
+    ['sale-not-found', 'Esa venta no existe en tu negocio.'],
+    ['sale-voided', 'Esa venta ya estaba anulada.'],
+    [
+      'shift-required',
+      'Para devolver el efectivo necesitas un turno abierto: ábrelo y vuelve a intentarlo.',
+    ],
+    [
+      'shift-not-found',
+      'El servidor todavía no conoce tu turno. Espera a que se envíe lo que hiciste sin conexión e inténtalo de nuevo.',
+    ],
+    ['shift-closed', 'Ese turno ya está cerrado. Abre uno y vuelve a intentarlo.'],
   ])('says %s in words, by its code and never by the text of the server', (code, words) => {
     expect(failureMessage(failure({ problem: problem(code) }))).toBe(words);
   });
