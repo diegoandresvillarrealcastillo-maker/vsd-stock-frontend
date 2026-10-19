@@ -8,6 +8,7 @@ import {
   openingBody,
   parseCash,
   parseLocalShift,
+  recordSale,
   summarizeShift,
   type LocalShift,
 } from './shift';
@@ -118,6 +119,51 @@ describe('describeDifference', () => {
 
   it('says how much is over, in pesos', () => {
     expect(describeDifference(1_250)).toEqual({ kind: 'over', title: 'Sobran $ 1.250' });
+  });
+});
+
+describe('recordSale', () => {
+  it('counts a sale paid in cash with the cash, which is what the drawer is expected to hold', () => {
+    const sales = recordSale(NO_SALES, 'cash', 26_800);
+
+    expect(sales).toEqual({ cashCount: 1, cashAmount: 26_800, otherCount: 0, otherAmount: 0 });
+  });
+
+  it('counts a sale paid with a card or a transfer apart: it does not go into the drawer', () => {
+    expect(recordSale(NO_SALES, 'card', 9_000)).toEqual({
+      cashCount: 0,
+      cashAmount: 0,
+      otherCount: 1,
+      otherAmount: 9_000,
+    });
+    expect(recordSale(NO_SALES, 'transfer', 4_000).otherAmount).toBe(4_000);
+  });
+
+  it('adds to what was already sold, and does not change what it was given', () => {
+    const before = { cashCount: 3, cashAmount: 120_000, otherCount: 2, otherAmount: 48_500 };
+
+    const after = recordSale(recordSale(before, 'cash', 1_000), 'card', 500);
+
+    expect(after).toEqual({
+      cashCount: 4,
+      cashAmount: 121_000,
+      otherCount: 3,
+      otherAmount: 49_000,
+    });
+    expect(before.cashCount).toBe(3);
+  });
+
+  it('is what the arqueo expects: the cash of the sales goes into the expected cash and the rest does not', () => {
+    const shift = {
+      ...OPENED,
+      sales: recordSale(recordSale(NO_SALES, 'cash', 6_000), 'card', 9_000),
+    };
+
+    expect(summarizeShift(shift)).toMatchObject({
+      cashAmount: 6_000,
+      otherAmount: 9_000,
+      expectedAmount: 56_000,
+    });
   });
 });
 

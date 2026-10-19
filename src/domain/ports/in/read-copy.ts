@@ -41,4 +41,13 @@ export interface ReadCopy {
   product(productId: string): Product | undefined;
   /** La existencia de la copia en milesimas de la unidad, o `null` si el servidor no ha dicho nada de ese producto. */
   stockOf(productId: string): number | null;
+  /**
+   * Descuenta lo que se acaba de vender en este equipo de la existencia que se muestra y de la que se guarda, para no seguir ofreciendo
+   * lo que ya no esta mientras el servidor no lo sabe. Puede quedar en negativo (una venta sin existencias se acepta y se marca). No
+   * inventa existencia para un producto que el servidor nunca dijo. La proxima descarga la reemplaza por la del servidor, que ya
+   * cuenta lo que recibio. Nunca lanza.
+   */
+  sold(
+    items: readonly { readonly productId: string; readonly quantityMilli: number }[],
+  ): Promise<void>;
 }

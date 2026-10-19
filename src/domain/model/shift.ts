@@ -17,6 +17,20 @@ export interface ShiftSales {
 
 export const NO_SALES: ShiftSales = { cashCount: 0, cashAmount: 0, otherCount: 0, otherAmount: 0 };
 
+/**
+ * Suma una venta a lo vendido en el turno: en efectivo si se cobro en efectivo (lo que entra a la caja, sin el vuelto) y aparte si
+ * fue con tarjeta o transferencia. No cambia lo que recibe.
+ */
+export function recordSale(
+  sales: ShiftSales,
+  method: 'cash' | 'card' | 'transfer',
+  amount: number,
+): ShiftSales {
+  return method === 'cash'
+    ? { ...sales, cashCount: sales.cashCount + 1, cashAmount: sales.cashAmount + amount }
+    : { ...sales, otherCount: sales.otherCount + 1, otherAmount: sales.otherAmount + amount };
+}
+
 /** El cierre: lo que la persona conto en la caja y cuando lo hizo (la hora del dispositivo). */
 export interface ShiftClosing {
   /** La operacion de cierre en la cola, para saber si el servidor ya la tiene. */

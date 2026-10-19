@@ -2,9 +2,11 @@ import { ApiError, type ApiFailure } from './api-error';
 import { AuthError, type AuthFailureKind } from './auth-failure';
 import {
   DeviceNotRegisteredError,
+  EmptySaleError,
   NoOpenShiftError,
   NoWorkspaceError,
   ShiftAlreadyOpenError,
+  ShiftRequiredError,
 } from './local-errors';
 
 /** Lo que se le dice a la persona cuando entrar o registrarse falla. Nunca lo que escribio: ni correo ni contrasena. */
@@ -130,6 +132,20 @@ export function problemOf(error: unknown): FormProblem {
   }
   if (error instanceof NoOpenShiftError) {
     return { code: 'no-open-shift', message: 'No hay un turno abierto que cerrar.', fields: {} };
+  }
+  if (error instanceof ShiftRequiredError) {
+    return {
+      code: 'shift-required',
+      message: 'Abre un turno para vender: cada venta queda en un turno de caja.',
+      fields: {},
+    };
+  }
+  if (error instanceof EmptySaleError) {
+    return {
+      code: 'empty-sale',
+      message: 'La venta está vacía. Busca un producto o lee su código para agregarlo.',
+      fields: {},
+    };
   }
   if (error instanceof DeviceNotRegisteredError) {
     return {

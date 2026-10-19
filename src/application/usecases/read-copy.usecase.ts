@@ -7,7 +7,12 @@ import {
   type SearchIndex,
   type SearchOptions,
 } from '../../domain/model/product-search';
-import { NO_DOWNLOADS, sinceOf, type CopyCheckpoint } from '../../domain/model/read-copy';
+import {
+  NO_DOWNLOADS,
+  sinceOf,
+  type CopyCheckpoint,
+  type StockLevel,
+} from '../../domain/model/read-copy';
 import type { ConnectionMonitor } from '../../domain/ports/in/connection-monitor';
 import type { CopyStorage } from '../../domain/ports/in/copy-storage';
 import type { LocalWorkspace } from '../../domain/ports/in/local-workspace';
@@ -138,6 +143,27 @@ export class ReadCopyUseCase implements ReadCopy {
 
   stockOf(productId: string): number | null {
     return this.levels.get(productId) ?? null;
+  }
+
+  async sold(items: readonly { productId: string; quantityMilli: number }[]): Promise<void> {
+    const id = this.adoptedId;
+    if (id === null || id === undefined) return;
+    const changed: StockLevel[] = [];
+    for (const { productId, quantityMilli } of items) {
+      const left = this.levels.get(productId);
+      // Lo que el servidor nunca dijo no se inventa: sin existencia conocida, no hay con que descontar.
+      if (left === undefined) continue;
+      const level = { productId, quantityMilli: left - quantityMilli };
+      this.levels.set(productId, level.quantityMilli);
+      changed.push(level);
+    }
+    if (changed.length === 0) return;
+    try {
+      await this.deps.workspace.copy().putStock(changed);
+    } catch {
+      // Es un calculo para no ofrecer lo que ya no esta, no un dato: si no se pudo guardar (cambio la persona, falla el disco), la
+      // proxima descarga lo corrige con lo que sabe el servidor, y la venta ya esta guardada por otro camino.
+    }
   }
 
   /** Lo que pasa solo (llego la conexion, entro alguien, se envio algo): baja si hay con que, y no dice nada si no. */
