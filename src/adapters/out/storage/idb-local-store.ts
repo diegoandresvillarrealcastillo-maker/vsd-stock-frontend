@@ -7,6 +7,7 @@ import {
   type AttentionReason,
   type NewOperation,
   type OperationKind,
+  type OperationState,
   type QueuedOperation,
 } from '../../../domain/model/outbox';
 import {
@@ -15,6 +16,7 @@ import {
   type CopyCheckpoint,
   type StockLevel,
 } from '../../../domain/model/read-copy';
+import { parseLocalShift, type LocalShift } from '../../../domain/model/shift';
 import type { DeviceRegistration, LocalStore } from '../../../domain/ports/out/local-store';
 import { AesGcmCipher, RecordUnreadableError, type Sealed } from './aes-gcm-cipher';
 
@@ -68,6 +70,7 @@ const STOCK_PREFIX = 'stock:';
 const SERIAL = 'serial';
 const PROFILE = 'profile';
 const DEVICE = 'device';
+const SHIFT = 'shift';
 
 /**
  * Abre la base de una persona y deja lista su clave. Si la base no existe, la crea. Si tiene operaciones por enviar pero no la
@@ -182,23 +185,45 @@ export class IdbLocalStore implements LocalStore {
 
   async enqueue(operation: NewOperation): Promise<void> {
     // El cifrado va antes de abrir la transaccion: dentro de una de IndexedDB solo se espera a IndexedDB.
-    const sealed = await this.cipher.seal(operationName(operation.operationId), {
-      kind: operation.kind,
-      shiftId: operation.shiftId ?? null,
-      body: operation.body,
-      attempts: 0,
-      attention: null,
-    } satisfies OperationContent);
+    const sealed = await this.sealOperation(operation);
     const tx = this.db.transaction('operations', 'readwrite');
     if ((await tx.store.get(operation.operationId)) === undefined) {
-      await tx.store.put({
-        operationId: operation.operationId,
-        state: 'pending',
-        createdAt: operation.createdAt.toISOString(),
-        ...sealed,
-      });
+      await tx.store.put(queuedRecord(operation, sealed));
     }
     await tx.done;
+  }
+
+  async readCurrentShift(): Promise<LocalShift | null> {
+    return parseLocalShift(await this.readRecord(SHIFT));
+  }
+
+  async saveShift(shift: LocalShift, operation: NewOperation): Promise<void> {
+    // Todo se cifra antes de abrir la transaccion; dentro, el turno y la operacion se escriben juntos o no se escribe nada.
+    const sealedShift = await this.cipher.seal(SHIFT, shift);
+    const sealedOperation = await this.sealOperation(operation);
+    const tx = this.db.transaction(['records', 'operations'], 'readwrite');
+    try {
+      await tx.objectStore('records').put({ name: SHIFT, ...sealedShift });
+      const operations = tx.objectStore('operations');
+      if ((await operations.get(operation.operationId)) === undefined) {
+        await operations.put(queuedRecord(operation, sealedOperation));
+      }
+    } catch (error) {
+      // Un fallo de JavaScript no deshace la transaccion por si solo: si algo fallo, ni el turno ni la operacion quedan.
+      tx.done.catch(() => undefined);
+      try {
+        tx.abort();
+      } catch {
+        // Ya habia terminado: no hay nada que deshacer.
+      }
+      throw error;
+    }
+    await tx.done;
+  }
+
+  async operationState(operationId: string): Promise<OperationState | null> {
+    const record = await this.db.get('operations', operationId);
+    return record?.state ?? null;
   }
 
   async pendingOperations(limit: number): Promise<QueuedOperation[]> {
@@ -287,6 +312,16 @@ export class IdbLocalStore implements LocalStore {
 
   close(): void {
     this.db.close();
+  }
+
+  private async sealOperation(operation: NewOperation): Promise<Sealed> {
+    return await this.cipher.seal(operationName(operation.operationId), {
+      kind: operation.kind,
+      shiftId: operation.shiftId ?? null,
+      body: operation.body,
+      attempts: 0,
+      attention: null,
+    } satisfies OperationContent);
   }
 
   /** Todos los registros cuyo nombre empieza por el prefijo, que es la clave de `records`. */
@@ -386,6 +421,16 @@ interface OperationContent {
   readonly body: Readonly<Record<string, unknown>>;
   readonly attempts: number;
   readonly attention: AttentionReason | null;
+}
+
+/** Una operacion nueva como se guarda en la cola: en claro solo lo que se busca. */
+function queuedRecord(operation: NewOperation, sealed: Sealed): QueuedOperationRecord {
+  return {
+    operationId: operation.operationId,
+    state: 'pending',
+    createdAt: operation.createdAt.toISOString(),
+    ...sealed,
+  };
 }
 
 /** El nombre bajo el que se cifra un producto de la copia: lleva su identificador, asi uno copiado al lugar de otro no se abre. */

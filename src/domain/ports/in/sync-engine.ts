@@ -35,6 +35,11 @@ export interface SyncEngine {
   stop(): void;
   /** Guarda la operacion en la cola de quien trabaja y la envia en cuanto se pueda. Lanza `NoWorkspaceError`. */
   enqueue(operation: NewOperation): Promise<void>;
+  /**
+   * Algo entro a la cola sin pasar por `enqueue` (el turno de caja guarda el turno y su operacion en una sola transaccion):
+   * vuelve a contarla y envia en cuanto se pueda. Sin nadie trabajando no hace nada.
+   */
+  queued(): Promise<void>;
   /** La persona pide enviar ya (o volver a intentar tras un fallo). Se cumple cuando termina el intento. */
   syncNow(): Promise<void>;
   /** Cuanto adelanta el servidor al reloj de este dispositivo en la ultima medicion confiable (ADR 0016), o `null`. */

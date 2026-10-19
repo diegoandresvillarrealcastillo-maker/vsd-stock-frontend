@@ -139,6 +139,7 @@ describe('LocalWorkspaceUseCase', () => {
       expect(workspace.current()).toEqual({
         profile: profileAt(NOW),
         deviceCode: null,
+        deviceId: null,
         resumed: false,
       });
     });
@@ -152,6 +153,15 @@ describe('LocalWorkspaceUseCase', () => {
       expect(workspace.current()?.deviceCode).toBe('AB');
     });
 
+    it('knows the identifier of the device the server knows, and only that one', async () => {
+      const { workspace, stores } = setup();
+      stores.dataOf(AUTH_ID).device = { id: 'dev-1', code: 'AB' };
+
+      await workspace.begin(me());
+
+      expect(workspace.current()?.deviceId).toBe('dev-1');
+    });
+
     it('does not take a device that was never given a code as registered', async () => {
       const { workspace, stores } = setup();
       stores.dataOf(AUTH_ID).device = { id: 'dev-1', code: null };
@@ -159,6 +169,7 @@ describe('LocalWorkspaceUseCase', () => {
       await workspace.begin(me());
 
       expect(workspace.current()?.deviceCode).toBeNull();
+      expect(workspace.current()?.deviceId).toBeNull();
     });
 
     it('does nothing for someone without a business: there is no counter for them', async () => {
@@ -287,6 +298,7 @@ describe('LocalWorkspaceUseCase', () => {
       expect(workspace.current()).toEqual({
         profile: profileAt(new Date(NOW.getTime() - 5 * HOUR)),
         deviceCode: 'AA',
+        deviceId: 'dev-1',
         resumed: true,
       });
     });
@@ -380,6 +392,18 @@ describe('LocalWorkspaceUseCase', () => {
       expect(registry.calls).toEqual([kept?.id, kept?.id]);
       expect(stores.dataOf(AUTH_ID).device).toEqual({ id: kept?.id, code: 'AA' });
       expect(workspace.current()?.deviceCode).toBe('AA');
+      expect(workspace.current()?.deviceId).toBe(kept?.id);
+    });
+
+    it('learns the identifier of a device that another tab registered while this one was waiting', async () => {
+      const { workspace, registry, stores } = setup();
+      await workspace.begin(me());
+      stores.dataOf(AUTH_ID).device = { id: 'dev-9', code: 'AC' };
+
+      await workspace.registerDevice();
+
+      expect(registry.calls).toEqual([]);
+      expect(workspace.current()).toMatchObject({ deviceCode: 'AC', deviceId: 'dev-9' });
     });
 
     it('asks the server once: a device that already has its code is not registered again', async () => {
@@ -750,6 +774,63 @@ describe('LocalWorkspaceUseCase', () => {
       await expect(outbox.attention()).rejects.toBeInstanceOf(NoWorkspaceError);
       expect(stores.dataOf(OTHER_AUTH_ID).queue).toEqual([]);
       expect(stores.dataOf(AUTH_ID).queue).toHaveLength(1);
+    });
+  });
+
+  describe('the shift of whoever works', () => {
+    const shift = {
+      shiftId: '5b0c8a7e-0000-4000-8000-000000000001',
+      deviceId: 'dev-1',
+      openOperationId: '5b0c8a7e-0000-4000-8000-0000000000a1',
+      openedAt: '2026-10-19T13:02:00.000Z',
+      openingAmount: 50_000,
+      sales: { cashCount: 0, cashAmount: 0, otherCount: 0, otherAmount: 0 },
+      closing: null,
+    };
+
+    const operation = (n: number): NewOperation => ({
+      operationId: `00000000-0000-4000-8000-00000000000${String(n)}`,
+      kind: 'shift-open',
+      body: {
+        operationId: `00000000-0000-4000-8000-00000000000${String(n)}`,
+        openingAmount: 50_000,
+      },
+      createdAt: new Date('2026-10-19T13:02:00.000Z'),
+    });
+
+    it('needs someone working here', () => {
+      const { workspace } = setup();
+
+      expect(() => workspace.shifts()).toThrow(NoWorkspaceError);
+    });
+
+    it('keeps the shift and its operation in the base of whoever works', async () => {
+      const { workspace, stores } = setup();
+      await workspace.begin(me());
+
+      await workspace.shifts().saveShift(shift, operation(1));
+
+      expect(stores.dataOf(AUTH_ID).shift).toEqual(shift);
+      expect(stores.dataOf(AUTH_ID).queue).toHaveLength(1);
+      expect(await workspace.shifts().readCurrentShift()).toEqual(shift);
+      expect(await workspace.shifts().operationState(operation(1).operationId)).toBe('pending');
+    });
+
+    it('stops serving when the person stops working: it never touches the shift of whoever comes next', async () => {
+      const { workspace, stores } = setup();
+      await workspace.begin(me());
+      const shifts = workspace.shifts();
+
+      await workspace.leave();
+      await workspace.begin(me({ id: OTHER_AUTH_ID }));
+
+      await expect(shifts.readCurrentShift()).rejects.toBeInstanceOf(NoWorkspaceError);
+      await expect(shifts.saveShift(shift, operation(1))).rejects.toBeInstanceOf(NoWorkspaceError);
+      await expect(shifts.operationState(operation(1).operationId)).rejects.toBeInstanceOf(
+        NoWorkspaceError,
+      );
+      expect(stores.dataOf(OTHER_AUTH_ID).shift).toBeNull();
+      expect(stores.dataOf(OTHER_AUTH_ID).queue).toEqual([]);
     });
   });
 });

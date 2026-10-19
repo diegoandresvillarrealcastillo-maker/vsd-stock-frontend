@@ -3,6 +3,12 @@ import type { ApiFailure } from './api-error';
 import type { AuthFailureKind } from './auth-failure';
 import { ApiError } from './api-error';
 import { AuthError } from './auth-failure';
+import {
+  DeviceNotRegisteredError,
+  NoOpenShiftError,
+  NoWorkspaceError,
+  ShiftAlreadyOpenError,
+} from './local-errors';
 import { authMessage, failureMessage, fieldErrors, problemOf } from './messages';
 import type { Problem } from './problem';
 
@@ -211,6 +217,26 @@ describe('what any error that reaches a form becomes', () => {
       fields: { '/businessName': 'El nombre no puede quedar en blanco.' },
     });
   });
+
+  it.each([
+    [new ShiftAlreadyOpenError(), 'shift-already-open', 'Ya hay un turno abierto en este equipo.'],
+    [new NoOpenShiftError(), 'no-open-shift', 'No hay un turno abierto que cerrar.'],
+    [
+      new DeviceNotRegisteredError(),
+      'device-not-registered',
+      'Este equipo todavía no está registrado. Conéctate a internet una vez para registrarlo.',
+    ],
+    [
+      new NoWorkspaceError(),
+      'no-workspace',
+      'Nadie está trabajando en este equipo. Entra de nuevo.',
+    ],
+  ])(
+    'says in its own words what happened with the shift of this device: %s',
+    (error, code, message) => {
+      expect(problemOf(error)).toEqual({ code, message, fields: {} });
+    },
+  );
 
   it('says something general, and nothing of what it was, when it is a defect of ours', () => {
     const result = problemOf(new TypeError('x is not a function'));

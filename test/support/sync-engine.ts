@@ -52,13 +52,23 @@ export class FakeSyncEngine implements SyncEngine {
     return Promise.resolve();
   }
 
+  queuedCalls = 0;
+
+  queued(): Promise<void> {
+    this.queuedCalls += 1;
+    return Promise.resolve();
+  }
+
   syncNow(): Promise<void> {
     this.syncNows += 1;
     return Promise.resolve();
   }
 
+  /** Cuanto adelanta el servidor al reloj, segun el motor de mentira. */
+  offset: number | null = null;
+
   clockOffsetMs(): number | null {
-    return null;
+    return this.offset;
   }
 
   /** El motor cambia: la interfaz se entera como se enteraria del real. El estado nuevo es otro objeto. */

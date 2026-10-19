@@ -24,6 +24,22 @@ export class DeviceNotRegisteredError extends Error {
   }
 }
 
+/** Ya hay un turno abierto en este dispositivo: se cierra antes de abrir otro (ADR 0026). */
+export class ShiftAlreadyOpenError extends Error {
+  constructor() {
+    super('There is already an open shift in this device');
+    this.name = 'ShiftAlreadyOpenError';
+  }
+}
+
+/** No hay un turno abierto que cerrar: nunca se abrio uno, o el ultimo ya se cerro. */
+export class NoOpenShiftError extends Error {
+  constructor() {
+    super('There is no open shift to close');
+    this.name = 'NoOpenShiftError';
+  }
+}
+
 /**
  * La base de la persona tiene operaciones sin enviar pero la clave que las cifro ya no esta (el navegador la borro y dejo los
  * datos, ADR 0018): no se pueden leer, y abrir con una clave nueva las dejaria perdidas sin avisar. `pending` dice cuantas son.
