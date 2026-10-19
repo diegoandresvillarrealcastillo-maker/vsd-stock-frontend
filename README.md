@@ -405,3 +405,4 @@ naranja del logo (`#f97801`) solo como acento.**
   [ADR 0010](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0010-flujo-de-trabajo-en-github.md);
   el CORS que necesita la API, en el
   [ADR 0012](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0012-cors-con-lista-explicita-de-origenes-y-sin-credenciales.md).
+- Cómo se publica la web de PRE en Cloudflare Pages (pasos, variables, encabezados y comprobación): [`docs/despliegue-de-la-web.md`](docs/despliegue-de-la-web.md).
