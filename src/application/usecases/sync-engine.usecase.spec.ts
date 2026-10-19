@@ -871,6 +871,7 @@ describe('SyncEngineUseCase', () => {
         enqueue: (operation) => real.enqueue(operation),
         nextBatch: () => real.nextBatch(),
         settle: (settlements) => real.settle(settlements),
+        pending: (limit) => real.pending(limit),
         counts: () => real.counts(),
         attention: () => real.attention(),
         ...(broken === 'unavailable' ? {} : broken),

@@ -27,6 +27,8 @@ export interface Outbox {
   nextBatch(): Promise<QueuedOperation[]>;
   /** Anota lo que paso con cada operacion de un lote. */
   settle(settlements: readonly Settlement[]): Promise<void>;
+  /** Las que esperan, en el orden en que se agregaron, hasta `limit`: para mostrarlas, no para enviarlas (eso es `nextBatch`). */
+  pending(limit: number): Promise<QueuedOperation[]>;
   counts(): Promise<OutboxCounts>;
   /** Las que piden atencion, en el orden en que se agregaron. */
   attention(): Promise<QueuedOperation[]>;
