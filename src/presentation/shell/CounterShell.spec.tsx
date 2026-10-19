@@ -2,8 +2,11 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { Route, Routes } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import type { LocalProfile } from '../../domain/model/local-profile';
+import type { Role } from '../../domain/model/permissions';
+import type { SalesHistory } from '../../domain/ports/in/sales-history';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createTestLocal, rememberPerson } from '../../../test/support/local';
+import { createFakeSalesHistory } from '../../../test/support/sales';
 import { renderScreen } from '../../../test/support/screens';
 import { FakeSyncEngine } from '../../../test/support/sync-engine';
 import { CounterShell } from './CounterShell';
@@ -27,17 +30,30 @@ const routes = (
       <Route path="turno/cerrar" element={<p>aqui se cierra el turno</p>} />
       <Route path="cobrar" element={<p>aqui se cobra</p>} />
       <Route path="comprobante" element={<p>aqui el comprobante</p>} />
+      <Route path="ventas" element={<p>aqui van las ventas</p>} />
+      <Route path="ventas/:saleId" element={<p>aqui una venta</p>} />
+      <Route path="ventas/:saleId/anular" element={<p>aqui se anula una venta</p>} />
       <Route path="equipo" element={<p>aqui el equipo</p>} />
     </Route>
   </Routes>
 );
 
 /** Una persona que entro con conexion: la cuenta esta lista y su base abierta. */
-async function online(path = '/mostrador', sync = new FakeSyncEngine()) {
+async function online(
+  path = '/mostrador',
+  sync = new FakeSyncEngine(),
+  { role = 'cashier', sales }: { role?: Role; sales?: SalesHistory } = {},
+) {
   const auth = createTestAuth({ stored: testSession('ana') });
-  auth.answer(testMe('ana', 'cashier'));
+  auth.answer(testMe('ana', role));
   const local = createTestLocal();
-  const view = renderScreen(routes, { auth, local, sync, path });
+  const view = renderScreen(routes, {
+    auth,
+    local,
+    sync,
+    path,
+    ...(sales === undefined ? {} : { sales }),
+  });
   await waitFor(() => {
     expect(local.workspace.current()?.deviceCode).toBe('AA');
   });
@@ -104,6 +120,95 @@ describe('CounterShell', () => {
       // Tambien se ve: la pagina actual tiene el color del tema, y las demas no.
       expect(shift.className).toContain('bg-primary');
       expect(counter.className).not.toContain('bg-primary');
+    });
+
+    it('offers the sales between the shift and the device, in that order', async () => {
+      await online();
+
+      const menu = await screen.findByRole('navigation', { name: 'Mostrador' });
+
+      expect(
+        within(menu)
+          .getAllByRole('link')
+          .map((link) => link.textContent),
+      ).toEqual(['Mostrador', 'Turno', 'Ventas', 'Equipo']);
+      expect(within(menu).getByRole('link', { name: 'Ventas' }).getAttribute('href')).toBe(
+        '/mostrador/ventas',
+      );
+    });
+
+    it.each(['/mostrador/ventas', '/mostrador/ventas/sale-1', '/mostrador/ventas/sale-1/anular'])(
+      'keeps the sales marked on %s, and nothing else',
+      async (path) => {
+        await online(path);
+
+        const menu = await screen.findByRole('navigation', { name: 'Mostrador' });
+
+        expect(
+          within(menu).getByRole('link', { name: 'Ventas' }).getAttribute('aria-current'),
+        ).toBe('page');
+        expect(
+          within(menu).getByRole('link', { name: 'Mostrador' }).getAttribute('aria-current'),
+        ).toBeNull();
+        expect(
+          within(menu).getByRole('link', { name: 'Equipo' }).getAttribute('aria-current'),
+        ).toBeNull();
+      },
+    );
+
+    it('does not mark the sales on the counter itself', async () => {
+      await online('/mostrador');
+
+      const menu = await screen.findByRole('navigation', { name: 'Mostrador' });
+
+      expect(
+        within(menu).getByRole('link', { name: 'Ventas' }).getAttribute('aria-current'),
+      ).toBeNull();
+    });
+
+    it('says how many sales need attention to the owner, in the name of the link', async () => {
+      const sales = createFakeSalesHistory();
+      sales.attentionCount.mockResolvedValue({ count: 3, more: false });
+      await online('/mostrador', new FakeSyncEngine(), { role: 'owner', sales });
+
+      const link = await screen.findByRole('link', { name: 'Ventas 3' });
+
+      expect(link.getAttribute('href')).toBe('/mostrador/ventas');
+    });
+
+    it('says it to an administrator too', async () => {
+      const sales = createFakeSalesHistory();
+      sales.attentionCount.mockResolvedValue({ count: 1, more: false });
+      await online('/mostrador', new FakeSyncEngine(), { role: 'admin', sales });
+
+      expect(await screen.findByRole('link', { name: 'Ventas 1' })).toBeDefined();
+    });
+
+    it('says that there are more than it counts, when there are', async () => {
+      const sales = createFakeSalesHistory();
+      sales.attentionCount.mockResolvedValue({ count: 50, more: true });
+      await online('/mostrador', new FakeSyncEngine(), { role: 'owner', sales });
+
+      expect(await screen.findByRole('link', { name: 'Ventas 50+' })).toBeDefined();
+    });
+
+    it('says no number when none needs attention', async () => {
+      const sales = createFakeSalesHistory();
+      await online('/mostrador', new FakeSyncEngine(), { role: 'owner', sales });
+      await waitFor(() => {
+        expect(sales.attentionCount).toHaveBeenCalled();
+      });
+
+      expect(screen.getByRole('link', { name: 'Ventas' })).toBeDefined();
+    });
+
+    it('does not tell the cashier, who is not told of what needs attention', async () => {
+      const sales = createFakeSalesHistory();
+      sales.attentionCount.mockResolvedValue({ count: 3, more: false });
+      await online('/mostrador', new FakeSyncEngine(), { role: 'cashier', sales });
+
+      expect(await screen.findByRole('link', { name: 'Ventas' })).toBeDefined();
+      expect(sales.attentionCount).not.toHaveBeenCalled();
     });
 
     it('offers what this device knows as well', async () => {

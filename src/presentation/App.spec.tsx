@@ -10,6 +10,7 @@ import { createFakeInventory } from '../../test/support/inventory';
 import { createFakePeople } from '../../test/support/people';
 import { createFakePurchasing } from '../../test/support/purchasing';
 import { FakeReadCopy } from '../../test/support/read-copy';
+import { createFakeSalesHistory } from '../../test/support/sales';
 import { FakeSelling } from '../../test/support/selling';
 import { FakeShifts } from '../../test/support/shifts';
 import { FakeSyncEngine } from '../../test/support/sync-engine';
@@ -24,6 +25,7 @@ function renderApp({
   copy = new FakeReadCopy(),
   shifts = new FakeShifts(),
   selling = new FakeSelling(),
+  sales = createFakeSalesHistory(),
   path = '/ingresar',
 }: {
   theme?: ReturnType<typeof createTestThemePreference>['preference'];
@@ -33,6 +35,7 @@ function renderApp({
   copy?: FakeReadCopy;
   shifts?: FakeShifts;
   selling?: FakeSelling;
+  sales?: ReturnType<typeof createFakeSalesHistory>;
   path?: string;
 } = {}) {
   render(
@@ -46,6 +49,7 @@ function renderApp({
         copy={copy}
         shifts={shifts}
         selling={selling}
+        sales={sales}
         people={createFakePeople()}
         catalog={createFakeCatalog()}
         inventory={createFakeInventory()}
@@ -111,6 +115,16 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Vender' })).toBeDefined();
     expect(selling.starts).toBeGreaterThan(0);
+  });
+
+  it('gives the whole interface the sales of the server, and counts what needs attention', async () => {
+    const sales = createFakeSalesHistory();
+    sales.attentionCount.mockResolvedValue({ count: 3, more: false });
+    renderApp({ auth: signedIn('owner'), sales, path: '/mostrador/ventas?vista=todas' });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ventas' })).toBeDefined();
+    expect(await screen.findByRole('link', { name: 'Ventas 3' })).toBeDefined();
+    expect(sales.list).toHaveBeenCalled();
   });
 
   it('asks whoever has not signed in to sign in', () => {

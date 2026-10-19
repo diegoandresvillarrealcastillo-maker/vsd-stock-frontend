@@ -11,6 +11,7 @@ import { RowsSkeleton } from '../components/RowsSkeleton';
 import { SubmitButton } from '../components/SubmitButton';
 import { usePagedLoad } from '../forms/use-paged-load';
 import { useLocal } from '../local/LocalWorkspaceProvider';
+import { attentionLabel } from '../sales/attention-label';
 import { SaleRow } from '../sales/SaleRow';
 import { useSales } from '../sales/SalesProvider';
 import { STATUS_TONES } from '../sales/status-tone';
@@ -100,7 +101,7 @@ export function SalesPage() {
               >
                 {tab.label}
                 {tab.view === 'attention' && attention !== null && attention.count > 0 && (
-                  <span>{` ${String(attention.count)}${attention.more ? '+' : ''}`}</span>
+                  <span>{` ${attentionLabel(attention)}`}</span>
                 )}
               </Link>
             );

@@ -19,6 +19,8 @@ import { PersonPage } from '../pages/PersonPage';
 import { PurchasesPage } from '../pages/PurchasesPage';
 import { ReceiptPage } from '../pages/ReceiptPage';
 import { RedeemPage } from '../pages/RedeemPage';
+import { SaleDetailPage } from '../pages/SaleDetailPage';
+import { SalesPage } from '../pages/SalesPage';
 import { SellPage } from '../pages/SellPage';
 import { ShiftPage } from '../pages/ShiftPage';
 import { SignInPage } from '../pages/SignInPage';
@@ -26,6 +28,7 @@ import { SignUpPage } from '../pages/SignUpPage';
 import { StockHistoryPage } from '../pages/StockHistoryPage';
 import { StockPage } from '../pages/StockPage';
 import { SuppliersPage } from '../pages/SuppliersPage';
+import { VoidSalePage } from '../pages/VoidSalePage';
 import { AppShell } from '../shell/AppShell';
 import { CounterShell } from '../shell/CounterShell';
 import {
@@ -96,6 +99,12 @@ export function AppRoutes() {
         <Route path="turno">
           <Route index element={<ShiftPage />} />
           <Route path="cerrar" element={<CloseShiftPage />} />
+        </Route>
+        {/* Las ventas se ven sin cuenta cargada (las de este equipo salen de la cola); solo anular pide el permiso. */}
+        <Route path="ventas">
+          <Route index element={<SalesPage />} />
+          <Route path=":saleId" element={<SaleDetailPage />} />
+          <Route path=":saleId/anular" element={guarded('sale:void', <VoidSalePage />)} />
         </Route>
       </Route>
       <Route
