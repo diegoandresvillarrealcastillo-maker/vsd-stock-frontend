@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router';
 import { formatTime } from '../../domain/model/moment';
 import { can } from '../../domain/model/permissions';
-import { saleStatus, statusLabel, type SaleStatus } from '../../domain/model/sales-history';
+import { saleStatus, statusLabel } from '../../domain/model/sales-history';
 import type { SalesView } from '../../domain/ports/in/sales-history';
 import { Callout } from '../components/Callout';
 import { FormAlert } from '../components/FormAlert';
@@ -13,6 +13,7 @@ import { usePagedLoad } from '../forms/use-paged-load';
 import { useLocal } from '../local/LocalWorkspaceProvider';
 import { SaleRow } from '../sales/SaleRow';
 import { useSales } from '../sales/SalesProvider';
+import { STATUS_TONES } from '../sales/status-tone';
 import { useLocalSales } from '../sales/use-local-sales';
 import { useSellerNames } from '../sales/use-seller-names';
 import { useShift } from '../shift/ShiftProvider';
@@ -27,13 +28,6 @@ const EMPTY: Record<SalesView, string> = {
   shift: 'Todavía no hay ventas en este turno.',
   all: 'Todavía no hay ventas.',
   attention: 'Todo en orden: ninguna venta pide atención.',
-};
-
-const TONES: Record<SaleStatus, 'success' | 'neutral' | 'warning' | 'muted'> = {
-  sent: 'success',
-  attention: 'warning',
-  reviewed: 'neutral',
-  voided: 'muted',
 };
 
 const TAB =
@@ -176,7 +170,7 @@ export function SalesPage() {
                   <SaleRow
                     key={sale.id}
                     folio={sale.folio}
-                    status={{ tone: TONES[status], label: statusLabel(status) }}
+                    status={{ tone: STATUS_TONES[status], label: statusLabel(status) }}
                     when={`${formatTime(sale.occurredAt)} · ${nameOf(sale.userId)}`}
                     total={sale.total}
                     to={`/mostrador/ventas/${sale.id}`}
