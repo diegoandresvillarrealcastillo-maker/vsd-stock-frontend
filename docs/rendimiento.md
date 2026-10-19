@@ -130,14 +130,42 @@ CPU ni la red**:
 Sirven para saber que la pantalla de muestra **no tiene un problema evidente**, no para afirmar que cumple el
 presupuesto: un escritorio no es un teléfono de gama baja.
 
+## El punto de venta (C3-12)
+
+Es la primera pantalla donde importa el presupuesto del ADR 0008 (**100 ms al tocar y 60 fps**). Se midió en Chromium
+con la CPU limitada a **un cuarto de velocidad** (`Emulation.setCPUThrottlingRate` de 4, la misma que usa Lighthouse), con la
+aplicación compilada y la API local detrás, y se leyó la **API de Event Timing** (el tiempo que el navegador tarda en pintar
+después de cada toque o tecla). Sigue siendo un computador de escritorio: **no es un teléfono**, y por eso se mira con margen.
+
+**La búsqueda** se midió primero con 20.000 productos, porque es lo que corre en cada tecla. La versión inicial recorría y
+ordenaba todo el catálogo cada vez: **de 69 a 178 ms por búsqueda** con la CPU a ¼, según la palabra. Ahora el catálogo se indexa
+**una vez por cambio de catálogo** y cada búsqueda solo ordena los veinte resultados que muestra: **de 5 a 12 ms** con la misma
+CPU. La lista de resultados además se dibuja con `useDeferredValue`, así que escribir no espera a que se pinten.
+
+**La pantalla real**, con el catálogo de prueba de la API local (el peor evento de cada acción; ninguno pasa de los 100 ms):
+
+| Acción                                         | Con la CPU normal | Con la CPU a ¼ |
+| ---------------------------------------------- | ----------------- | -------------- |
+| Escribir en el buscador (peor tecla)           | 16 ms             | 40 ms          |
+| Tocar un resultado para agregarlo              | 32 ms             | 48 ms          |
+| Cambiar la cantidad, con 41 líneas en la venta | —                 | 24 ms          |
+| Abrir la rebaja de una línea (41 líneas)       | —                 | 48 ms          |
+| Quitar una línea (41 líneas)                   | —                 | 16 ms          |
+| Desplazar la lista de 41 líneas (2 s)          | —                 | 143 cuadros/s  |
+
+El desplazamiento de la lista de 41 líneas corre a 143 cuadros por segundo con la CPU a ¼ (el peor cuadro, 14 ms; el 95 % de
+los cuadros, 7 ms o menos). Una venta real rara vez pasa de 15 líneas; 41 es un caso malo a propósito.
+
+Lo que **no** dicen esas cifras: cómo responde un Android de gama baja de verdad (otra GPU, otra memoria, el navegador con
+muchas pestañas, la batería en ahorro). Es lo que mide C3-16 en un teléfono prestado.
+
 ## Lo que falta
 
 - **La respuesta al toque y los 60 fps en un teléfono de gama baja.** Es lo que fija el ADR 0008 y nada de lo
   anterior lo mide en un dispositivo lento. El equipo no tiene uno (ver arriba), así que el riesgo queda
-  **aceptado y a la vista**: la primera pantalla donde importa de verdad es el punto de venta (Ciclo 3), y ahí
-  hay que medirlo con un teléfono prestado o con la CPU limitada en las herramientas del navegador. Si alguien
-  consigue uno antes: abrir la versión de producción, activar «Mostrar toques» y comprobar que el botón responde
-  al instante y la animación no se entrecorta.
+  **aceptado y a la vista**. El punto de venta (C3-12) ya se midió con la CPU limitada a ¼ en el navegador (arriba) y
+  cumple con margen; falta repetirlo en un teléfono prestado (C3-16). Si alguien consigue uno antes: abrir la versión de
+  producción, activar «Mostrar toques» y comprobar que el botón responde al instante y la animación no se entrecorta.
 - **Un presupuesto en bytes** que rompa el build si el JavaScript crece: se define cuando haya más pantallas y
   se sepa qué es razonable. Hoy lo único que impone el CI es que compile y que Lighthouse no baje de 90 en
   rendimiento (solo avisa).

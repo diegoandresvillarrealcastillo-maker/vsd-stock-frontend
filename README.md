@@ -175,7 +175,7 @@ Lo que el dispositivo hizo sin conexión (abrir un turno, cerrarlo, vender) espe
   atención» y «Tu sesión caducó» con «Entrar de nuevo». Nunca dice «en línea» mientras solo comprueba.
 - **El catálogo y la existencia viajan al equipo** (`GET /v1/sync/products` y `/stock`) para vender sin conexión: se guardan **cifrados**
   en la base de quien trabaja, se piden **solo los cambios** desde un minuto antes de la última descarga y se buscan **en memoria** por
-  nombre, código del negocio o código de barras, sin importar mayúsculas ni tildes. `/mostrador` dice cuántos productos hay y **de
+  nombre, código del negocio o código de barras, sin importar mayúsculas ni tildes. `/mostrador/equipo` dice cuántos productos hay y **de
   cuándo** son: no es la existencia de hoy en todas las cajas, es lo que el servidor sabía a esa hora.
 
 ### Turno de caja
@@ -188,8 +188,25 @@ El turno se abre y se cierra **sin conexión**, en `/mostrador/turno` (el detall
   a recibir. Su cuerpo es exactamente el de la ruta individual (`POST /v1/shifts` y `/close`).
 - **Dice la verdad del servidor:** «Falta confirmar con el servidor» mientras el cierre espera, «El servidor ya tiene este turno» cuando
   salió de la cola y «El servidor no aceptó…» cuando lo apartó. Un equipo que el servidor no conoce todavía no abre turno.
-- **El mostrador tiene su propio marco** (`CounterShell`): cabecera, menú (Mostrador · Turno) y estado del envío, sin depender de que la
+- **El mostrador tiene su propio marco** (`CounterShell`): cabecera, menú (Mostrador · Turno · Equipo) y estado del envío, sin depender de que la
   cuenta esté cargada.
+
+### Punto de venta
+
+Se vende, se cobra y se da el comprobante **sin conexión**, en `/mostrador` (el detalle está en
+[`docs/punto-de-venta.md`](docs/punto-de-venta.md)).
+
+- **Vender** busca en la copia que guarda el equipo, por nombre o por código, y agrega el producto con un toque o con el Enter de un
+  lector de códigos. Cada línea lleva su cantidad (con decimales para lo que se pesa) y su rebaja; la barra de abajo siempre muestra
+  el total y «Cobrar».
+- **Cobrar** acepta efectivo (con montos para tocar y el vuelto), tarjeta o transferencia con su referencia; una forma de pago por venta.
+  El comprobante dice el folio y si la venta ya llegó al servidor. **No es una factura.**
+- **El total, la base y el IVA son los mismos del servidor**, peso por peso. La existencia solo avisa: no impide vender.
+- **La venta, su folio y el turno se guardan juntos** en una sola transacción de la base cifrada, con el cuerpo exacto de `POST /v1/sales`.
+  Dos toques seguidos cobran una vez.
+- **Responde dentro del presupuesto** con la CPU a ¼: la búsqueda en 20.000 productos pasó de 69–178 ms a 5–12 ms
+  ([`docs/rendimiento.md`](docs/rendimiento.md#el-punto-de-venta-c3-12)).
+- **Todavía no:** leer códigos con la cámara, ver o anular las ventas hechas (C3-13) ni varias formas de pago en una venta.
 
 ### Pantallas de acceso y personas
 
@@ -441,6 +458,7 @@ naranja del logo (`#f97801`) solo como acento.**
 - Lo que se guarda en el equipo, cómo se protege y cuándo se olvida: [`docs/almacenamiento-local.md`](docs/almacenamiento-local.md).
 - Cómo se envía la cola sin conexión y qué dice la pantalla mientras tanto: [`docs/sincronizacion.md`](docs/sincronizacion.md).
 - Cómo se abre, se cierra y se ve el turno de caja sin conexión: [`docs/turno.md`](docs/turno.md).
+- Cómo se vende, se cobra y se da el comprobante sin conexión: [`docs/punto-de-venta.md`](docs/punto-de-venta.md).
 - El recorrido de la aplicación completa con el que se cierra cada ciclo, paso a paso y con lo que debe pasar:
   [`docs/recorrido-del-ciclo-2.md`](docs/recorrido-del-ciclo-2.md).
 - Todos los ADR del proyecto, también los de este repositorio, viven en el backend:
