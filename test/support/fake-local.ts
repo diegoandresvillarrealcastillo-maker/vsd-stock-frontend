@@ -192,13 +192,9 @@ class FakeLocalStore implements LocalStore {
     this.closed = true;
   }
 
+  /** En el orden en que se agregaron: asi las ordena la base de verdad (una puede depender de la de antes). */
   private ofState(state: QueuedOperation['state']): QueuedOperation[] {
-    return this.data.queue
-      .filter((operation) => operation.state === state)
-      .sort(
-        (a, b) =>
-          a.createdAt.localeCompare(b.createdAt) || a.operationId.localeCompare(b.operationId),
-      );
+    return this.data.queue.filter((operation) => operation.state === state);
   }
 
   private change(operationId: string, work: (operation: QueuedOperation) => QueuedOperation): void {

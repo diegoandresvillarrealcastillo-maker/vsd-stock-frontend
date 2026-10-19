@@ -119,11 +119,16 @@ describe('the queue of operations of a person', () => {
         'data',
         'iv',
         'operationId',
+        'seq',
         'state',
       ]);
       const text = JSON.stringify(Array.from(new Uint8Array(record!.data)));
       expect(text).not.toContain('Marta');
-      expect(record).toMatchObject({ state: 'pending', createdAt: '2026-10-19T12:01:00.000Z' });
+      expect(record).toMatchObject({
+        state: 'pending',
+        createdAt: '2026-10-19T12:01:00.000Z',
+        seq: 1,
+      });
     });
 
     it('does not open an operation that was altered by a single bit, nor one copied to the place of another', async () => {
@@ -221,7 +226,7 @@ describe('the queue of operations of a person', () => {
   });
 
   describe('reading', () => {
-    it('gives the oldest first, whatever the order in which they were added', async () => {
+    it('gives them in the order in which they were added: one can depend on the one before', async () => {
       const store = await stores.open(ANA);
       await store.enqueue(sale(3, '2026-10-19T12:03:00.000Z'));
       await store.enqueue(sale(1, '2026-10-19T12:01:00.000Z'));
@@ -230,24 +235,89 @@ describe('the queue of operations of a person', () => {
       const operations = await store.pendingOperations(10);
 
       expect(operations.map((operation) => operation.operationId)).toEqual([
+        sale(3).operationId,
         sale(1).operationId,
         sale(2).operationId,
-        sale(3).operationId,
       ]);
       store.close();
     });
 
-    it('breaks a tie by the identifier, so the order is the same every time', async () => {
+    it('keeps the order in which they were added when they carry the same hour, instead of mixing them by identifier', async () => {
       const store = await stores.open(ANA);
       const at = '2026-10-19T12:00:00.000Z';
+      // Un identificador mas grande primero: si se desempatara por el, saldria al reves de como se agrego.
       await store.enqueue(sale(2, at));
       await store.enqueue(sale(1, at));
 
       const operations = await store.pendingOperations(10);
 
       expect(operations.map((operation) => operation.operationId)).toEqual([
-        sale(1).operationId,
         sale(2).operationId,
+        sale(1).operationId,
+      ]);
+      store.close();
+    });
+
+    it('gives each one its own number when two are added at once, from this tab or another', async () => {
+      const store = await stores.open(ANA);
+
+      await Promise.all([store.enqueue(sale(1)), store.enqueue(sale(2)), store.enqueue(sale(3))]);
+
+      const db = await raw(ANA);
+      const records = await db.getAll('operations');
+      db.close();
+      expect(records.map((record) => record.seq).sort()).toEqual([1, 2, 3]);
+      store.close();
+    });
+
+    it('does not use a number for an operation that was already in the queue', async () => {
+      const store = await stores.open(ANA);
+      await store.enqueue(sale(1));
+      await store.enqueue(sale(1));
+      await store.enqueue(sale(2));
+
+      const db = await raw(ANA);
+      const records = await db.getAll('operations');
+      db.close();
+      expect(records.map((record) => record.seq).sort()).toEqual([1, 2]);
+      store.close();
+    });
+
+    it('keeps the order in which they were added when the clock went back in between', async () => {
+      const store = await stores.open(ANA);
+      await store.enqueue({
+        ...sale(1),
+        kind: 'shift-open',
+        createdAt: new Date('2026-10-19T12:00:05.000Z'),
+      });
+      // Se corrigio el reloj del dispositivo: la venta, hecha despues, lleva una hora anterior a la de la apertura del turno.
+      await store.enqueue(sale(2, '2026-10-19T12:00:02.000Z'));
+
+      const operations = await store.pendingOperations(10);
+
+      expect(operations.map((operation) => operation.kind)).toEqual(['shift-open', 'sale']);
+      store.close();
+    });
+
+    it('puts what was saved before the order was kept first, by its hour, and what is added now after', async () => {
+      const store = await stores.open(ANA);
+      await store.enqueue(sale(1, '2026-10-19T12:05:00.000Z'));
+      await store.enqueue(sale(2, '2026-10-19T12:01:00.000Z'));
+      await store.enqueue(sale(3));
+      const db = await raw(ANA);
+      for (const old of [sale(1), sale(2)]) {
+        const record = (await db.get('operations', old.operationId))!;
+        const { seq: _seq, ...withoutOrder } = record as typeof record & { seq?: number };
+        await db.put('operations', withoutOrder);
+      }
+      db.close();
+
+      const operations = await store.pendingOperations(10);
+
+      expect(operations.map((operation) => operation.operationId)).toEqual([
+        sale(2).operationId,
+        sale(1).operationId,
+        sale(3).operationId,
       ]);
       store.close();
     });
