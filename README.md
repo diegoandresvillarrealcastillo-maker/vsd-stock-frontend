@@ -179,6 +179,19 @@ Lo que el dispositivo hizo sin conexión (abrir un turno, cerrarlo, vender) espe
   nombre, código del negocio o código de barras, sin importar mayúsculas ni tildes. `/mostrador` dice cuántos productos hay y **de
   cuándo** son: no es la existencia de hoy en todas las cajas, es lo que el servidor sabía a esa hora.
 
+### Turno de caja
+
+El turno se abre y se cierra **sin conexión**, en `/mostrador/turno` (el detalle está en [`docs/turno.md`](docs/turno.md)).
+
+- **Se abre con el efectivo que hay en la caja** y se cierra con el que se cuenta. Al escribir el conteo, la pantalla dice si la caja
+  cuadra, **cuánto falta o cuánto sobra**; cerrar con diferencia se permite y queda anotado.
+- **El turno y su operación se guardan juntos**, en una sola transacción de la base cifrada: nunca queda un turno que el servidor no va
+  a recibir. Su cuerpo es exactamente el de la ruta individual (`POST /v1/shifts` y `/close`).
+- **Dice la verdad del servidor:** «Falta confirmar con el servidor» mientras el cierre espera, «El servidor ya tiene este turno» cuando
+  salió de la cola y «El servidor no aceptó…» cuando lo apartó. Un equipo que el servidor no conoce todavía no abre turno.
+- **El mostrador tiene su propio marco** (`CounterShell`): cabecera, menú (Mostrador · Turno) y estado del envío, sin depender de que la
+  cuenta esté cargada.
+
 ### Pantallas de acceso y personas
 
 | Ruta              | Pantalla             | Quién la ve                                                                |
@@ -430,6 +443,7 @@ naranja del logo (`#f97801`) solo como acento.**
   protegido y el presupuesto de peso): [`docs/aplicacion-instalable.md`](docs/aplicacion-instalable.md).
 - Lo que se guarda en el equipo, cómo se protege y cuándo se olvida: [`docs/almacenamiento-local.md`](docs/almacenamiento-local.md).
 - Cómo se envía la cola sin conexión y qué dice la pantalla mientras tanto: [`docs/sincronizacion.md`](docs/sincronizacion.md).
+- Cómo se abre, se cierra y se ve el turno de caja sin conexión: [`docs/turno.md`](docs/turno.md).
 - El recorrido de la aplicación completa con el que se cierra cada ciclo, paso a paso y con lo que debe pasar:
   [`docs/recorrido-del-ciclo-2.md`](docs/recorrido-del-ciclo-2.md).
 - Todos los ADR del proyecto, también los de este repositorio, viven en el backend:

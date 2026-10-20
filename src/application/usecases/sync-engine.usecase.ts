@@ -111,6 +111,10 @@ export class SyncEngineUseCase implements SyncEngine {
 
   async enqueue(operation: NewOperation): Promise<void> {
     await this.deps.workspace.outbox().enqueue(operation);
+    await this.queued();
+  }
+
+  async queued(): Promise<void> {
     await this.refresh();
     void this.request();
   }

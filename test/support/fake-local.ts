@@ -1,12 +1,18 @@
 import { LocalKeyLostError } from '../../src/domain/model/local-errors';
 import type { Product } from '../../src/domain/model/catalog';
 import type { LocalProfile } from '../../src/domain/model/local-profile';
-import type { AttentionReason, NewOperation, QueuedOperation } from '../../src/domain/model/outbox';
+import type {
+  AttentionReason,
+  NewOperation,
+  OperationState,
+  QueuedOperation,
+} from '../../src/domain/model/outbox';
 import {
   NO_DOWNLOADS,
   type CopyCheckpoint,
   type StockLevel,
 } from '../../src/domain/model/read-copy';
+import type { LocalShift } from '../../src/domain/model/shift';
 import type { DeviceRegistry, RegisteredDevice } from '../../src/domain/ports/out/device-registry';
 import type { IdGenerator } from '../../src/domain/ports/out/id-generator';
 import type {
@@ -29,6 +35,8 @@ export interface PersonData {
   products: Map<string, Product>;
   stock: Map<string, StockLevel>;
   checkpoint: CopyCheckpoint;
+  /** El turno de caja de ahora: el abierto, o el ultimo cerrado. */
+  shift: LocalShift | null;
 }
 
 /** La base de una persona en memoria. Hace lo mismo que el adaptador de IndexedDB, sin navegador. */
@@ -98,6 +106,23 @@ class FakeLocalStore implements LocalStore {
       attention: null,
     });
     return Promise.resolve();
+  }
+
+  readCurrentShift(): Promise<LocalShift | null> {
+    return Promise.resolve(this.data.shift);
+  }
+
+  async saveShift(shift: LocalShift, operation: NewOperation): Promise<void> {
+    if (this.owner.holdShift !== null) await this.owner.holdShift;
+    if (this.owner.failShift !== null) throw this.owner.failShift;
+    // Los dos a la vez y sin esperar nada en medio: es lo que hace la transaccion de la base de verdad.
+    this.data.shift = shift;
+    await this.enqueue(operation);
+  }
+
+  operationState(operationId: string): Promise<OperationState | null> {
+    const queued = this.data.queue.find((operation) => operation.operationId === operationId);
+    return Promise.resolve(queued?.state ?? null);
   }
 
   pendingOperations(limit: number): Promise<QueuedOperation[]> {
@@ -195,6 +220,10 @@ export class FakeLocalStores implements LocalStores {
   holdOpen: Promise<void> | null = null;
   /** Si se pone, reclamar el dispositivo espera a que esta promesa se cumpla (para cambiar de persona a la mitad). */
   holdClaim: Promise<void> | null = null;
+  /** Si se pone, guardar un turno espera a que esta promesa se cumpla (para cambiar de persona a la mitad). */
+  holdShift: Promise<void> | null = null;
+  /** Si se pone, guardar un turno falla con este error y no guarda nada. */
+  failShift: Error | null = null;
   /** Si se pone, abrir la base de esa persona falla con este error. */
   failOpen: Error | null = null;
   /** Si se pone, abrir la base de esa persona dice que la clave se perdio y quedan operaciones. */
@@ -212,6 +241,7 @@ export class FakeLocalStores implements LocalStores {
         products: new Map(),
         stock: new Map(),
         checkpoint: NO_DOWNLOADS,
+        shift: null,
       };
       this.people.set(authUserId, data);
     }

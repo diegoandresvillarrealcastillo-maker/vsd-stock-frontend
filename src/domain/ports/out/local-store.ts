@@ -1,5 +1,6 @@
 import type { LocalProfile } from '../../model/local-profile';
 import type { CopyStorage } from '../in/copy-storage';
+import type { ShiftStorage } from '../in/shift-storage';
 import type { AttentionReason, NewOperation, QueuedOperation } from '../../model/outbox';
 
 /**
@@ -16,7 +17,7 @@ export interface DeviceRegistration {
  * Puerto de salida: lo que se guarda de UNA persona en este dispositivo (ADR 0018). Todo el contenido va cifrado; la
  * implementacion decide como. Ningun metodo recibe ni devuelve credenciales: nada secreto se guarda.
  */
-export interface LocalStore extends CopyStorage {
+export interface LocalStore extends CopyStorage, ShiftStorage {
   readProfile(): Promise<LocalProfile | null>;
   writeProfile(profile: LocalProfile): Promise<void>;
   readDevice(): Promise<DeviceRegistration | null>;

@@ -14,13 +14,28 @@ import type {
 } from '../../domain/ports/in/local-workspace';
 import type { CopyStorage } from '../../domain/ports/in/copy-storage';
 import type { Outbox } from '../../domain/ports/in/outbox';
+import type { ShiftStorage } from '../../domain/ports/in/shift-storage';
 import type { Clock } from '../../domain/ports/out/clock';
 import type { DeviceRegistry } from '../../domain/ports/out/device-registry';
 import type { IdGenerator } from '../../domain/ports/out/id-generator';
-import type { LocalStore, LocalStores } from '../../domain/ports/out/local-store';
+import type {
+  DeviceRegistration,
+  LocalStore,
+  LocalStores,
+} from '../../domain/ports/out/local-store';
 import type { PersonPointer } from '../../domain/ports/out/person-pointer';
 import { StoreCopy } from './store-copy';
 import { StoreOutbox } from './store-outbox';
+import { StoreShifts } from './store-shifts';
+
+/** Lo que el espacio dice del dispositivo: su codigo y su identificador, juntos. El identificador solo se da cuando el servidor ya lo conoce. */
+function knownDevice(device: DeviceRegistration | null): {
+  deviceCode: string | null;
+  deviceId: string | null;
+} {
+  if (device === null || device.code === null) return { deviceCode: null, deviceId: null };
+  return { deviceCode: device.code, deviceId: device.id };
+}
 
 interface Dependencies {
   readonly stores: LocalStores;
@@ -96,7 +111,7 @@ export class LocalWorkspaceUseCase implements LocalWorkspace {
     try {
       await store.writeProfile(profile);
       const device = await store.readDevice();
-      this.replace({ store, value: { profile, deviceCode: device?.code ?? null, resumed: false } });
+      this.replace({ store, value: { profile, ...knownDevice(device), resumed: false } });
     } catch (error) {
       store.close();
       throw error;
@@ -121,7 +136,7 @@ export class LocalWorkspaceUseCase implements LocalWorkspace {
       const access = counterAccess(profile, this.clock.now());
       if (access.state === 'locked') throw new CounterLockedError(access.reason);
       const device = await store.readDevice();
-      this.replace({ store, value: { profile, deviceCode: device?.code ?? null, resumed: true } });
+      this.replace({ store, value: { profile, ...knownDevice(device), resumed: true } });
     } catch (error) {
       store.close();
       throw error;
@@ -134,7 +149,7 @@ export class LocalWorkspaceUseCase implements LocalWorkspace {
     // mismo dispositivo. `claimDevice` decide con quien llega primero (un intento anterior o la otra pestaña): el candidato solo
     // vale si no habia ninguno, y entonces todas terminan con el mismo.
     const claimed = await active.store.claimDevice({ id: this.ids.newId(), code: null });
-    if (claimed.code !== null) return this.knowCode(active, claimed.code);
+    if (claimed.code !== null) return this.knowDevice(active, claimed.id, claimed.code);
 
     const registered = await this.registry.register(claimed.id);
     if (registered.id !== claimed.id) {
@@ -144,7 +159,7 @@ export class LocalWorkspaceUseCase implements LocalWorkspace {
     // Si la persona cambio mientras tanto, su base ya esta cerrada: el codigo se pedira de nuevo con el mismo identificador.
     if (this.open?.store !== active.store) return;
     await active.store.completeDevice({ id: claimed.id, code });
-    this.knowCode(active, code);
+    this.knowDevice(active, claimed.id, code);
   }
 
   async nextFolio(): Promise<string> {
@@ -166,6 +181,10 @@ export class LocalWorkspaceUseCase implements LocalWorkspace {
 
   copy(): CopyStorage {
     return new StoreCopy(this.storeWhileOpen());
+  }
+
+  shifts(): ShiftStorage {
+    return new StoreShifts(this.storeWhileOpen());
   }
 
   /** Da la base de quien trabaja ahora, y solo mientras esa MISMA base siga siendo la abierta: si la persona cambia, lanza `NoWorkspaceError`. */
@@ -196,11 +215,14 @@ export class LocalWorkspaceUseCase implements LocalWorkspace {
     return this.open;
   }
 
-  /** Pone el codigo del dispositivo en el espacio abierto, si sigue siendo el mismo, y avisa. */
-  private knowCode(active: Open, code: string): void {
+  /** Pone el dispositivo que el servidor ya conoce en el espacio abierto, si sigue siendo el mismo, y avisa. */
+  private knowDevice(active: Open, id: string, code: string): void {
     const current = this.open;
     if (current?.store !== active.store || current.value.deviceCode === code) return;
-    this.open = { store: current.store, value: { ...current.value, deviceCode: code } };
+    this.open = {
+      store: current.store,
+      value: { ...current.value, deviceCode: code, deviceId: id },
+    };
     this.notify();
   }
 

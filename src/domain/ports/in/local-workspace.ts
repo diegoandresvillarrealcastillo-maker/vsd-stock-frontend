@@ -2,12 +2,15 @@ import type { LocalProfile, CounterAccess } from '../../model/local-profile';
 import type { Me } from '../../model/me';
 import type { CopyStorage } from './copy-storage';
 import type { Outbox } from './outbox';
+import type { ShiftStorage } from './shift-storage';
 
 /** Quien trabaja ahora en este dispositivo, con su base local abierta. */
 export interface ActiveWorkspace {
   readonly profile: LocalProfile;
   /** El codigo del dispositivo, o `null` mientras no se haya registrado con conexion. */
   readonly deviceCode: string | null;
+  /** El identificador con el que el servidor conoce este dispositivo: va junto al codigo, y es `null` mientras no tenga codigo. */
+  readonly deviceId: string | null;
   /** `true` si se reanudo desde el registro local, sin que el servidor lo confirmara ahora. */
   readonly resumed: boolean;
 }
@@ -55,6 +58,8 @@ export interface LocalWorkspace {
   outbox(): Outbox;
   /** La copia de lectura del catalogo y de la existencia de quien trabaja ahora (C3-10). Lanza `NoWorkspaceError`. */
   copy(): CopyStorage;
+  /** El turno de caja de quien trabaja ahora (C3-11). Lanza `NoWorkspaceError`. */
+  shifts(): ShiftStorage;
   /** «Cambiar de persona»: suelta la base y conserva todo lo guardado, para que la persona vuelva a por ello. */
   leave(): Promise<void>;
   /** «Cerrar sesion»: borra la base de la persona con todo lo que tiene, y olvida quien era. No hace nada si no hay nadie. */

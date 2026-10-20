@@ -51,8 +51,6 @@ describe('CounterPage', () => {
 
     // Nada de la pantalla: solo lo que el montaje de prueba pone para saber donde esta (la ruta y su estado).
     expect(container.querySelectorAll('p')).toHaveLength(2);
-    expect(screen.queryByRole('main')).toBeNull();
-    expect(screen.queryByRole('banner')).toBeNull();
   });
 
   describe('the catalog this device keeps', () => {
@@ -87,14 +85,6 @@ describe('CounterPage', () => {
       expect(await screen.findByText('Nada')).toBeDefined();
     });
 
-    it('says in the header which business and which person', async () => {
-      await online();
-
-      const header = await screen.findByRole('banner');
-      expect(header.textContent).toContain('Tienda La Esquina');
-      expect(header.textContent).toContain('Ana Gómez');
-    });
-
     it('counts what waits to be sent, in the singular and in the plural', async () => {
       await online({ pending: 3 });
       expect(await screen.findByText('3 registros')).toBeDefined();
@@ -103,16 +93,6 @@ describe('CounterPage', () => {
     it('talks in the singular for one', async () => {
       await online({ pending: 1 });
       expect(await screen.findByText('1 registro')).toBeDefined();
-    });
-
-    it('goes back to the administration, and offers no way to sign in again', async () => {
-      await online();
-
-      const link = await screen.findByRole('link', { name: 'Administración' });
-
-      expect(link.getAttribute('href')).toBe('/');
-      expect(screen.queryByRole('link', { name: 'Entrar con contraseña' })).toBeNull();
-      expect(screen.queryByRole('button', { name: 'Cambiar de persona' })).toBeNull();
     });
 
     it('does not claim to be offline', async () => {
@@ -134,33 +114,6 @@ describe('CounterPage', () => {
 
       expect(text).toContain(`Puedes seguir hasta el ${until}`);
       expect(text).toContain('después hay que entrar con la contraseña');
-    });
-
-    it('offers to sign in with the password, and to change person, but not to go to the administration', async () => {
-      await resumed();
-
-      const login = await screen.findByRole('link', { name: 'Entrar con contraseña' });
-
-      expect(login.getAttribute('href')).toBe('/ingresar');
-      expect(screen.getByRole('button', { name: 'Cambiar de persona' })).toBeDefined();
-      expect(screen.queryByRole('link', { name: 'Administración' })).toBeNull();
-    });
-
-    it('lets go of the person on changing, keeps what was saved and goes to sign in', async () => {
-      const { local } = await resumed({ pending: 2 });
-
-      fireEvent.click(await screen.findByRole('button', { name: 'Cambiar de persona' }));
-
-      await waitFor(() => {
-        expect(local.workspace.current()).toBeNull();
-      });
-      // Soltar a la persona y navegar son dos pasos: se espera al segundo en vez de suponer que ya paso (con la maquina cargada no pasa a tiempo).
-      await waitFor(() => {
-        expect(screen.getByTestId('ruta').textContent).toBe('/ingresar');
-      });
-      expect(local.stores.forgotten).toEqual([]);
-      expect(local.stores.dataOf('ana').pending).toBe(2);
-      expect(local.pointer.get()).toBe('ana');
     });
 
     it('shows the device as not registered, without offering to register it: that needs a connection', async () => {

@@ -14,6 +14,7 @@ import { createConnectionMonitor } from './create-connection-monitor';
 import { createLocalWorkspace } from './create-local-workspace';
 import { createPwa } from './create-pwa';
 import { createReadCopy } from './create-read-copy';
+import { createShifts } from './create-shifts';
 import { createSyncEngine } from './create-sync-engine';
 import { createThemePreference } from './create-theme-preference';
 
@@ -78,6 +79,14 @@ const sync = createSyncEngine({
 // La copia de lectura del catalogo y de la existencia: la baja cuando hay conexion y la busca sin esperar a nadie (ADR 0028).
 const copy = createReadCopy({ api: auth.api, workspace: local, connection, sync });
 
+// El turno de caja: se abre y se cierra sin conexion, y su operacion espera en la cola del envio (ADR 0026).
+const shifts = createShifts({
+  workspace: local,
+  sync,
+  now: () => new Date(),
+  fillRandom: (bytes) => window.crypto.getRandomValues(bytes),
+});
+
 const people = new BusinessPeopleUseCase(auth.api);
 const catalog = new CatalogUseCase(auth.api);
 const inventory = new InventoryUseCase(auth.api);
@@ -93,6 +102,7 @@ createRoot(container).render(
         local={local}
         sync={sync}
         copy={copy}
+        shifts={shifts}
         people={people}
         catalog={catalog}
         inventory={inventory}

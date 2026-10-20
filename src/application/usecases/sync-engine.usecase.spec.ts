@@ -154,6 +154,61 @@ describe('SyncEngineUseCase', () => {
     });
   });
 
+  describe('something that went into the queue by another way', () => {
+    /** Un turno guardado junto con su operacion, que es lo que hace el turno de caja: el motor no pasa por ahi. */
+    const openShift = async (t: TestSync) => {
+      const operation = {
+        operationId: '00000000-0000-4000-8000-0000000000a1',
+        kind: 'shift-open' as const,
+        body: { openingAmount: 50_000 },
+        createdAt: new Date('2026-10-19T13:02:00.000Z'),
+      };
+      await t.local.workspace.shifts().saveShift(
+        {
+          shiftId: '00000000-0000-4000-8000-0000000000b1',
+          deviceId: '00000000-0000-4000-8000-0000000000d1',
+          openOperationId: operation.operationId,
+          openedAt: '2026-10-19T13:02:00.000Z',
+          openingAmount: 50_000,
+          sales: { cashCount: 0, cashAmount: 0, otherCount: 0, otherAmount: 0 },
+          closing: null,
+        },
+        operation,
+      );
+      return operation.operationId;
+    };
+
+    it('counts it and sends it right away when it can', async () => {
+      const t = await createTestSync();
+      const id = await openShift(t);
+
+      await t.engine.queued();
+      await settle();
+
+      expect(t.api.sent).toEqual([id]);
+      expect(await counts(t)).toEqual({ pending: 0, attention: 0 });
+    });
+
+    it('counts it and keeps it when it can not send: nothing is lost by being offline', async () => {
+      const t = await createTestSync({ status: 'offline' });
+      await openShift(t);
+
+      await t.engine.queued();
+      await settle();
+
+      expect(t.api.batches).toEqual([]);
+      expect(t.engine.current().pending).toBe(1);
+    });
+
+    it('has nothing to say when nobody works: there is no queue to count', async () => {
+      const t = await createTestSync({ working: false });
+
+      await expect(t.engine.queued()).resolves.toBeUndefined();
+
+      expect(t.engine.current().pending).toBe(0);
+    });
+  });
+
   describe('what the server says about each operation', () => {
     it('sets apart the one it rejected, with why, and goes on with the rest', async () => {
       const t = await createTestSync();

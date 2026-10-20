@@ -11,6 +11,7 @@ import { CatalogProvider } from '../../src/presentation/catalog/CatalogProvider'
 import { InventoryProvider } from '../../src/presentation/inventory/InventoryProvider';
 import { PurchasingProvider } from '../../src/presentation/purchasing/PurchasingProvider';
 import { ReadCopyProvider } from '../../src/presentation/copy/ReadCopyProvider';
+import { ShiftProvider } from '../../src/presentation/shift/ShiftProvider';
 import { SyncProvider } from '../../src/presentation/sync/SyncProvider';
 import { ConnectionProvider } from '../../src/presentation/connection/ConnectionProvider';
 import { MotionProvider } from '../../src/presentation/motion/MotionProvider';
@@ -24,6 +25,7 @@ import { createFakeInventory } from './inventory';
 import { createFakePeople } from './people';
 import { createFakePurchasing } from './purchasing';
 import { FakeReadCopy } from './read-copy';
+import { FakeShifts } from './shifts';
 import { FakeSyncEngine } from './sync-engine';
 import { createTestThemePreference } from './theme';
 
@@ -54,6 +56,8 @@ interface Options {
   sync?: FakeSyncEngine;
   /** La copia de lectura de mentira. Por omision, una vacia que no tiene nada que decir. */
   copy?: FakeReadCopy;
+  /** El turno de caja de mentira. Por omision, uno sin turno. */
+  shifts?: FakeShifts;
   connection?: ReturnType<typeof createTestConnection>;
 }
 
@@ -67,6 +71,7 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
   const purchasing = options.purchasing ?? createFakePurchasing();
   const sync = options.sync ?? new FakeSyncEngine();
   const copy = options.copy ?? new FakeReadCopy();
+  const shifts = options.shifts ?? new FakeShifts();
   const connection = options.connection ?? createTestConnection();
   const view = render(
     <ThemeProvider preference={createTestThemePreference().preference}>
@@ -76,22 +81,24 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
             <LocalWorkspaceProvider workspace={local.workspace}>
               <SyncProvider engine={sync}>
                 <ReadCopyProvider copy={copy}>
-                  <PeopleProvider people={people}>
-                    <CatalogProvider catalog={catalog}>
-                      <InventoryProvider inventory={inventory}>
-                        <PurchasingProvider purchasing={purchasing}>
-                          <MemoryRouter
-                            initialEntries={[
-                              { pathname: options.path ?? '/', state: options.state },
-                            ]}
-                          >
-                            <Where />
-                            {ui}
-                          </MemoryRouter>
-                        </PurchasingProvider>
-                      </InventoryProvider>
-                    </CatalogProvider>
-                  </PeopleProvider>
+                  <ShiftProvider shifts={shifts}>
+                    <PeopleProvider people={people}>
+                      <CatalogProvider catalog={catalog}>
+                        <InventoryProvider inventory={inventory}>
+                          <PurchasingProvider purchasing={purchasing}>
+                            <MemoryRouter
+                              initialEntries={[
+                                { pathname: options.path ?? '/', state: options.state },
+                              ]}
+                            >
+                              <Where />
+                              {ui}
+                            </MemoryRouter>
+                          </PurchasingProvider>
+                        </InventoryProvider>
+                      </CatalogProvider>
+                    </PeopleProvider>
+                  </ShiftProvider>
                 </ReadCopyProvider>
               </SyncProvider>
             </LocalWorkspaceProvider>
@@ -100,5 +107,17 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
       </ConnectionProvider>
     </ThemeProvider>,
   );
-  return { ...view, auth, local, people, catalog, inventory, purchasing, sync, copy, connection };
+  return {
+    ...view,
+    auth,
+    local,
+    people,
+    catalog,
+    inventory,
+    purchasing,
+    sync,
+    copy,
+    shifts,
+    connection,
+  };
 }

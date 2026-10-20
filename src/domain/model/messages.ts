@@ -1,5 +1,11 @@
 import { ApiError, type ApiFailure } from './api-error';
 import { AuthError, type AuthFailureKind } from './auth-failure';
+import {
+  DeviceNotRegisteredError,
+  NoOpenShiftError,
+  NoWorkspaceError,
+  ShiftAlreadyOpenError,
+} from './local-errors';
 
 /** Lo que se le dice a la persona cuando entrar o registrarse falla. Nunca lo que escribio: ni correo ni contrasena. */
 const AUTH_MESSAGES: Readonly<Record<AuthFailureKind, string>> = {
@@ -114,6 +120,31 @@ export interface FormProblem {
 export function problemOf(error: unknown): FormProblem {
   if (error instanceof AuthError) {
     return { code: error.kind, message: authMessage(error.kind), fields: {} };
+  }
+  if (error instanceof ShiftAlreadyOpenError) {
+    return {
+      code: 'shift-already-open',
+      message: 'Ya hay un turno abierto en este equipo.',
+      fields: {},
+    };
+  }
+  if (error instanceof NoOpenShiftError) {
+    return { code: 'no-open-shift', message: 'No hay un turno abierto que cerrar.', fields: {} };
+  }
+  if (error instanceof DeviceNotRegisteredError) {
+    return {
+      code: 'device-not-registered',
+      message:
+        'Este equipo todavía no está registrado. Conéctate a internet una vez para registrarlo.',
+      fields: {},
+    };
+  }
+  if (error instanceof NoWorkspaceError) {
+    return {
+      code: 'no-workspace',
+      message: 'Nadie está trabajando en este equipo. Entra de nuevo.',
+      fields: {},
+    };
   }
   if (error instanceof ApiError) {
     return {

@@ -9,18 +9,21 @@ const VARIANTS = {
 } as const;
 
 /**
- * El boton que manda un formulario. Mientras se envia dice «Enviando…» y no deja mandarlo dos veces; usa `aria-busy` para
- * que los lectores de pantalla sepan que algo esta en camino. Mide al menos 44 px de alto (ADR 0008).
+ * El boton que manda un formulario. Mientras se envia dice «Enviando…» (o lo que se le pida) y no deja mandarlo dos veces; usa
+ * `aria-busy` para que los lectores de pantalla sepan que algo esta en camino. Mide al menos 44 px de alto (ADR 0008).
  */
 export function SubmitButton({
   pending,
   children,
   variant = 'primary',
+  pendingLabel = 'Enviando…',
   onClick,
 }: {
   pending: boolean;
   children: ReactNode;
   variant?: keyof typeof VARIANTS;
+  /** Lo que dice mientras la accion esta en camino. Lo que se guarda en este equipo no se «envia»: dice «Guardando…». */
+  pendingLabel?: string;
   /** Si se da, es un boton comun que hace esto al pulsarlo (una accion que no es un formulario); si no, manda el formulario. */
   onClick?: () => void;
 }) {
@@ -32,7 +35,7 @@ export function SubmitButton({
       aria-busy={pending}
       className={`${BASE} ${VARIANTS[variant]}`}
     >
-      {pending ? 'Enviando…' : children}
+      {pending ? pendingLabel : children}
     </button>
   );
 }

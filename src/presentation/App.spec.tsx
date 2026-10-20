@@ -11,6 +11,7 @@ import { createFakePeople } from '../../test/support/people';
 import { createFakePurchasing } from '../../test/support/purchasing';
 import { createTestPwa } from '../../test/support/pwa';
 import { FakeReadCopy } from '../../test/support/read-copy';
+import { FakeShifts } from '../../test/support/shifts';
 import { FakeSyncEngine } from '../../test/support/sync-engine';
 import { createTestThemePreference } from '../../test/support/theme';
 import { App } from './App';
@@ -21,6 +22,7 @@ function renderApp({
   auth = createTestAuth(),
   sync = new FakeSyncEngine(),
   copy = new FakeReadCopy(),
+  shifts = new FakeShifts(),
   path = '/ingresar',
 }: {
   theme?: ReturnType<typeof createTestThemePreference>['preference'];
@@ -28,6 +30,7 @@ function renderApp({
   auth?: TestAuth;
   sync?: FakeSyncEngine;
   copy?: FakeReadCopy;
+  shifts?: FakeShifts;
   path?: string;
 } = {}) {
   render(
@@ -39,6 +42,7 @@ function renderApp({
         local={createTestLocal().workspace}
         sync={sync}
         copy={copy}
+        shifts={shifts}
         people={createFakePeople()}
         catalog={createFakeCatalog()}
         inventory={createFakeInventory()}
@@ -83,6 +87,15 @@ describe('App', () => {
 
     expect(sync.starts).toBeGreaterThan(0);
     expect(screen.getByText('2 registros por enviar.')).toBeDefined();
+  });
+
+  it('gives the whole interface the shift of the counter, and starts it', async () => {
+    const shifts = new FakeShifts({ status: 'none' });
+    const auth = signedIn('cashier');
+    renderApp({ auth, shifts, path: '/mostrador/turno' });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Turno de caja' })).toBeDefined();
+    expect(shifts.starts).toBeGreaterThan(0);
   });
 
   it('asks whoever has not signed in to sign in', () => {
