@@ -13,6 +13,7 @@ import { createAuth } from './create-auth';
 import { createConnectionMonitor } from './create-connection-monitor';
 import { createLocalWorkspace } from './create-local-workspace';
 import { createPwa } from './create-pwa';
+import { createReadCopy } from './create-read-copy';
 import { createSyncEngine } from './create-sync-engine';
 import { createThemePreference } from './create-theme-preference';
 
@@ -74,6 +75,9 @@ const sync = createSyncEngine({
   now: () => new Date(),
 });
 
+// La copia de lectura del catalogo y de la existencia: la baja cuando hay conexion y la busca sin esperar a nadie (ADR 0028).
+const copy = createReadCopy({ api: auth.api, workspace: local, connection, sync });
+
 const people = new BusinessPeopleUseCase(auth.api);
 const catalog = new CatalogUseCase(auth.api);
 const inventory = new InventoryUseCase(auth.api);
@@ -88,6 +92,7 @@ createRoot(container).render(
         auth={auth}
         local={local}
         sync={sync}
+        copy={copy}
         people={people}
         catalog={catalog}
         inventory={inventory}

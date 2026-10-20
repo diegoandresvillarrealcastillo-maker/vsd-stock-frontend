@@ -1,6 +1,12 @@
 import { LocalKeyLostError } from '../../src/domain/model/local-errors';
+import type { Product } from '../../src/domain/model/catalog';
 import type { LocalProfile } from '../../src/domain/model/local-profile';
 import type { AttentionReason, NewOperation, QueuedOperation } from '../../src/domain/model/outbox';
+import {
+  NO_DOWNLOADS,
+  type CopyCheckpoint,
+  type StockLevel,
+} from '../../src/domain/model/read-copy';
 import type { DeviceRegistry, RegisteredDevice } from '../../src/domain/ports/out/device-registry';
 import type { IdGenerator } from '../../src/domain/ports/out/id-generator';
 import type {
@@ -19,6 +25,10 @@ export interface PersonData {
   pending: number;
   /** La cola de operaciones, en el orden en que se agregaron. */
   queue: QueuedOperation[];
+  /** La copia de lectura: el catalogo y la existencia por producto, y lo que se sabe de las descargas. */
+  products: Map<string, Product>;
+  stock: Map<string, StockLevel>;
+  checkpoint: CopyCheckpoint;
 }
 
 /** La base de una persona en memoria. Hace lo mismo que el adaptador de IndexedDB, sin navegador. */
@@ -121,6 +131,38 @@ class FakeLocalStore implements LocalStore {
     return Promise.resolve();
   }
 
+  putProducts(products: readonly Product[]): Promise<void> {
+    for (const product of products) {
+      const current = this.data.products.get(product.id);
+      if (current === undefined || current.updatedAt.getTime() <= product.updatedAt.getTime()) {
+        this.data.products.set(product.id, product);
+      }
+    }
+    return Promise.resolve();
+  }
+
+  readProducts(): Promise<Product[]> {
+    return Promise.resolve([...this.data.products.values()]);
+  }
+
+  putStock(levels: readonly StockLevel[]): Promise<void> {
+    for (const level of levels) this.data.stock.set(level.productId, level);
+    return Promise.resolve();
+  }
+
+  readStock(): Promise<StockLevel[]> {
+    return Promise.resolve([...this.data.stock.values()]);
+  }
+
+  readCheckpoint(): Promise<CopyCheckpoint> {
+    return Promise.resolve(this.data.checkpoint);
+  }
+
+  writeCheckpoint(checkpoint: CopyCheckpoint): Promise<void> {
+    this.data.checkpoint = checkpoint;
+    return Promise.resolve();
+  }
+
   close(): void {
     this.closed = true;
   }
@@ -161,7 +203,16 @@ export class FakeLocalStores implements LocalStores {
   dataOf(authUserId: string): PersonData {
     let data = this.people.get(authUserId);
     if (data === undefined) {
-      data = { profile: null, device: null, serial: 0, pending: 0, queue: [] };
+      data = {
+        profile: null,
+        device: null,
+        serial: 0,
+        pending: 0,
+        queue: [],
+        products: new Map(),
+        stock: new Map(),
+        checkpoint: NO_DOWNLOADS,
+      };
       this.people.set(authUserId, data);
     }
     return data;

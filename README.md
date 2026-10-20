@@ -174,6 +174,10 @@ Lo que el dispositivo hizo sin conexión (abrir un turno, cerrarlo, vender) espe
 - **El marco de la aplicación dice la verdad del envío** en todas las páginas: «Todo enviado», «Sin conexión» con cuántos registros
   esperan y que están guardados solo en este equipo, «Enviando…», «No se pudo enviar» con «Reintentar ahora», «N requieren
   atención» y «Tu sesión caducó» con «Entrar de nuevo». Nunca dice «en línea» mientras solo comprueba.
+- **El catálogo y la existencia viajan al equipo** (`GET /v1/sync/products` y `/stock`) para vender sin conexión: se guardan **cifrados**
+  en la base de quien trabaja, se piden **solo los cambios** desde un minuto antes de la última descarga y se buscan **en memoria** por
+  nombre, código del negocio o código de barras, sin importar mayúsculas ni tildes. `/mostrador` dice cuántos productos hay y **de
+  cuándo** son: no es la existencia de hoy en todas las cajas, es lo que el servidor sabía a esa hora.
 
 ### Pantallas de acceso y personas
 

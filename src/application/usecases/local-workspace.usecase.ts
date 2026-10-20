@@ -12,12 +12,14 @@ import type {
   LocalWorkspace,
   Resumption,
 } from '../../domain/ports/in/local-workspace';
+import type { CopyStorage } from '../../domain/ports/in/copy-storage';
 import type { Outbox } from '../../domain/ports/in/outbox';
 import type { Clock } from '../../domain/ports/out/clock';
 import type { DeviceRegistry } from '../../domain/ports/out/device-registry';
 import type { IdGenerator } from '../../domain/ports/out/id-generator';
 import type { LocalStore, LocalStores } from '../../domain/ports/out/local-store';
 import type { PersonPointer } from '../../domain/ports/out/person-pointer';
+import { StoreCopy } from './store-copy';
 import { StoreOutbox } from './store-outbox';
 
 interface Dependencies {
@@ -159,12 +161,20 @@ export class LocalWorkspaceUseCase implements LocalWorkspace {
   }
 
   outbox(): Outbox {
+    return new StoreOutbox(this.storeWhileOpen());
+  }
+
+  copy(): CopyStorage {
+    return new StoreCopy(this.storeWhileOpen());
+  }
+
+  /** Da la base de quien trabaja ahora, y solo mientras esa MISMA base siga siendo la abierta: si la persona cambia, lanza `NoWorkspaceError`. */
+  private storeWhileOpen(): () => LocalStore {
     const active = this.requireOpen();
-    // Sirve mientras esa MISMA base siga siendo la abierta: si la persona cambia, ya no toca nada.
-    return new StoreOutbox(() => {
+    return () => {
       if (this.open?.store !== active.store) throw new NoWorkspaceError();
       return active.store;
-    });
+    };
   }
 
   leave(): Promise<void> {

@@ -6,6 +6,7 @@ import { formatMoment } from '../../domain/model/moment';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { deferred } from '../../../test/support/deferred';
 import { createTestLocal, rememberPerson } from '../../../test/support/local';
+import { FakeReadCopy } from '../../../test/support/read-copy';
 import { renderScreen } from '../../../test/support/screens';
 import { CounterPage } from './CounterPage';
 
@@ -52,6 +53,27 @@ describe('CounterPage', () => {
     expect(container.querySelectorAll('p')).toHaveLength(2);
     expect(screen.queryByRole('main')).toBeNull();
     expect(screen.queryByRole('banner')).toBeNull();
+  });
+
+  describe('the catalog this device keeps', () => {
+    it('says how many products there are and from when, also without a connection', async () => {
+      const local = createTestLocal();
+      rememberPerson(local, profile);
+      local.stores.dataOf('ana').device = { id: 'dev-1', code: 'AA' };
+      const copy = new FakeReadCopy({
+        status: 'ready',
+        productCount: 42,
+        productsAsOf: new Date(2026, 9, 19, 15, 30),
+        stockAsOf: new Date(2026, 9, 19, 15, 31),
+      });
+      renderScreen(<CounterPage />, { local, copy, path: '/mostrador' });
+      await local.workspace.resume();
+
+      expect(await screen.findByRole('heading', { name: 'Catálogo en este equipo' })).toBeDefined();
+      expect(screen.getByText('42 productos en este equipo')).toBeDefined();
+      fireEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
+      expect(copy.refreshes).toBe(1);
+    });
   });
 
   describe('for a person who came in with a connection', () => {

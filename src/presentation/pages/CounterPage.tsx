@@ -4,6 +4,7 @@ import { COUNTER_RESUME_WINDOW_MS } from '../../domain/model/local-profile';
 import { formatMoment } from '../../domain/model/moment';
 import { roleLabel } from '../../domain/model/people';
 import { useOptionalAccount } from '../auth/AuthProvider';
+import { CopyStatus } from '../copy/CopyStatus';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -127,6 +128,13 @@ export function CounterPage() {
               </dd>
             </div>
           </dl>
+        </section>
+
+        <section aria-labelledby="catalogo-titulo" className="flex flex-col gap-3">
+          <h2 id="catalogo-titulo" className="text-xl font-semibold text-fg">
+            Catálogo en este equipo
+          </h2>
+          <CopyStatus />
         </section>
       </main>
     </div>

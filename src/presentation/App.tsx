@@ -6,6 +6,7 @@ import type { Inventory } from '../domain/ports/in/inventory';
 import type { LoadMe } from '../domain/ports/in/load-me';
 import type { LocalWorkspace } from '../domain/ports/in/local-workspace';
 import type { Purchasing } from '../domain/ports/in/purchasing';
+import type { ReadCopy } from '../domain/ports/in/read-copy';
 import type { SessionManager } from '../domain/ports/in/session-manager';
 import type { StorageProtectionStatus } from '../domain/ports/in/storage-protection';
 import type { SyncEngine } from '../domain/ports/in/sync-engine';
@@ -13,6 +14,7 @@ import type { ThemePreference } from '../domain/ports/in/theme-preference';
 import { AuthProvider } from './auth/AuthProvider';
 import { CatalogProvider } from './catalog/CatalogProvider';
 import { ConnectionProvider } from './connection/ConnectionProvider';
+import { ReadCopyProvider } from './copy/ReadCopyProvider';
 import { InventoryProvider } from './inventory/InventoryProvider';
 import { LocalWorkspaceProvider } from './local/LocalWorkspaceProvider';
 import { MotionProvider } from './motion/MotionProvider';
@@ -35,6 +37,7 @@ export function App({
   auth,
   local,
   sync,
+  copy,
   people,
   catalog,
   inventory,
@@ -46,6 +49,7 @@ export function App({
   auth: { sessions: SessionManager; loadMe: LoadMe };
   local: LocalWorkspace;
   sync: SyncEngine;
+  copy: ReadCopy;
   people: BusinessPeople;
   catalog: Catalog;
   inventory: Inventory;
@@ -60,16 +64,18 @@ export function App({
             <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
               <LocalWorkspaceProvider workspace={local}>
                 <SyncProvider engine={sync}>
-                  <PeopleProvider people={people}>
-                    <CatalogProvider catalog={catalog}>
-                      <InventoryProvider inventory={inventory}>
-                        <PurchasingProvider purchasing={purchasing}>
-                          <AppRoutes />
-                          <UpdateNotice />
-                        </PurchasingProvider>
-                      </InventoryProvider>
-                    </CatalogProvider>
-                  </PeopleProvider>
+                  <ReadCopyProvider copy={copy}>
+                    <PeopleProvider people={people}>
+                      <CatalogProvider catalog={catalog}>
+                        <InventoryProvider inventory={inventory}>
+                          <PurchasingProvider purchasing={purchasing}>
+                            <AppRoutes />
+                            <UpdateNotice />
+                          </PurchasingProvider>
+                        </InventoryProvider>
+                      </CatalogProvider>
+                    </PeopleProvider>
+                  </ReadCopyProvider>
                 </SyncProvider>
               </LocalWorkspaceProvider>
             </AuthProvider>

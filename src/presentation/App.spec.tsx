@@ -10,6 +10,7 @@ import { createFakeInventory } from '../../test/support/inventory';
 import { createFakePeople } from '../../test/support/people';
 import { createFakePurchasing } from '../../test/support/purchasing';
 import { createTestPwa } from '../../test/support/pwa';
+import { FakeReadCopy } from '../../test/support/read-copy';
 import { FakeSyncEngine } from '../../test/support/sync-engine';
 import { createTestThemePreference } from '../../test/support/theme';
 import { App } from './App';
@@ -19,12 +20,14 @@ function renderApp({
   connection = createTestConnection(),
   auth = createTestAuth(),
   sync = new FakeSyncEngine(),
+  copy = new FakeReadCopy(),
   path = '/ingresar',
 }: {
   theme?: ReturnType<typeof createTestThemePreference>['preference'];
   connection?: ReturnType<typeof createTestConnection>;
   auth?: TestAuth;
   sync?: FakeSyncEngine;
+  copy?: FakeReadCopy;
   path?: string;
 } = {}) {
   render(
@@ -35,6 +38,7 @@ function renderApp({
         auth={auth}
         local={createTestLocal().workspace}
         sync={sync}
+        copy={copy}
         people={createFakePeople()}
         catalog={createFakeCatalog()}
         inventory={createFakeInventory()}
