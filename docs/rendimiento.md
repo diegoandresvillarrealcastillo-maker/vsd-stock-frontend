@@ -84,6 +84,27 @@ cliente de Supabase ni de HTTP). Es el mayor aumento desde C0-07 pero sigue lejo
 Lighthouse sobre la página pública (3 corridas, mismas condiciones de abajo): **rendimiento 98 y 99, accesibilidad 100,
 mejores prácticas 96**; LCP de 2,0 a 2,3 s, TBT de 0 a 44 ms y CLS 0.
 
+### Después de C3-07 (aplicación instalable) y el presupuesto de peso
+
+Medido con `npm run budget` (gzip al nivel 9, el mismo de la tabla de arriba) sobre la compilación de C3-07:
+
+| Pieza                  | Antes (C2-08) | Ahora (C3-07) | Presupuesto |
+| ---------------------- | ------------: | ------------: | ----------: |
+| JavaScript comprimido  |      119,7 KB |      141,7 KB |      180 KB |
+| CSS comprimido         |             — |        4,7 KB |       12 KB |
+| Service worker (nuevo) |             — |        1,7 KB |        3 KB |
+
+El salto del JavaScript de C2-08 a hoy son las pantallas del catálogo, el inventario, las compras y las personas (C2-09 a
+C2-11); **C3-07 casi no pesa**: el service worker es un archivo aparte de 1,7 KB que no entra al paquete de la página, y lo
+nuevo de la página (el caso de uso de versiones nuevas, el de almacenamiento protegido, el aviso y dos adaptadores) suma
+unos pocos KB. Los iconos (`icon-192.png`, 22 KB, y los dos de 512 px, que solo pide el sistema operativo al instalar) no
+son JavaScript y no cuentan.
+
+**El presupuesto es un techo, no una meta.** Lo que falta del Ciclo 3 (el almacenamiento cifrado, el motor de
+sincronización y la pantalla de venta) cabe en los 38 KB que quedan; si no cupiera, la salida está en
+[`docs/aplicacion-instalable.md`](aplicacion-instalable.md): separar por rutas las pantallas de administración. El CI ejecuta
+`npm run budget` después de compilar y rompe si alguna de las tres partes se pasa.
+
 ## Lighthouse: lo más cercano a un teléfono de gama baja
 
 **Decisión (2026-10-16):** el equipo no tiene un teléfono de gama baja, así que la comprobación en un

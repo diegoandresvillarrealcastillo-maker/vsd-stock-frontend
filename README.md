@@ -30,6 +30,7 @@ el backend en marcha: ver [Conexión con el backend](#conexión-con-el-backend).
 | `npm run dev`               | Servidor de desarrollo de Vite.                                                      |
 | `npm run build`             | Revisa los tipos y genera la versión de producción en `dist/`.                       |
 | `npm run preview`           | Sirve `dist/` para probar la versión de producción.                                  |
+| `npm run budget`            | Falla si lo que baja el navegador pesa más que el presupuesto (después de compilar). |
 | `npm test`                  | Ejecuta las pruebas (Vitest, jsdom y Testing Library).                               |
 | `npm run test:coverage`     | Pruebas con cobertura; falla si `domain/` o `application/` bajan del 80 %.           |
 | `npm run lint`              | ESLint, incluidas las **fronteras de la arquitectura**.                              |
@@ -455,6 +456,8 @@ naranja del logo (`#f97801`) solo como acento.**
 
 - Cómo contribuir (ramas, commits, PR, comprobaciones, contrato y diseño): [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Rendimiento y Lighthouse: [`docs/rendimiento.md`](docs/rendimiento.md).
+- La aplicación instalable (qué guarda el service worker y qué nunca, cómo se actualiza, el almacenamiento
+  protegido y el presupuesto de peso): [`docs/aplicacion-instalable.md`](docs/aplicacion-instalable.md).
 - Lo que se guarda en el equipo, cómo se protege y cuándo se olvida: [`docs/almacenamiento-local.md`](docs/almacenamiento-local.md).
 - Cómo se envía la cola sin conexión y qué dice la pantalla mientras tanto: [`docs/sincronizacion.md`](docs/sincronizacion.md).
 - Cómo se abre, se cierra y se ve el turno de caja sin conexión: [`docs/turno.md`](docs/turno.md).
