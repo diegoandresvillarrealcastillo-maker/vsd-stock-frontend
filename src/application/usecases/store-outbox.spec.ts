@@ -12,4 +12,15 @@ describe('StoreOutbox', () => {
 
     expect(pendingOperations).toHaveBeenCalledWith(BATCH_SIZE);
   });
+
+  it('gives what waits, as many as it is asked for, to whoever wants to show it', async () => {
+    const waiting = [{ operationId: 'a' }, { operationId: 'b' }];
+    const pendingOperations = vi.fn().mockResolvedValue(waiting);
+    const store = { pendingOperations } as unknown as LocalStore;
+
+    const found = await new StoreOutbox(() => store).pending(200);
+
+    expect(found).toBe(waiting);
+    expect(pendingOperations).toHaveBeenCalledWith(200);
+  });
 });

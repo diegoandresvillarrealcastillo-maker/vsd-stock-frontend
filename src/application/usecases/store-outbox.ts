@@ -22,6 +22,10 @@ export class StoreOutbox implements Outbox {
     return takeBatch(await this.current().pendingOperations(BATCH_SIZE));
   }
 
+  async pending(limit: number): Promise<QueuedOperation[]> {
+    return await this.current().pendingOperations(limit);
+  }
+
   async settle(settlements: readonly Settlement[]): Promise<void> {
     const store = this.current();
     const done: string[] = [];

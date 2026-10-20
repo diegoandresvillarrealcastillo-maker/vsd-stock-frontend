@@ -312,6 +312,54 @@ describe('AppRoutes', () => {
       expect(screen.getByRole('navigation', { name: 'Mostrador' })).toBeDefined();
     });
 
+    it('has the sales inside the frame of the counter, for the cashier as well', async () => {
+      renderAt('/mostrador/ventas', { role: 'cashier' });
+
+      expect(await heading('Ventas')).toBeDefined();
+      expect(screen.getByRole('navigation', { name: 'Mostrador' })).toBeDefined();
+      expect(screen.queryByRole('navigation', { name: 'Principal' })).toBeNull();
+    });
+
+    it('shows a sale one level down, still inside the counter', async () => {
+      renderAt('/mostrador/ventas/sale-1', { role: 'cashier' });
+
+      expect(await heading('Venta AA-000141')).toBeDefined();
+      expect(screen.getByRole('navigation', { name: 'Mostrador' })).toBeDefined();
+    });
+
+    it.each<Role>(['owner', 'admin'])('lets the %s void a sale', async (role) => {
+      renderAt('/mostrador/ventas/sale-1/anular', { role });
+
+      expect(await heading('Anular la venta AA-000141')).toBeDefined();
+      expect(screen.getByRole('navigation', { name: 'Mostrador' })).toBeDefined();
+    });
+
+    it('keeps the cashier out of voiding a sale, even by writing the address', async () => {
+      renderAt('/mostrador/ventas/sale-1/anular', { role: 'cashier' });
+
+      expect(await heading('No tienes acceso')).toBeDefined();
+      expect(screen.queryByRole('heading', { level: 1, name: /Anular/ })).toBeNull();
+    });
+
+    it('opens the sales without a session for the person who resumed the counter without a connection', async () => {
+      const local = createTestLocal();
+      rememberPerson(local, {
+        authUserId: 'ana',
+        email: 'ana@example.com',
+        userId: 'u-ana',
+        businessId: 'b-1',
+        businessName: 'Tienda La Esquina',
+        role: 'cashier',
+        fullName: 'Ana Gómez',
+        verifiedAt: '2026-10-17T10:00:00.000Z',
+      });
+      await local.workspace.resume();
+
+      renderAt('/mostrador/ventas', undefined, local);
+
+      expect(await heading('Ventas')).toBeDefined();
+    });
+
     it('opens the shift without a session for the person who resumed the counter without a connection', async () => {
       const local = createTestLocal();
       rememberPerson(local, {

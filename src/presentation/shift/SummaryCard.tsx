@@ -39,7 +39,10 @@ export function SummaryCard({
             >
               {row.label}
             </dt>
-            <dd className="text-base font-semibold tabular-nums text-fg">{row.value}</dd>
+            {/* El monto va entero: si la frase de al lado es larga, la que se parte es ella, no «2 productos». */}
+            <dd className="whitespace-nowrap text-base font-semibold tabular-nums text-fg">
+              {row.value}
+            </dd>
           </div>
         ))}
       </dl>

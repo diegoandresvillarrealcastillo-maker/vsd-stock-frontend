@@ -2,13 +2,15 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useOptionalAccount } from '../auth/AuthProvider';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useLocal } from '../local/LocalWorkspaceProvider';
+import { attentionLabel } from '../sales/attention-label';
+import { useSales } from '../sales/SalesProvider';
 import { SyncStatus } from '../sync/SyncStatus';
 
 const LINK =
   'inline-flex min-h-touch min-w-touch items-center justify-center rounded-full border border-border bg-surface-raised px-3 text-sm font-medium text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 const TAB =
-  'inline-flex min-h-touch items-center whitespace-nowrap rounded-md px-4 text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
+  'inline-flex min-h-touch items-center whitespace-nowrap rounded-md px-2.5 text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 /**
  * Lo que la persona hace en el mostrador. Todo funciona sin conexion: sale de lo guardado en este equipo. Vender, cobrar y el
@@ -27,6 +29,12 @@ const COUNTER_MENU = [
     current: (path: string) => path === '/mostrador/turno' || path.startsWith('/mostrador/turno/'),
   },
   {
+    path: '/mostrador/ventas',
+    label: 'Ventas',
+    current: (path: string) =>
+      path === '/mostrador/ventas' || path.startsWith('/mostrador/ventas/'),
+  },
+  {
     path: '/mostrador/equipo',
     label: 'Equipo',
     current: (path: string) => path === '/mostrador/equipo',
@@ -40,6 +48,7 @@ const COUNTER_MENU = [
  */
 export function CounterShell() {
   const { active, workspace } = useLocal();
+  const { attention } = useSales();
   const account = useOptionalAccount();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -102,6 +111,17 @@ export function CounterShell() {
                   className={`${TAB} ${current ? 'bg-primary text-on-primary' : 'text-fg hover:bg-surface'}`}
                 >
                   {item.label}
+                  {/* Solo la gerencia lo sabe (`attention` es nulo para los demas); el numero se lee con el nombre: «Ventas 3». */}
+                  {item.path === '/mostrador/ventas' &&
+                    attention !== null &&
+                    attention.count > 0 && (
+                      <>
+                        {' '}
+                        <span className="ml-1 rounded-full bg-accent px-2 text-sm text-on-accent">
+                          {attentionLabel(attention)}
+                        </span>
+                      </>
+                    )}
                 </Link>
               </li>
             );

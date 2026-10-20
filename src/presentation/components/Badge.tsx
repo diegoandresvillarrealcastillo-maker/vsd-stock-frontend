@@ -8,6 +8,8 @@ const TONES = {
   warning: 'border-accent-text bg-surface-raised text-accent-text',
   /** Algo que ya no esta activo. */
   muted: 'border-border bg-surface-raised text-fg-muted',
+  /** Algo que salio bien (una venta que el servidor ya tiene). */
+  success: 'border-success bg-surface-raised text-success',
 } as const;
 
 /** Una etiqueta corta (un rol, un estado). El color acompana: lo que dice esta siempre escrito. */
