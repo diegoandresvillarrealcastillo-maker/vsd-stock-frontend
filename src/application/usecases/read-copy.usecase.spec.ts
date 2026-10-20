@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Product } from '../../domain/model/catalog';
 import { NoWorkspaceError } from '../../domain/model/local-errors';
+import { indexProducts } from '../../domain/model/product-search';
 import { NO_DOWNLOADS, type CopyPage } from '../../domain/model/read-copy';
 import { testMe } from '../../../test/support/auth';
 import { settle } from '../../../test/support/connection';
@@ -16,6 +17,12 @@ import {
 } from '../../../test/support/fake-copy';
 import { failure } from '../../../test/support/fake-sync';
 
+// Se cuenta cuantas veces se arma el indice de busqueda, sin cambiar lo que hace.
+vi.mock('../../domain/model/product-search', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../domain/model/product-search')>();
+  return { ...actual, indexProducts: vi.fn(actual.indexProducts) };
+});
+
 const FIRST = new Date('2026-10-19T12:00:00.000Z');
 const SECOND = new Date('2026-10-19T12:00:07.000Z');
 const LATER = new Date('2026-10-19T13:30:00.000Z');
@@ -29,6 +36,166 @@ async function saved(t: TestCopy, products: number[], stock: [number, number][] 
 }
 
 describe('ReadCopyUseCase', () => {
+  describe('what was sold in this device', () => {
+    it('takes it out of the stock the screen shows, without waiting for the server', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await saved(
+        t,
+        [1, 2],
+        [
+          [1, 5_000],
+          [2, 8_000],
+        ],
+      );
+      t.copy.start();
+      await settle();
+
+      await t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 2_000 }]);
+
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(3_000);
+      expect(t.copy.stockOf(copiedProduct(2).id)).toBe(8_000);
+    });
+
+    it('lets it go below zero: a sale without stock is accepted and marked', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await saved(t, [1], [[1, 1_000]]);
+      t.copy.start();
+      await settle();
+
+      await t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 3_000 }]);
+
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(-2_000);
+    });
+
+    it('does not invent a stock while the stock was never downloaded: there is nothing to take it out of', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await t.local.workspace.copy().putProducts([copiedProduct(1)]);
+      await t.local.workspace.copy().writeCheckpoint({ productsAsOf: FIRST, stockAsOf: null });
+      t.copy.start();
+      await settle();
+
+      await t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 1_000 }]);
+
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBeNull();
+    });
+
+    it('takes it from nothing for a product the server has no stock of, once the stock was downloaded', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await saved(t, [1], []);
+      t.copy.start();
+      await settle();
+
+      await t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 1_000 }]);
+
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(-1_000);
+    });
+
+    it('adds up what is sold of the same product twice in a row', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await saved(t, [1], [[1, 10_000]]);
+      t.copy.start();
+      await settle();
+
+      await t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 1_000 }]);
+      await t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 2_000 }]);
+
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(7_000);
+    });
+
+    it('keeps it saved, so closing and opening the application does not bring the old stock back', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await saved(t, [1], [[1, 5_000]]);
+      t.copy.start();
+      await settle();
+
+      await t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 2_000 }]);
+
+      expect(await t.local.workspace.copy().readStock()).toEqual([
+        { productId: copiedProduct(1).id, quantityMilli: 3_000 },
+      ]);
+    });
+
+    it('is replaced by what the server says on the next download: its stock already counts what it received', async () => {
+      const t = await createTestCopy();
+      await saved(t, [1], [[1, 5_000]]);
+      t.copy.start();
+      await settle();
+      await t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 2_000 }]);
+      t.api.serveProducts(page([], LATER)).serveStock(page([stockOfProduct(1, 2_000)], LATER));
+
+      await t.copy.refresh();
+
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(2_000);
+    });
+
+    it('does not touch what is saved when there is nothing to take out of the stock', async () => {
+      const putStock = vi.fn(() => Promise.resolve());
+      let armed = false;
+      const t = await createTestCopy({
+        status: 'offline',
+        wrap: hooking((storage) => (armed ? overStorage(storage, { putStock }) : storage)),
+      });
+      await saved(t, [1], [[1, 5_000]]);
+      t.copy.start();
+      await settle();
+      armed = true;
+
+      await t.copy.sold([]);
+
+      expect(putStock).not.toHaveBeenCalled();
+    });
+
+    it('still shows the new stock when it could not be saved: it is a calculation and the sale is already kept', async () => {
+      let armed = false;
+      const t = await createTestCopy({
+        status: 'offline',
+        wrap: hooking((storage) =>
+          armed
+            ? overStorage(storage, { putStock: () => Promise.reject(new Error('disco lleno')) })
+            : storage,
+        ),
+      });
+      await saved(t, [1], [[1, 5_000]]);
+      t.copy.start();
+      await settle();
+      armed = true;
+
+      await expect(
+        t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 2_000 }]),
+      ).resolves.toBeUndefined();
+
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(3_000);
+    });
+
+    it('does nothing, and says nothing, when nobody works any more', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await saved(t, [1], [[1, 5_000]]);
+      t.copy.start();
+      await settle();
+      await t.local.workspace.leave();
+
+      await expect(
+        t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 1_000 }]),
+      ).resolves.toBeUndefined();
+    });
+
+    it('does not touch the stock of the person who arrived while it was saving', async () => {
+      const t = await createTestCopy({ status: 'offline' });
+      await saved(t, [1], [[1, 5_000]]);
+      t.copy.start();
+      await settle();
+      const selling = t.copy.sold([{ productId: copiedProduct(1).id, quantityMilli: 1_000 }]);
+      await t.local.workspace.leave();
+      await t.local.workspace.begin(testMe('luis', 'cashier'));
+      await selling;
+      await settle();
+
+      // Luis no bajo nunca la existencia: no se sabe nada, y menos lo de Ana.
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBeNull();
+      expect(t.local.stores.dataOf('luis').stock.size).toBe(0);
+    });
+  });
+
   describe('before anything was downloaded', () => {
     it('is empty: no catalog, no hour, nothing happening', async () => {
       const t = await createTestCopy();
@@ -68,7 +235,8 @@ describe('ReadCopyUseCase', () => {
       ]);
       expect(t.copy.product(copiedProduct(1).id)).toEqual(copiedProduct(1));
       expect(t.copy.stockOf(copiedProduct(1).id)).toBe(12_500);
-      expect(t.copy.stockOf(copiedProduct(2).id)).toBeNull();
+      // El servidor ya dijo la existencia y de este producto no dijo nada: nunca se movio, y sin movimientos no hay existencia.
+      expect(t.copy.stockOf(copiedProduct(2).id)).toBe(0);
       expect(t.api.productCalls).toEqual([]);
     });
 
@@ -768,7 +936,8 @@ describe('ReadCopyUseCase', () => {
       t.copy.start();
       await settle();
 
-      expect(t.copy.stockOf(copiedProduct(1).id)).toBeNull();
+      // Lo que se bajo para Ana no llega a Luis: para el, el producto no tiene existencia.
+      expect(t.copy.stockOf(copiedProduct(1).id)).toBe(0);
       expect(t.api.stockCalls[1]?.since).toEqual(new Date('2026-10-19T11:59:07.000Z'));
     });
 
@@ -801,6 +970,29 @@ describe('ReadCopyUseCase', () => {
       expect(t.copy.product(copiedProduct(9).id)).toBeDefined();
       expect(t.copy.product(copiedProduct(1).id)).toBeUndefined();
       expect(t.copy.current()).toMatchObject({ fault: null, downloading: false });
+    });
+  });
+
+  describe('the index of the search', () => {
+    it('is made once for any number of searches, and again only when the catalog changes', async () => {
+      const t = await createTestCopy();
+      t.api
+        .serveProducts(page([copiedProduct(1), copiedProduct(2), copiedProduct(3)], FIRST))
+        .serveStock(page([], FIRST));
+      await t.copy.refresh();
+      vi.mocked(indexProducts).mockClear();
+
+      t.copy.search('producto 1');
+      t.copy.search('producto 2');
+      t.copy.search('producto 3');
+      expect(indexProducts).toHaveBeenCalledTimes(1);
+
+      t.api.serveProducts(page([copiedProduct(4)], LATER)).serveStock(page([], LATER));
+      await t.copy.refresh();
+      t.copy.search('producto 4');
+      t.copy.search('producto 1');
+
+      expect(indexProducts).toHaveBeenCalledTimes(2);
     });
   });
 

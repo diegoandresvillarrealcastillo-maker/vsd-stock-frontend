@@ -67,6 +67,17 @@ export class FakeReadCopy implements ReadCopy {
     return this.levels.get(productId) ?? null;
   }
 
+  readonly soldItems: { productId: string; quantityMilli: number }[][] = [];
+
+  sold(items: readonly { productId: string; quantityMilli: number }[]): Promise<void> {
+    this.soldItems.push([...items]);
+    for (const { productId, quantityMilli } of items) {
+      const left = this.levels.get(productId);
+      if (left !== undefined) this.levels.set(productId, left - quantityMilli);
+    }
+    return Promise.resolve();
+  }
+
   /** La copia tiene estos productos y esta existencia. */
   hold(products: readonly Product[], levels: Record<string, number> = {}): void {
     this.products = products;

@@ -22,8 +22,8 @@ Todo esto funciona **sin conexión**: sale de lo guardado en el equipo, no del s
 
 El turno cuelga de **`/mostrador`**, no de la administración: `/mostrador/turno` y `/mostrador/turno/cerrar`. Es a propósito
 (ADR 0017): el marco de la administración necesita la cuenta cargada, que sin conexión no está; el **marco del mostrador**
-(`CounterShell`) solo necesita el espacio de trabajo local abierto. Trae su propia cabecera, un menú (Mostrador · Turno) y el estado
-del envío en todas sus pantallas.
+(`CounterShell`) solo necesita el espacio de trabajo local abierto. Trae su propia cabecera, un menú (Mostrador · Turno · Equipo) y el
+estado del envío en todas sus pantallas.
 
 ## Qué se guarda y cómo
 
@@ -73,9 +73,9 @@ calcular cuando la cola cambia (cuántas esperan, cuántas piden atención o cu�
 
 ## Las ventas
 
-El arqueo del dispositivo suma lo vendido en efectivo y lo vendido con otro medio. **Esas sumas todavía son cero:** las ventas
-llegan en el siguiente paso (C3-12), que actualizará los totales del turno **en la misma transacción** en que guarda la venta y su
-operación, y avisará con `refresh()` para que la pantalla los lea.
+El arqueo del dispositivo suma lo vendido en efectivo y lo vendido con otro medio. Cada venta cobrada actualiza los totales del
+turno **en la misma transacción** en que se guarda la venta y su operación (lo cobrado en efectivo cuenta sin el vuelto), y el
+turno vuelve a leerlos con `refresh()`. Cómo se vende está en [`punto-de-venta.md`](punto-de-venta.md).
 
 El arqueo definitivo lo calcula el servidor cuando recibe todas las ventas (ADR 0026); también cuenta los movimientos de efectivo
 que la gerencia hace con conexión (entradas y salidas de caja) y deja **aparte** las ventas que llegan después del cierre. El del

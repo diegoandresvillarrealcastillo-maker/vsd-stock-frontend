@@ -23,11 +23,11 @@ export interface OutboxCounts {
 export interface Outbox {
   /** Pone una operacion en la cola. Si ya estaba, no hace nada. */
   enqueue(operation: NewOperation): Promise<void>;
-  /** El siguiente lote: las que esperan, de la mas antigua a la mas nueva, hasta `BATCH_SIZE` o `BATCH_BYTES`. */
+  /** El siguiente lote: las que esperan, en el orden en que se agregaron, hasta `BATCH_SIZE` o `BATCH_BYTES`. */
   nextBatch(): Promise<QueuedOperation[]>;
   /** Anota lo que paso con cada operacion de un lote. */
   settle(settlements: readonly Settlement[]): Promise<void>;
   counts(): Promise<OutboxCounts>;
-  /** Las que piden atencion, de la mas antigua a la mas nueva. */
+  /** Las que piden atencion, en el orden en que se agregaron. */
   attention(): Promise<QueuedOperation[]>;
 }

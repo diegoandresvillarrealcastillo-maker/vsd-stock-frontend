@@ -5,9 +5,11 @@ import { ApiError } from './api-error';
 import { AuthError } from './auth-failure';
 import {
   DeviceNotRegisteredError,
+  EmptySaleError,
   NoOpenShiftError,
   NoWorkspaceError,
   ShiftAlreadyOpenError,
+  ShiftRequiredError,
 } from './local-errors';
 import { authMessage, failureMessage, fieldErrors, problemOf } from './messages';
 import type { Problem } from './problem';
@@ -221,6 +223,16 @@ describe('what any error that reaches a form becomes', () => {
   it.each([
     [new ShiftAlreadyOpenError(), 'shift-already-open', 'Ya hay un turno abierto en este equipo.'],
     [new NoOpenShiftError(), 'no-open-shift', 'No hay un turno abierto que cerrar.'],
+    [
+      new ShiftRequiredError(),
+      'shift-required',
+      'Abre un turno para vender: cada venta queda en un turno de caja.',
+    ],
+    [
+      new EmptySaleError(),
+      'empty-sale',
+      'La venta está vacía. Busca un producto o lee su código para agregarlo.',
+    ],
     [
       new DeviceNotRegisteredError(),
       'device-not-registered',

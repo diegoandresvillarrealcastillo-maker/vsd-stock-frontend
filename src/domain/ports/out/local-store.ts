@@ -41,11 +41,11 @@ export interface LocalStore extends CopyStorage, ShiftStorage {
    */
   enqueue(operation: NewOperation): Promise<void>;
   /**
-   * Las que esperan a ser enviadas, de la mas antigua a la mas nueva (y por identificador si son de la misma hora), hasta
-   * `limit`. Una que no se puede abrir (un bit alterado, otra clave) no se da: sigue contando como pendiente pero no se envia.
+   * Las que esperan a ser enviadas, en el orden en que se agregaron (una puede depender de la de antes: la venta, de la apertura del
+   * turno, y la hora del reloj no es de fiar para ordenarlas), hasta `limit`. Una que no se puede abrir (un bit alterado, otra clave) no se da: sigue contando como pendiente pero no se envia.
    */
   pendingOperations(limit: number): Promise<QueuedOperation[]>;
-  /** Las que el servidor no acepto y alguien tiene que mirar, de la mas antigua a la mas nueva. */
+  /** Las que el servidor no acepto y alguien tiene que mirar, en el orden en que se agregaron. */
   attentionOperations(): Promise<QueuedOperation[]>;
   /** Cuantas operaciones piden atencion. */
   countAttention(): Promise<number>;

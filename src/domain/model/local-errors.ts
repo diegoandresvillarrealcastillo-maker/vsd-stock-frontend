@@ -40,6 +40,22 @@ export class NoOpenShiftError extends Error {
   }
 }
 
+/** No hay un turno abierto en el que vender: cada venta queda en un turno de caja (ADR 0026). */
+export class ShiftRequiredError extends Error {
+  constructor() {
+    super('There is no open shift to sell in');
+    this.name = 'ShiftRequiredError';
+  }
+}
+
+/** La venta no tiene ninguna linea: no hay nada que cobrar. */
+export class EmptySaleError extends Error {
+  constructor() {
+    super('The sale has no lines');
+    this.name = 'EmptySaleError';
+  }
+}
+
 /**
  * La base de la persona tiene operaciones sin enviar pero la clave que las cifro ya no esta (el navegador la borro y dejo los
  * datos, ADR 0018): no se pueden leer, y abrir con una clave nueva las dejaria perdidas sin avisar. `pending` dice cuantas son.

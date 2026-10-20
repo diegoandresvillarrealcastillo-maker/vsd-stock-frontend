@@ -1,4 +1,4 @@
-import type { HTMLInputTypeAttribute } from 'react';
+import type { HTMLInputTypeAttribute, KeyboardEvent } from 'react';
 
 export interface FieldOption {
   readonly value: string;
@@ -29,6 +29,8 @@ interface FormFieldProps {
   required?: boolean;
   /** Si se da, el campo es una lista corta de opciones en vez de un texto. */
   options?: readonly FieldOption[];
+  /** Cada tecla que se pulsa en el campo de texto: por ejemplo el Enter con que un lector de codigos termina de leer. */
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 }
 
 const CONTROL =
@@ -56,6 +58,7 @@ export function FormField({
   disabled = false,
   required = false,
   options,
+  onKeyDown,
 }: FormFieldProps) {
   const messageId = `${id}-mensaje`;
   const message = error ?? hint;
@@ -80,6 +83,7 @@ export function FormField({
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          {...(onKeyDown === undefined ? {} : { onKeyDown })}
           {...(autoComplete === undefined ? {} : { autoComplete })}
           {...(inputMode === undefined ? {} : { inputMode })}
           {...(autoCapitalize === undefined ? {} : { autoCapitalize })}

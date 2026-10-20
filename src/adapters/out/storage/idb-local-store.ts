@@ -41,6 +41,12 @@ export interface QueuedOperationRecord extends Sealed {
   readonly operationId: string;
   readonly state: 'pending' | 'attention';
   readonly createdAt: string;
+  /**
+   * El numero de orden en que se agrego a la cola: lo que manda para enviarlas. Una operacion puede depender de la de antes (la
+   * venta, de la apertura del turno) y la hora del reloj no es de fiar para ordenarlas: se corrige, o se repite en el mismo
+   * milisegundo. Las que se guardaron antes de que existiera no lo tienen y van primero, por su hora.
+   */
+  readonly seq?: number;
 }
 
 export interface LocalSchema extends DBSchema {
@@ -71,6 +77,7 @@ const SERIAL = 'serial';
 const PROFILE = 'profile';
 const DEVICE = 'device';
 const SHIFT = 'shift';
+const QUEUE_SEQ = 'queue-seq';
 
 /**
  * Abre la base de una persona y deja lista su clave. Si la base no existe, la crea. Si tiene operaciones por enviar pero no la
@@ -186,9 +193,11 @@ export class IdbLocalStore implements LocalStore {
   async enqueue(operation: NewOperation): Promise<void> {
     // El cifrado va antes de abrir la transaccion: dentro de una de IndexedDB solo se espera a IndexedDB.
     const sealed = await this.sealOperation(operation);
-    const tx = this.db.transaction('operations', 'readwrite');
-    if ((await tx.store.get(operation.operationId)) === undefined) {
-      await tx.store.put(queuedRecord(operation, sealed));
+    const tx = this.db.transaction(['operations', 'meta'], 'readwrite');
+    const operations = tx.objectStore('operations');
+    if ((await operations.get(operation.operationId)) === undefined) {
+      const seq = await nextSeq(tx.objectStore('meta'));
+      await operations.put(queuedRecord(operation, sealed, seq));
     }
     await tx.done;
   }
@@ -201,12 +210,13 @@ export class IdbLocalStore implements LocalStore {
     // Todo se cifra antes de abrir la transaccion; dentro, el turno y la operacion se escriben juntos o no se escribe nada.
     const sealedShift = await this.cipher.seal(SHIFT, shift);
     const sealedOperation = await this.sealOperation(operation);
-    const tx = this.db.transaction(['records', 'operations'], 'readwrite');
+    const tx = this.db.transaction(['records', 'operations', 'meta'], 'readwrite');
     try {
       await tx.objectStore('records').put({ name: SHIFT, ...sealedShift });
       const operations = tx.objectStore('operations');
       if ((await operations.get(operation.operationId)) === undefined) {
-        await operations.put(queuedRecord(operation, sealedOperation));
+        const seq = await nextSeq(tx.objectStore('meta'));
+        await operations.put(queuedRecord(operation, sealedOperation, seq));
       }
     } catch (error) {
       // Un fallo de JavaScript no deshace la transaccion por si solo: si algo fallo, ni el turno ni la operacion quedan.
@@ -336,7 +346,7 @@ export class IdbLocalStore implements LocalStore {
     await tx.done;
   }
 
-  /** Las operaciones de un estado, de la mas antigua a la mas nueva, abriendo solo las que hacen falta. */
+  /** Las operaciones de un estado, en el orden en que se agregaron, abriendo solo las que hacen falta. */
   private async readOperations(
     state: QueuedOperationRecord['state'],
     limit: number,
@@ -344,7 +354,9 @@ export class IdbLocalStore implements LocalStore {
     const records = await this.db.getAllFromIndex('operations', 'state', state);
     records.sort(
       (a, b) =>
-        a.createdAt.localeCompare(b.createdAt) || a.operationId.localeCompare(b.operationId),
+        (a.seq ?? 0) - (b.seq ?? 0) ||
+        a.createdAt.localeCompare(b.createdAt) ||
+        a.operationId.localeCompare(b.operationId),
     );
     const operations: QueuedOperation[] = [];
     for (const record of records) {
@@ -424,13 +436,25 @@ interface OperationContent {
 }
 
 /** Una operacion nueva como se guarda en la cola: en claro solo lo que se busca. */
-function queuedRecord(operation: NewOperation, sealed: Sealed): QueuedOperationRecord {
+function queuedRecord(operation: NewOperation, sealed: Sealed, seq: number): QueuedOperationRecord {
   return {
     operationId: operation.operationId,
     state: 'pending',
     createdAt: operation.createdAt.toISOString(),
+    seq,
     ...sealed,
   };
+}
+
+/** El siguiente numero de orden de la cola, ya asentado. Va en la misma transaccion que escribe la operacion: dos pestañas nunca reciben el mismo. */
+async function nextSeq(meta: {
+  get(key: string): Promise<unknown>;
+  put(value: number, key: string): Promise<unknown>;
+}): Promise<number> {
+  const last = await meta.get(QUEUE_SEQ);
+  const seq = (typeof last === 'number' ? last : 0) + 1;
+  await meta.put(seq, QUEUE_SEQ);
+  return seq;
 }
 
 /** El nombre bajo el que se cifra un producto de la copia: lleva su identificador, asi uno copiado al lugar de otro no se abre. */

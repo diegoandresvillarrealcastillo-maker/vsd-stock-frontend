@@ -1,8 +1,18 @@
 import { ApiError } from '../../domain/model/api-error';
 import type { Product } from '../../domain/model/catalog';
 import { NoWorkspaceError } from '../../domain/model/local-errors';
-import { searchProducts, type SearchOptions } from '../../domain/model/product-search';
-import { NO_DOWNLOADS, sinceOf, type CopyCheckpoint } from '../../domain/model/read-copy';
+import {
+  indexProducts,
+  searchIndex,
+  type SearchIndex,
+  type SearchOptions,
+} from '../../domain/model/product-search';
+import {
+  NO_DOWNLOADS,
+  sinceOf,
+  type CopyCheckpoint,
+  type StockLevel,
+} from '../../domain/model/read-copy';
 import type { ConnectionMonitor } from '../../domain/ports/in/connection-monitor';
 import type { CopyStorage } from '../../domain/ports/in/copy-storage';
 import type { LocalWorkspace } from '../../domain/ports/in/local-workspace';
@@ -69,7 +79,8 @@ export class ReadCopyUseCase implements ReadCopy {
   private checkpoint: CopyCheckpoint = NO_DOWNLOADS;
   private readonly products = new Map<string, Product>();
   private readonly levels = new Map<string, number>();
-  private listed: readonly Product[] | null = null;
+  /** El catalogo listo para buscar: se arma con la primera busqueda tras un cambio y sirve a todas las siguientes. */
+  private indexed: SearchIndex | null = null;
   private lastSyncedAt: number | null = null;
 
   constructor(private readonly deps: Dependencies) {}
@@ -123,7 +134,7 @@ export class ReadCopyUseCase implements ReadCopy {
   }
 
   search(query: string, options?: SearchOptions): readonly Product[] {
-    return searchProducts(this.all(), query, options);
+    return searchIndex(this.index(), query, options);
   }
 
   product(productId: string): Product | undefined {
@@ -131,7 +142,28 @@ export class ReadCopyUseCase implements ReadCopy {
   }
 
   stockOf(productId: string): number | null {
-    return this.levels.get(productId) ?? null;
+    // El servidor solo dice la existencia de lo que tuvo movimientos: de un producto que nunca los tuvo no dice nada, y eso es cero.
+    // Mientras la existencia nunca se haya bajado, en cambio, no se sabe nada de nadie.
+    return this.levels.get(productId) ?? (this.checkpoint.stockAsOf === null ? null : 0);
+  }
+
+  async sold(items: readonly { productId: string; quantityMilli: number }[]): Promise<void> {
+    const changed: StockLevel[] = [];
+    for (const { productId, quantityMilli } of items) {
+      const left = this.stockOf(productId);
+      // Mientras la existencia nunca se haya bajado no se inventa una: no hay de donde descontar.
+      if (left === null) continue;
+      const level = { productId, quantityMilli: left - quantityMilli };
+      this.levels.set(productId, level.quantityMilli);
+      changed.push(level);
+    }
+    if (changed.length === 0) return;
+    try {
+      await this.deps.workspace.copy().putStock(changed);
+    } catch {
+      // Es un calculo para no ofrecer lo que ya no esta, no un dato: si no se pudo guardar (cambio la persona, falla el disco), la
+      // proxima descarga lo corrige con lo que sabe el servidor, y la venta ya esta guardada por otro camino.
+    }
   }
 
   /** Lo que pasa solo (llego la conexion, entro alguien, se envio algo): baja si hay con que, y no dice nada si no. */
@@ -167,7 +199,7 @@ export class ReadCopyUseCase implements ReadCopy {
   private forget(): void {
     this.products.clear();
     this.levels.clear();
-    this.listed = null;
+    this.indexed = null;
     this.checkpoint = NO_DOWNLOADS;
     this.update(INITIAL);
   }
@@ -271,12 +303,12 @@ export class ReadCopyUseCase implements ReadCopy {
         this.products.set(product.id, product);
       }
     }
-    this.listed = null;
+    this.indexed = null;
   }
 
-  private all(): readonly Product[] {
-    this.listed ??= [...this.products.values()];
-    return this.listed;
+  private index(): SearchIndex {
+    this.indexed ??= indexProducts([...this.products.values()]);
+    return this.indexed;
   }
 
   /** Lo que se dice de lo guardado: cuanto hay y de cuando es. */

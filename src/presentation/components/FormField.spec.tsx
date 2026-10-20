@@ -51,6 +51,22 @@ describe('FormField', () => {
     expect(input.getAttribute('spellcheck')).toBe('false');
   });
 
+  it('tells about the keys that are pressed in it, like the enter that a code reader ends with', () => {
+    const onKeyDown = vi.fn();
+    const { input } = renderField({ onKeyDown });
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+    expect(onKeyDown.mock.calls[0]?.[0]).toMatchObject({ key: 'Enter' });
+  });
+
+  it('does not need to hear about the keys', () => {
+    const { input } = renderField();
+
+    expect(() => fireEvent.keyDown(input, { key: 'Enter' })).not.toThrow();
+  });
+
   it('is plain text by default', () => {
     const { input } = renderField();
 

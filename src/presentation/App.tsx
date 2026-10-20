@@ -7,6 +7,7 @@ import type { LoadMe } from '../domain/ports/in/load-me';
 import type { LocalWorkspace } from '../domain/ports/in/local-workspace';
 import type { Purchasing } from '../domain/ports/in/purchasing';
 import type { ReadCopy } from '../domain/ports/in/read-copy';
+import type { Selling } from '../domain/ports/in/selling';
 import type { SessionManager } from '../domain/ports/in/session-manager';
 import type { Shifts } from '../domain/ports/in/shifts';
 import type { StorageProtectionStatus } from '../domain/ports/in/storage-protection';
@@ -24,6 +25,7 @@ import { PurchasingProvider } from './purchasing/PurchasingProvider';
 import { PwaProvider } from './pwa/PwaProvider';
 import { UpdateNotice } from './pwa/UpdateNotice';
 import { AppRoutes } from './routes/AppRoutes';
+import { SellingProvider } from './selling/SellingProvider';
 import { ShiftProvider } from './shift/ShiftProvider';
 import { SyncProvider } from './sync/SyncProvider';
 import { ThemeProvider } from './theme/ThemeProvider';
@@ -41,6 +43,7 @@ export function App({
   sync,
   copy,
   shifts,
+  selling,
   people,
   catalog,
   inventory,
@@ -54,6 +57,7 @@ export function App({
   sync: SyncEngine;
   copy: ReadCopy;
   shifts: Shifts;
+  selling: Selling;
   people: BusinessPeople;
   catalog: Catalog;
   inventory: Inventory;
@@ -70,16 +74,18 @@ export function App({
                 <SyncProvider engine={sync}>
                   <ReadCopyProvider copy={copy}>
                     <ShiftProvider shifts={shifts}>
-                      <PeopleProvider people={people}>
-                        <CatalogProvider catalog={catalog}>
-                          <InventoryProvider inventory={inventory}>
-                            <PurchasingProvider purchasing={purchasing}>
-                              <AppRoutes />
-                              <UpdateNotice />
-                            </PurchasingProvider>
-                          </InventoryProvider>
-                        </CatalogProvider>
-                      </PeopleProvider>
+                      <SellingProvider selling={selling}>
+                        <PeopleProvider people={people}>
+                          <CatalogProvider catalog={catalog}>
+                            <InventoryProvider inventory={inventory}>
+                              <PurchasingProvider purchasing={purchasing}>
+                                <AppRoutes />
+                                <UpdateNotice />
+                              </PurchasingProvider>
+                            </InventoryProvider>
+                          </CatalogProvider>
+                        </PeopleProvider>
+                      </SellingProvider>
                     </ShiftProvider>
                   </ReadCopyProvider>
                 </SyncProvider>

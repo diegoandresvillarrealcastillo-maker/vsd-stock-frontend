@@ -17,6 +17,7 @@ export function SubmitButton({
   children,
   variant = 'primary',
   pendingLabel = 'Enviando…',
+  disabled = false,
   onClick,
 }: {
   pending: boolean;
@@ -24,6 +25,8 @@ export function SubmitButton({
   variant?: keyof typeof VARIANTS;
   /** Lo que dice mientras la accion esta en camino. Lo que se guarda en este equipo no se «envia»: dice «Guardando…». */
   pendingLabel?: string;
+  /** Apagado aunque no haya nada en camino: lo que falta para poder mandarlo ya se dice en la pantalla. */
+  disabled?: boolean;
   /** Si se da, es un boton comun que hace esto al pulsarlo (una accion que no es un formulario); si no, manda el formulario. */
   onClick?: () => void;
 }) {
@@ -31,7 +34,7 @@ export function SubmitButton({
     <button
       type={onClick === undefined ? 'submit' : 'button'}
       {...(onClick === undefined ? {} : { onClick })}
-      disabled={pending}
+      disabled={pending || disabled}
       aria-busy={pending}
       className={`${BASE} ${VARIANTS[variant]}`}
     >

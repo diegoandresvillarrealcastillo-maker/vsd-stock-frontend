@@ -25,6 +25,9 @@ const routes = (
       <Route index element={<p>aqui va el mostrador</p>} />
       <Route path="turno" element={<p>aqui va el turno</p>} />
       <Route path="turno/cerrar" element={<p>aqui se cierra el turno</p>} />
+      <Route path="cobrar" element={<p>aqui se cobra</p>} />
+      <Route path="comprobante" element={<p>aqui el comprobante</p>} />
+      <Route path="equipo" element={<p>aqui el equipo</p>} />
     </Route>
   </Routes>
 );
@@ -98,9 +101,44 @@ describe('CounterShell', () => {
       expect(shift.getAttribute('href')).toBe('/mostrador/turno');
       expect(shift.getAttribute('aria-current')).toBe('page');
       expect(counter.getAttribute('aria-current')).toBeNull();
+      // Tambien se ve: la pagina actual tiene el color del tema, y las demas no.
+      expect(shift.className).toContain('bg-primary');
+      expect(counter.className).not.toContain('bg-primary');
     });
 
-    it('marks the counter only on its own screen, not on the ones below it', async () => {
+    it('offers what this device knows as well', async () => {
+      await online('/mostrador/equipo');
+
+      const menu = await screen.findByRole('navigation', { name: 'Mostrador' });
+      const device = within(menu).getByRole('link', { name: 'Equipo' });
+
+      expect(device.getAttribute('href')).toBe('/mostrador/equipo');
+      expect(device.getAttribute('aria-current')).toBe('page');
+      expect(
+        within(menu).getByRole('link', { name: 'Mostrador' }).getAttribute('aria-current'),
+      ).toBeNull();
+    });
+
+    it.each(['/mostrador/cobrar', '/mostrador/comprobante'])(
+      'keeps the counter marked while charging and on the receipt: %s is still the sale',
+      async (path) => {
+        await online(path);
+
+        const menu = await screen.findByRole('navigation', { name: 'Mostrador' });
+
+        expect(
+          within(menu).getByRole('link', { name: 'Mostrador' }).getAttribute('aria-current'),
+        ).toBe('page');
+        expect(
+          within(menu).getByRole('link', { name: 'Turno' }).getAttribute('aria-current'),
+        ).toBeNull();
+        expect(
+          within(menu).getByRole('link', { name: 'Equipo' }).getAttribute('aria-current'),
+        ).toBeNull();
+      },
+    );
+
+    it('marks the counter only on its own screens, not on the ones that are the shift or the device', async () => {
       await online('/mostrador');
 
       const menu = await screen.findByRole('navigation', { name: 'Mostrador' });
@@ -163,7 +201,10 @@ describe('CounterShell', () => {
       await waitFor(() => {
         expect(local.workspace.current()).toBeNull();
       });
-      expect(screen.getByTestId('ruta').textContent).toBe('/ingresar');
+      // Soltar a la persona y navegar son dos pasos: se espera al segundo en vez de suponer que ya paso.
+      await waitFor(() => {
+        expect(screen.getByTestId('ruta').textContent).toBe('/ingresar');
+      });
       expect(local.stores.forgotten).toEqual([]);
       expect(local.stores.dataOf('ana').pending).toBe(2);
       expect(local.pointer.get()).toBe('ana');

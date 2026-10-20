@@ -3,14 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { NAVIGATION } from '../../domain/model/navigation';
 import { can, ROLES, type Role } from '../../domain/model/permissions';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
+import { item } from '../../../test/support/fake-selling';
 import { createTestLocal, rememberPerson, type TestLocal } from '../../../test/support/local';
 import { renderScreen } from '../../../test/support/screens';
+import { FakeSelling } from '../../../test/support/selling';
+import { EMPTY_CART, addProduct } from '../../domain/model/sale-cart';
+import { buildReceipt } from '../../domain/model/sale-receipt';
 import { AppRoutes } from './AppRoutes';
 
 function renderAt(
   path: string,
   signedInAs?: { role: Role; membership?: boolean },
   local: TestLocal = createTestLocal(),
+  selling: FakeSelling = new FakeSelling(),
 ) {
   const auth = createTestAuth(signedInAs ? { stored: testSession('ana') } : {});
   if (signedInAs) {
@@ -20,7 +25,7 @@ function renderAt(
         : testMe('ana', signedInAs.role),
     );
   }
-  renderScreen(<AppRoutes />, { path, auth, local });
+  renderScreen(<AppRoutes />, { path, auth, local, selling });
   return auth;
 }
 
@@ -199,7 +204,7 @@ describe('AppRoutes', () => {
   });
 
   describe('the counter', () => {
-    const counter = () => screen.findByRole('heading', { level: 1, name: 'Mostrador' });
+    const counter = () => screen.findByRole('heading', { level: 1, name: 'Este equipo' });
 
     it('sends someone who has not entered, and has nothing saved here, to sign in', async () => {
       renderAt('/mostrador');
@@ -208,7 +213,7 @@ describe('AppRoutes', () => {
     });
 
     it('opens for a person who came in with a connection, outside of the menu of the administration', async () => {
-      renderAt('/mostrador', { role: 'cashier' });
+      renderAt('/mostrador/equipo', { role: 'cashier' });
 
       expect(await counter()).toBeDefined();
       expect(screen.queryByRole('navigation', { name: 'Principal' })).toBeNull();
@@ -228,7 +233,7 @@ describe('AppRoutes', () => {
       });
       await local.workspace.resume();
 
-      renderAt('/mostrador', undefined, local);
+      renderAt('/mostrador/equipo', undefined, local);
 
       expect(await counter()).toBeDefined();
       expect(screen.getByText(/Estás trabajando sin conexión/)).toBeDefined();
@@ -238,6 +243,58 @@ describe('AppRoutes', () => {
       renderAt('/mostrador', { role: 'owner', membership: false });
 
       expect(await heading('Crea tu negocio')).toBeDefined();
+    });
+
+    it('sells at the counter itself: it is the first thing the person sees', async () => {
+      renderAt('/mostrador', { role: 'cashier' });
+
+      expect(await heading('Vender')).toBeDefined();
+      expect(screen.getByRole('navigation', { name: 'Mostrador' })).toBeDefined();
+    });
+
+    it('charges one level down, still inside the counter', async () => {
+      const selling = new FakeSelling();
+      selling.add(item(1, { name: 'Arroz 500 g', unitPrice: 3_200 }));
+
+      renderAt('/mostrador/cobrar', { role: 'cashier' }, undefined, selling);
+
+      expect(await screen.findByText('Total a cobrar')).toBeDefined();
+      expect(screen.getByRole('navigation', { name: 'Mostrador' })).toBeDefined();
+    });
+
+    it('goes back to the sale from the charge when there is nothing to charge', async () => {
+      renderAt('/mostrador/cobrar', { role: 'cashier' });
+
+      expect(await heading('Vender')).toBeDefined();
+    });
+
+    it('shows the receipt one level down, still inside the counter', async () => {
+      const selling = new FakeSelling();
+      selling.set(
+        EMPTY_CART,
+        buildReceipt({
+          operationId: 'op-1',
+          shiftId: 'shift-1',
+          folio: 'AA-000001',
+          at: new Date('2026-10-19T14:00:00.000Z'),
+          clockOffsetMs: null,
+          cashier: 'Ana Gómez',
+          shiftOpenedAt: '2026-10-19T13:02:00.000Z',
+          cart: addProduct(EMPTY_CART, item(1, { name: 'Arroz 500 g', unitPrice: 3_200 })),
+          payment: { method: 'cash', received: 5_000 },
+        }),
+      );
+
+      renderAt('/mostrador/comprobante', { role: 'cashier' }, undefined, selling);
+
+      expect(await heading('Venta AA-000001')).toBeDefined();
+      expect(screen.getByRole('navigation', { name: 'Mostrador' })).toBeDefined();
+    });
+
+    it('goes back to the sale from the receipt when there is none', async () => {
+      renderAt('/mostrador/comprobante', { role: 'cashier' });
+
+      expect(await heading('Vender')).toBeDefined();
     });
 
     it('has the shift inside the frame of the counter, with its own menu', async () => {

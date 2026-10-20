@@ -98,6 +98,17 @@ describe('the shift of a person in this device', () => {
     store.close();
   });
 
+  it('keeps the order in which they were saved, even when the clock of the device went back in between', async () => {
+    const store = await stores.open(ANA);
+    await store.saveShift(OPENED, opening);
+
+    await store.saveShift(CLOSED, { ...closing, createdAt: new Date('2026-10-19T12:00:00.000Z') });
+
+    const waiting = await store.pendingOperations(10);
+    expect(waiting.map((operation) => operation.kind)).toEqual(['shift-open', 'shift-close']);
+    store.close();
+  });
+
   it('is the one that was opened last: a new shift takes the place of the one that was closed', async () => {
     const store = await stores.open(ANA);
     await store.saveShift(CLOSED, closing);
