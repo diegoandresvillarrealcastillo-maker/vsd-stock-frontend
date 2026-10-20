@@ -15,12 +15,17 @@ import { stripTypeScriptTypes } from 'node:module';
 import { join, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-/** Lo que el sistema operativo pide al instalar la aplicacion y la pagina nunca necesita sin red: no se guarda. */
+/**
+ * Lo que el sistema operativo pide al instalar la aplicacion y la pagina nunca necesita sin red: no se guarda. Tampoco las reglas
+ * del host (`_headers`, `_redirects`): Cloudflare Pages las lee y no las sirve, y una sola peticion que falle detiene la instalacion.
+ */
 const NOT_NEEDED_OFFLINE = new Set([
   'icon-512.png',
   'icon-maskable-512.png',
   'apple-touch-icon.png',
   'sw.js',
+  '_headers',
+  '_redirects',
 ]);
 
 /** Todos los archivos de una carpeta, con rutas relativas y barras normales, en orden. */
