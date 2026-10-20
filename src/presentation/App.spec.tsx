@@ -9,6 +9,7 @@ import { createFakeCatalog } from '../../test/support/catalog';
 import { createFakeInventory } from '../../test/support/inventory';
 import { createFakePeople } from '../../test/support/people';
 import { createFakePurchasing } from '../../test/support/purchasing';
+import { createTestPwa } from '../../test/support/pwa';
 import { FakeReadCopy } from '../../test/support/read-copy';
 import { FakeShifts } from '../../test/support/shifts';
 import { FakeSyncEngine } from '../../test/support/sync-engine';
@@ -46,6 +47,7 @@ function renderApp({
         catalog={createFakeCatalog()}
         inventory={createFakeInventory()}
         purchasing={createFakePurchasing()}
+        pwa={createTestPwa().pwa}
       />
     </MemoryRouter>,
   );

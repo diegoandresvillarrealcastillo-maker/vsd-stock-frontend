@@ -2,7 +2,9 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest';
 import { createTestConnection } from '../../../test/support/connection';
 import { setPrefersReducedMotion } from '../../../test/support/match-media';
+import { createTestPwa } from '../../../test/support/pwa';
 import { renderWithProviders } from '../../../test/support/render';
+import { PwaProvider } from '../pwa/PwaProvider';
 import { ConnectionPanel } from './ConnectionPanel';
 
 const SERVER_TIME = new Date('2026-10-16T15:30:00.000Z');
@@ -254,6 +256,54 @@ describe('ConnectionPanel', () => {
         expect(icons().length).toBeGreaterThan(0);
       });
       expect(icons().every((icon) => icon.getAttribute('aria-hidden') === 'true')).toBe(true);
+    });
+  });
+
+  describe('what is stored on this device', () => {
+    const withStorage = async (change: (test: ReturnType<typeof createTestPwa>) => void) => {
+      const test = createTestPwa();
+      change(test);
+      renderWithProviders(
+        <PwaProvider updates={test.updates} storage={test.protection}>
+          <ConnectionPanel />
+        </PwaProvider>,
+      );
+      await act(() => Promise.resolve());
+    };
+
+    it('says nothing until the browser has answered', () => {
+      setup();
+
+      expect(screen.queryByText(/protegido/i)).toBeNull();
+      expect(screen.queryByText(/podría borrar/i)).toBeNull();
+    });
+
+    it('says what is stored is protected when the browser promised to keep it', async () => {
+      await withStorage(() => undefined);
+
+      expect(screen.getByText('Lo guardado en este dispositivo está protegido.')).toBeDefined();
+    });
+
+    it('warns that the browser could delete it, and asks to send the sales soon, when it did not promise', async () => {
+      await withStorage((test) => {
+        test.storage.grants = false;
+      });
+
+      expect(
+        screen.getByText(
+          'El navegador podría borrar lo guardado si se queda sin espacio. Envía tus ventas pronto.',
+        ),
+      ).toBeDefined();
+    });
+
+    it('says the browser can not protect it when it has no such feature', async () => {
+      await withStorage((test) => {
+        test.storage.supported = false;
+      });
+
+      expect(
+        screen.getByText('Este navegador no puede proteger lo guardado en el dispositivo.'),
+      ).toBeDefined();
     });
   });
 });

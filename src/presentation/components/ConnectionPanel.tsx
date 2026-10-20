@@ -1,7 +1,9 @@
 import { AnimatePresence, m } from 'framer-motion';
 import type { ConnectionState, ConnectionStatus } from '../../domain/model/connection';
+import type { StorageProtection } from '../../domain/model/storage-protection';
 import { useConnection } from '../connection/ConnectionProvider';
 import { useIconSwap, usePulse, useReveal } from '../motion/use-motion';
+import { useStorageProtection } from '../pwa/PwaProvider';
 import { Button } from './Button';
 import { CheckIcon, CloudOffIcon } from './icons';
 
@@ -21,6 +23,16 @@ const LABEL: Record<ConnectionStatus, string> = {
   checking: 'Comprobando conexión…',
   online: 'En línea',
   offline: 'Sin conexión',
+};
+
+// Lo que se dice de lo guardado en el dispositivo (ADR 0018): si el navegador puede borrarlo, las ventas sin enviar corren
+// riesgo y la persona merece saberlo. Mientras no se sabe, no se dice nada.
+const STORAGE_NOTE: Record<StorageProtection, string> = {
+  unknown: '',
+  protected: 'Lo guardado en este dispositivo está protegido.',
+  'not-protected':
+    'El navegador podría borrar lo guardado si se queda sin espacio. Envía tus ventas pronto.',
+  unsupported: 'Este navegador no puede proteger lo guardado en el dispositivo.',
 };
 
 const timeFormat = new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit' });
@@ -92,6 +104,7 @@ export function ConnectionPanel() {
   const swap = useIconSwap();
   const reveal = useReveal();
   const { status } = state;
+  const storage = useStorageProtection();
 
   return (
     <div role="status" className={CARD}>
@@ -122,6 +135,8 @@ export function ConnectionPanel() {
           </p>
         </div>
       </div>
+      {/* Reserva su linea: el panel no salta cuando el navegador contesta. */}
+      <p className="min-h-5 text-sm text-fg-muted">{STORAGE_NOTE[storage]}</p>
       {status === 'offline' && (
         <m.div variants={reveal} initial="hidden" animate="visible">
           <Button onClick={retry}>Reintentar</Button>
