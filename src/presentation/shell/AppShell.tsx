@@ -3,6 +3,9 @@ import { itemOfPath, navigationFor } from '../../domain/model/navigation';
 import { useAccount } from '../auth/AuthProvider';
 import { NeedsConnection } from '../components/NeedsConnection';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { SessionControls } from '../local/SessionControls';
+import { StorageNotice } from '../local/StorageNotice';
+import { SyncStatus } from '../sync/SyncStatus';
 
 const LINK =
   'inline-flex min-h-touch items-center whitespace-nowrap rounded-md px-4 text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
@@ -13,7 +16,7 @@ const LINK =
  * dice que lo necesita cuando no hay conexion, en vez de mostrarse vacia.
  */
 export function AppShell() {
-  const { state, signOut } = useAccount();
+  const { state } = useAccount();
   const { pathname } = useLocation();
 
   if (state.status !== 'ready' || state.me.membership === null) {
@@ -36,15 +39,9 @@ export function AppShell() {
             <p className="truncate text-lg font-semibold">{businessName}</p>
             <p className="truncate text-sm opacity-90">{fullName}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ThemeToggle />
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="inline-flex min-h-touch min-w-touch items-center justify-center rounded-full border border-border bg-surface-raised px-4 text-base font-medium text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            >
-              Cerrar sesión
-            </button>
+            <SessionControls />
           </div>
         </div>
       </header>
@@ -68,6 +65,12 @@ export function AppShell() {
       </nav>
 
       <main id="contenido" tabIndex={-1} className="mx-auto max-w-5xl px-gutter py-6">
+        <div className="mb-4 empty:hidden">
+          <StorageNotice />
+        </div>
+        <div className="mb-4">
+          <SyncStatus />
+        </div>
         {needsConnection ? (
           <NeedsConnection>
             <Outlet />

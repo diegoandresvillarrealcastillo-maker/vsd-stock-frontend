@@ -4,6 +4,7 @@ import type { Action } from '../../domain/model/permissions';
 import { AdjustStockPage } from '../pages/AdjustStockPage';
 import { CatalogPage } from '../pages/CatalogPage';
 import { CategoriesPage } from '../pages/CategoriesPage';
+import { CounterPage } from '../pages/CounterPage';
 import { EditProductPage } from '../pages/EditProductPage';
 import { HomePage } from '../pages/HomePage';
 import { InvitePage } from '../pages/InvitePage';
@@ -21,7 +22,12 @@ import { StockHistoryPage } from '../pages/StockHistoryPage';
 import { StockPage } from '../pages/StockPage';
 import { SuppliersPage } from '../pages/SuppliersPage';
 import { AppShell } from '../shell/AppShell';
-import { RequireMembership, RequireNoMembership, SignedOutOnly } from './AccountGate';
+import {
+  RequireMembership,
+  RequireNoMembership,
+  RequireWorkspace,
+  SignedOutOnly,
+} from './AccountGate';
 import { RequireAction } from './RequireAction';
 
 /** Una pantalla con su guarda: la misma tabla de permisos que aplica el servidor (ADR 0017), como cortesia. */
@@ -67,6 +73,14 @@ export function AppRoutes() {
           <RequireNoMembership>
             <RedeemPage />
           </RequireNoMembership>
+        }
+      />
+      <Route
+        path="/mostrador"
+        element={
+          <RequireWorkspace>
+            <CounterPage />
+          </RequireWorkspace>
         }
       />
       <Route

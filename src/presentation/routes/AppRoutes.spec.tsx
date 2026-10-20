@@ -3,10 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { NAVIGATION } from '../../domain/model/navigation';
 import { can, ROLES, type Role } from '../../domain/model/permissions';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
+import { createTestLocal, rememberPerson, type TestLocal } from '../../../test/support/local';
 import { renderScreen } from '../../../test/support/screens';
 import { AppRoutes } from './AppRoutes';
 
-function renderAt(path: string, signedInAs?: { role: Role; membership?: boolean }) {
+function renderAt(
+  path: string,
+  signedInAs?: { role: Role; membership?: boolean },
+  local: TestLocal = createTestLocal(),
+) {
   const auth = createTestAuth(signedInAs ? { stored: testSession('ana') } : {});
   if (signedInAs) {
     auth.answer(
@@ -15,7 +20,7 @@ function renderAt(path: string, signedInAs?: { role: Role; membership?: boolean 
         : testMe('ana', signedInAs.role),
     );
   }
-  renderScreen(<AppRoutes />, { path, auth });
+  renderScreen(<AppRoutes />, { path, auth, local });
   return auth;
 }
 
@@ -190,6 +195,57 @@ describe('AppRoutes', () => {
 
       expect(screen.getByLabelText('Correo')).toBeDefined();
       expect(screen.getByLabelText('Contraseña')).toBeDefined();
+    });
+  });
+
+  describe('the counter', () => {
+    const counter = () => screen.findByRole('heading', { level: 1, name: 'Mostrador' });
+
+    it('sends someone who has not entered, and has nothing saved here, to sign in', async () => {
+      renderAt('/mostrador');
+
+      expect(await heading('Ingresar')).toBeDefined();
+    });
+
+    it('opens for a person who came in with a connection, outside of the menu of the administration', async () => {
+      renderAt('/mostrador', { role: 'cashier' });
+
+      expect(await counter()).toBeDefined();
+      expect(screen.queryByRole('navigation', { name: 'Principal' })).toBeNull();
+    });
+
+    it('opens, without a session, for the person who resumed it without a connection', async () => {
+      const local = createTestLocal();
+      rememberPerson(local, {
+        authUserId: 'ana',
+        email: 'ana@example.com',
+        userId: 'u-ana',
+        businessId: 'b-1',
+        businessName: 'Tienda La Esquina',
+        role: 'cashier',
+        fullName: 'Ana Gómez',
+        verifiedAt: '2026-10-17T10:00:00.000Z',
+      });
+      await local.workspace.resume();
+
+      renderAt('/mostrador', undefined, local);
+
+      expect(await counter()).toBeDefined();
+      expect(screen.getByText(/Estás trabajando sin conexión/)).toBeDefined();
+    });
+
+    it('sends a person who has no business yet to create it: there is no counter for them', async () => {
+      renderAt('/mostrador', { role: 'owner', membership: false });
+
+      expect(await heading('Crea tu negocio')).toBeDefined();
+    });
+
+    it('is reached from the home page', async () => {
+      renderAt('/', { role: 'cashier' });
+
+      const link = await screen.findByRole('link', { name: 'Ir al mostrador' });
+
+      expect(link.getAttribute('href')).toBe('/mostrador');
     });
   });
 
