@@ -8,8 +8,16 @@ import {
   testSession,
   type TestAuth,
 } from '../../../test/support/auth';
+import { deferred } from '../../../test/support/deferred';
+import { createTestLocal, type TestLocal } from '../../../test/support/local';
 import { AuthProvider } from '../auth/AuthProvider';
-import { RequireMembership, RequireNoMembership, SignedOutOnly } from './AccountGate';
+import { LocalWorkspaceProvider } from '../local/LocalWorkspaceProvider';
+import {
+  RequireMembership,
+  RequireNoMembership,
+  RequireWorkspace,
+  SignedOutOnly,
+} from './AccountGate';
 
 function Where() {
   return <p data-testid="where">{useLocation().pathname}</p>;
@@ -196,5 +204,101 @@ describe('AccountGate', () => {
 
     await waitFor(() => expect(where()).toBe('/ingresar'));
     expect(auth.sessions.current()).toBeNull();
+  });
+
+  describe('the gate of the counter', () => {
+    function renderCounterGate(auth: TestAuth, local: TestLocal) {
+      return render(
+        <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
+          <LocalWorkspaceProvider workspace={local.workspace}>
+            <MemoryRouter initialEntries={['/mostrador']}>
+              <Where />
+              <Routes>
+                <Route
+                  path="/mostrador"
+                  element={
+                    <RequireWorkspace>
+                      <p>el mostrador</p>
+                    </RequireWorkspace>
+                  }
+                />
+                <Route path="/ingresar" element={<p>pantalla de entrar</p>} />
+                <Route path="/empezar" element={<p>pantalla de empezar</p>} />
+                <Route path="/" element={<p>la administracion</p>} />
+              </Routes>
+            </MemoryRouter>
+          </LocalWorkspaceProvider>
+        </AuthProvider>,
+      );
+    }
+
+    const signedInAs = (answer: Parameters<TestAuth['answer']>[0]) => {
+      const auth = createTestAuth({ stored: testSession('ana') });
+      auth.answer(answer);
+      return auth;
+    };
+
+    it('lets in whoever has their base open', async () => {
+      renderCounterGate(signedInAs(testMe('ana', 'cashier')), createTestLocal());
+
+      expect(await screen.findByText('el mostrador')).toBeDefined();
+      expect(where()).toBe('/mostrador');
+    });
+
+    it('waits while the base opens, instead of sending the person to the administration', async () => {
+      const auth = signedInAs(testMe('ana', 'cashier'));
+      const local = createTestLocal();
+      const release = deferred<undefined>();
+      local.stores.holdOpen = release.promise.then(() => undefined);
+      renderCounterGate(auth, local);
+      await waitFor(() => {
+        expect(auth.loads).toEqual(['ana']);
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+
+      expect(where()).toBe('/mostrador');
+      expect(screen.getByText('Cargando tu cuenta…')).toBeDefined();
+
+      local.stores.holdOpen = null;
+      release.resolve(undefined);
+      expect(await screen.findByText('el mostrador')).toBeDefined();
+    });
+
+    it('sends to sign in whoever nobody is working as', async () => {
+      renderCounterGate(createTestAuth(), createTestLocal());
+
+      await waitFor(() => {
+        expect(where()).toBe('/ingresar');
+      });
+      expect(screen.getByText('pantalla de entrar')).toBeDefined();
+    });
+
+    it('says so when the account can not be loaded, and does not send anyone anywhere', async () => {
+      renderCounterGate(signedInAs(testApiError()), createTestLocal());
+
+      expect(await screen.findByText('No pudimos cargar tu cuenta')).toBeDefined();
+      expect(where()).toBe('/mostrador');
+    });
+
+    it('sends to the administration, which says why, whoever works in a business but has no base', async () => {
+      const local = createTestLocal();
+      local.stores.failOpen = new Error('sin IndexedDB');
+      renderCounterGate(signedInAs(testMe('ana', 'cashier')), local);
+
+      expect(await screen.findByText('la administracion')).toBeDefined();
+      expect(where()).toBe('/');
+    });
+
+    it('sends to create a business whoever has none: there is no counter for them', async () => {
+      renderCounterGate(
+        signedInAs({ identity: { id: 'ana', email: 'ana@example.com' }, membership: null }),
+        createTestLocal(),
+      );
+
+      expect(await screen.findByText('pantalla de empezar')).toBeDefined();
+      expect(where()).toBe('/empezar');
+    });
   });
 });

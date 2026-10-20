@@ -11,7 +11,9 @@ import { resolveApiBaseUrl } from './api-base-url';
 import { resolveAuthConfig } from './auth-config';
 import { createAuth } from './create-auth';
 import { createConnectionMonitor } from './create-connection-monitor';
+import { createLocalWorkspace } from './create-local-workspace';
 import { createPwa } from './create-pwa';
+import { createSyncEngine } from './create-sync-engine';
 import { createThemePreference } from './create-theme-preference';
 
 // Punto de arranque: cablea los adaptadores del navegador, arma los casos de
@@ -45,6 +47,14 @@ const auth = createAuth({
   now: () => new Date(),
 });
 
+// El espacio de trabajo local: una base cifrada por persona, el registro del dispositivo y la serie de folios (ADR 0018).
+const local = createLocalWorkspace({
+  api: auth.api,
+  now: () => new Date(),
+  getStorage: () => window.localStorage,
+  fillRandom: (bytes) => window.crypto.getRandomValues(bytes),
+});
+
 // La aplicacion instalable: solo la version desplegada instala el service worker (`import.meta.env.PROD`).
 const pwa = createPwa({
   production: import.meta.env.PROD,
@@ -53,6 +63,15 @@ const pwa = createPwa({
   reload: () => {
     window.location.reload();
   },
+});
+
+// El motor de sincronizacion: envia la cola de quien trabaja cuando hay conexion, de a un lote y una pestaña a la vez (ADR 0009 y 0028).
+const sync = createSyncEngine({
+  api: auth.api,
+  workspace: local,
+  connection,
+  locks: 'locks' in window.navigator ? window.navigator.locks : undefined,
+  now: () => new Date(),
 });
 
 const people = new BusinessPeopleUseCase(auth.api);
@@ -67,6 +86,8 @@ createRoot(container).render(
         theme={theme}
         connection={connection}
         auth={auth}
+        local={local}
+        sync={sync}
         people={people}
         catalog={catalog}
         inventory={inventory}

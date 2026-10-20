@@ -148,6 +148,33 @@ Cómo entra una persona y qué ve según su rol (ADR 0017, 0022 y 0024). Todo es
 - **Sin conexión:** una pantalla que lista o cambia algo necesita al servidor y lo dice («Esta pantalla necesita
   conexión») en vez de mostrarse vacía. La base local del Ciclo 3 es lo que lo cambiará.
 
+### Almacenamiento local y mostrador sin conexión
+
+Lo que este equipo guarda de cada persona (ADR 0018, 0022 y 0016); el detalle y las comprobaciones en un navegador real están en
+[`docs/almacenamiento-local.md`](docs/almacenamiento-local.md).
+
+- **Una base de IndexedDB por persona** (`vsd-stock-<su identificador>`), con el contenido de cada registro cifrado con
+  **AES-GCM** y una clave **no extraíble**. Nada secreto se guarda: la sesión sigue viviendo solo en memoria.
+- **El mostrador se reanuda sin conexión hasta 72 horas** después de que el servidor confirmó a la persona: la pantalla de entrar
+  ofrece «Continuar sin conexión» y lleva a `/mostrador`. Pasado el plazo se bloquea y lo guardado se conserva.
+- **«Cambiar de persona»** conserva lo guardado; **«Cerrar sesión»** lo olvida en un paso, y si hay operaciones sin enviar dice
+  cuántas son y pide confirmación.
+- **El folio** (`AA-000142`) lo numera una serie que solo crece, reservada en una transacción propia de IndexedDB: dos pestañas
+  nunca reciben el mismo número. El código del dispositivo lo reparte el servidor (`POST /v1/devices`) al registrarlo.
+
+### Envío sin conexión: la cola y el motor de sincronización
+
+Lo que el dispositivo hizo sin conexión (abrir un turno, cerrarlo, vender) espera en una cola cifrada y se envía a `POST /v1/sync`
+(ADR 0009 y 0028); el detalle está en [`docs/sincronizacion.md`](docs/sincronizacion.md).
+
+- **Se envía cuando el servidor confirma que hay conexión**, de a un lote (20 operaciones o 64 KB) y **una pestaña a la vez**
+  (Web Locks). Cada resultado se clasifica como cualquier respuesta: lo que el servidor tiene **sale de la cola**; un conflicto o un
+  rechazo permanente **se aparta y pide atención** sin frenar a las demás; lo transitorio **se reintenta con una espera** que se
+  duplica de 2 segundos a 5 minutos; y un `401` **detiene todo y conserva la cola**.
+- **El marco de la aplicación dice la verdad del envío** en todas las páginas: «Todo enviado», «Sin conexión» con cuántos registros
+  esperan y que están guardados solo en este equipo, «Enviando…», «No se pudo enviar» con «Reintentar ahora», «N requieren
+  atención» y «Tu sesión caducó» con «Entrar de nuevo». Nunca dice «en línea» mientras solo comprueba.
+
 ### Pantallas de acceso y personas
 
 | Ruta              | Pantalla             | Quién la ve                                                                |
@@ -397,6 +424,8 @@ naranja del logo (`#f97801`) solo como acento.**
 - Rendimiento y Lighthouse: [`docs/rendimiento.md`](docs/rendimiento.md).
 - La aplicación instalable (qué guarda el service worker y qué nunca, cómo se actualiza, el almacenamiento
   protegido y el presupuesto de peso): [`docs/aplicacion-instalable.md`](docs/aplicacion-instalable.md).
+- Lo que se guarda en el equipo, cómo se protege y cuándo se olvida: [`docs/almacenamiento-local.md`](docs/almacenamiento-local.md).
+- Cómo se envía la cola sin conexión y qué dice la pantalla mientras tanto: [`docs/sincronizacion.md`](docs/sincronizacion.md).
 - El recorrido de la aplicación completa con el que se cierra cada ciclo, paso a paso y con lo que debe pasar:
   [`docs/recorrido-del-ciclo-2.md`](docs/recorrido-del-ciclo-2.md).
 - Todos los ADR del proyecto, también los de este repositorio, viven en el backend:

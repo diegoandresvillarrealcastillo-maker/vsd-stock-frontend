@@ -1,5 +1,6 @@
 import { useMembership } from '../auth/AuthProvider';
 import { ConnectionPanel } from '../components/ConnectionPanel';
+import { LinkButton } from '../components/LinkButton';
 
 /**
  * El inicio de quien ya entro: a que negocio pertenece y si el servidor responde. El resumen del dia llega con las
@@ -17,6 +18,17 @@ export function HomePage() {
           </p>
         )}
       </div>
+      <section aria-labelledby="mostrador-titulo" className="flex flex-col gap-3">
+        <h2 id="mostrador-titulo" className="text-xl font-semibold text-fg">
+          Mostrador
+        </h2>
+        <p className="text-sm text-fg-muted">
+          Tu área de trabajo del día a día, también cuando se cae la conexión.
+        </p>
+        <div className="sm:max-w-xs">
+          <LinkButton to="/mostrador">Ir al mostrador</LinkButton>
+        </div>
+      </section>
       <section aria-labelledby="conexion-titulo" className="flex flex-col gap-3">
         <h2 id="conexion-titulo" className="text-xl font-semibold text-fg">
           Estado del servicio

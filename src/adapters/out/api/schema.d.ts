@@ -452,6 +452,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Los dispositivos del negocio
+         * @description Del más antiguo al más nuevo, incluidos los dados de baja. Es de la gerencia (`device:revoke`). Pagina por cursor (ADR 0019).
+         */
+        get: operations["DevicesController_list"];
+        put?: never;
+        /**
+         * Registrar un dispositivo
+         * @description Lo puede hacer cualquier persona del negocio (`device:enroll`), pero necesita conexión: el servidor reparte el código corto (`AA`, `AB`...) y nunca lo repite. Es idempotente por `id` (ADR 0019): la primera vez responde 201; repetirlo con el mismo nombre responde 200 con el mismo dispositivo y `Idempotent-Replayed: true`, sin gastar otro código (si fue dado de baja, `revokedAt` lo dice); con otro nombre, 409 `device-id-reused`.
+         */
+        post: operations["DevicesController_register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/devices/{deviceId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dar de baja un dispositivo
+         * @description Es de la gerencia (`device:revoke`) y necesita conexión. No borra nada: el dispositivo queda marcado y su código no se vuelve a dar. Repetirlo responde lo mismo, con la primera fecha. Lo que el dispositivo ya vendió sin red se acepta igual y queda marcado (ADR 0009).
+         */
+        post: operations["DevicesController_revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shifts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Los turnos
+         * @description Del más nuevo al más viejo. Un cajero ve solo los suyos; la gerencia ve todos (`sale:view-all`). No trae el arqueo: se pide con el turno. Pagina por cursor (ADR 0019).
+         */
+        get: operations["ShiftsController_list"];
+        put?: never;
+        /**
+         * Abrir un turno de caja
+         * @description Lo puede hacer cualquier persona del negocio (`shift:open`) y también un dispositivo sin conexión, que la manda después. Un turno abierto por dispositivo y por persona: abrir otro responde 409 `shift-already-open`. El `shiftId` lo crea el dispositivo. Es idempotente por `operationId` (ADR 0019): la primera vez responde 201; repetirla con los mismos datos responde 200 con el turno tal como está ahora y `Idempotent-Replayed: true`; con otros datos, 409 `operation-id-reused`. Un dispositivo que no existe en el negocio es un 400 del campo `/deviceId`.
+         */
+        post: operations["ShiftsController_open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shifts/{shiftId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cerrar un turno con su arqueo
+         * @description La persona del turno lo cierra (`shift:close`); la gerencia puede cerrar el de otra persona (`shift:close-other`, solo con conexión). Registra el efectivo contado, la hora efectiva y quién lo cerró, y responde con el arqueo. Es idempotente por `operationId`: repetirla responde 200 con `Idempotent-Replayed: true`. Cerrar un turno que ya estaba cerrado con otra operación es 409 `shift-closed`.
+         */
+        post: operations["ShiftsController_close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shifts/{shiftId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Un turno con su arqueo
+         * @description El arqueo: lo que debía haber en la caja (lo inicial, más lo cobrado en efectivo, más lo que entró, menos lo que salió) frente a lo contado, con las ventas tardías aparte. El turno de otra persona no existe para un cajero.
+         */
+        get: operations["ShiftsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cash-movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mover efectivo fuera de una venta
+         * @description Es de la gerencia (`cash-movement:create`) y necesita conexión. Entra o sale efectivo de un turno ABIERTO con su motivo (el del turno cerrado ya se contó: 409 `shift-closed`). Es idempotente por `operationId`: la primera vez responde 201; repetirla con los mismos datos responde 200 con el mismo movimiento y `Idempotent-Replayed: true`; con otros datos, 409 `operation-id-reused`. Un turno que no existe es un 400 del campo `/shiftId`.
+         */
+        post: operations["CashMovementsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las ventas
+         * @description De la más reciente a la más vieja, por la hora en que ocurrieron (no por la de llegada), con cursor. Un cajero ve las ventas de SUS turnos (`sale:view-own-shift`); la gerencia ve todas (`sale:view-all`). La bandeja «Requiere atención» (`attention=true`) es solo de la gerencia: un cajero que la pide recibe 403. Cada venta trae `attention`, que dice si está en la bandeja; la lista no trae líneas ni cobros, para eso está el detalle.
+         */
+        get: operations["SalesController_list"];
+        put?: never;
+        /**
+         * Registrar una venta
+         * @description Lo puede hacer cualquier persona del negocio (`sale:create`), también un dispositivo sin conexión que la manda después. Casi siempre la venta ya ocurrió en un mostrador (ADR 0009): el servidor la ACEPTA y, si algo no cuadra con lo que él sabe, la guarda marcada (`flags`, `needsAdjustment`, `folioConflict`, `timeFlags`) para que alguien la mire. Solo rechaza lo que ninguna realidad del mostrador explica: un cuerpo que no es una venta (400), un turno que no es de quien vende y un producto que el negocio no tiene (400 en `/shiftId` y `/lines/N/productId`). La venta, sus líneas, sus cobros y la baja de existencias son una sola transacción. Es idempotente por `operationId` (ADR 0019): la primera vez responde 201; repetirla con los mismos datos responde 200 con la venta tal como quedó y `Idempotent-Replayed: true`; con otros datos, 409 `operation-id-reused`.
+         */
+        post: operations["SalesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sales/{saleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Una venta
+         * @description Con sus líneas, sus cobros, el IVA desglosado, sus marcas y su revisión. La venta de un turno ajeno no existe para un cajero: recibe 404 `sale-not-found`, igual que una que nunca existió.
+         */
+        get: operations["SalesController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sales/{saleId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revisar una venta
+         * @description La gerencia (`sale:view-all`, con conexión) revisa una venta que pedía atención: la saca de la bandeja SIN cambiarla (sus marcas se conservan) y deja dicho quién y cuándo, con una nota opcional. Una venta se revisa una vez: la primera vez responde 201; revisarla otra vez responde 200 con la revisión que ya tenía y `Idempotent-Replayed: true`.
+         */
+        post: operations["SalesController_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sales/{saleId}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anular una venta
+         * @description La gerencia (`sale:void`, con conexión). **No borra ni edita la venta** (ADR 0009): agrega los movimientos que compensan. La existencia vuelve con un movimiento de motivo `void` por producto, y el efectivo que se cobró sale como un egreso del turno ABIERTO de quien anula (`shiftId`), no del de la venta, que puede estar cerrado y contado. Si la venta tuvo efectivo y no se nombra un turno abierto suyo, `409 shift-required`; una venta ya anulada es `409 sale-voided`. Es idempotente por `operationId` (ADR 0019): la primera vez responde 201 con la venta; repetirla con los mismos datos responde 200 con la venta tal como quedó y `Idempotent-Replayed: true`; con otros datos, 409 `operation-id-reused`.
+         */
+        post: operations["SalesController_voidSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enviar un lote de operaciones hechas sin conexión
+         * @description De 1 a 50 operaciones (`shift-open`, `shift-close` o `sale`) con el cuerpo EXACTO de su ruta individual. Se aplican una tras otra y cada una en su propia transacción, con las reglas de su ruta, así que una que falla no deshace ni detiene a las demás (ADR 0028). Responde 200 siempre que se procesó el lote, con un resultado por operación y en el mismo orden: `status` es el estado HTTP que habría contestado la ruta suelta, `replayed` dice si ya estaba aplicada, y viene `body` (lo que la ruta devuelve) o `problem` (el error de siempre). Lo que echa abajo la petición entera (sin sesión, sin negocio, un lote que no es una lista de 1 a 50) es el error de siempre.
+         */
+        post: operations["SyncController_apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sync/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Copia de lectura: el catálogo
+         * @description Del cambio más viejo al más nuevo (por `updatedAt` y luego `id`), con cursor, e **incluye los productos archivados** (`active: false`) para que el dispositivo los quite de su copia. Con `since`, solo lo que cambió después. Cada página dice su `asOf`. Lo leen los tres roles (un cajero necesita el catálogo para vender).
+         */
+        get: operations["SyncController_products"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sync/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Copia de lectura: la existencia
+         * @description La existencia de ahora de cada producto que alguna vez se movió, ordenada por producto, con cursor. Con `since`, solo los productos con un movimiento posterior. Un producto que nunca se movió no aparece: vale cero. Cada página dice su `asOf`: la cifra que muestra el dispositivo lleva esa hora.
+         */
+        get: operations["SyncController_stock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -891,6 +1163,544 @@ export interface components {
              */
             reason: string;
         };
+        RegisterDeviceRequestDto: {
+            /**
+             * Format: uuid
+             * @description El identificador que el propio dispositivo se inventó antes de hablar con el servidor. Es la llave de la idempotencia: registrar dos veces el mismo no gasta otro código.
+             */
+            id: string;
+            /**
+             * @description Para que el dueño reconozca el dispositivo en la lista.
+             * @example Caja del frente
+             */
+            name?: string | null;
+        };
+        DeviceDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description El código corto que encabeza los folios de este dispositivo (`AA-000142`). Lo da el servidor y no se reutiliza jamás.
+             * @example AA
+             */
+            code: string;
+            /** @example Caja del frente */
+            name: string | null;
+            /** Format: uuid */
+            enrolledByUserId: string | null;
+            /** Format: date-time */
+            enrolledAt: string;
+            /**
+             * Format: date-time
+             * @description Cuándo se dio de baja. `null` mientras siga activo.
+             */
+            revokedAt: string | null;
+        };
+        DevicePageDto: {
+            items: components["schemas"]["DeviceDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
+        };
+        OpenShiftRequestDto: {
+            /**
+             * Format: uuid
+             * @description La clave de idempotencia (ADR 0019): repetir la operación con el mismo `operationId` y los mismos datos no la duplica.
+             */
+            operationId: string;
+            /**
+             * Format: uuid
+             * @description El identificador del turno, que crea el dispositivo para poder vender sin haber hablado con el servidor.
+             */
+            shiftId: string;
+            /**
+             * Format: uuid
+             * @description Un dispositivo registrado del negocio.
+             */
+            deviceId: string;
+            /**
+             * @description Pesos enteros con los que arranca la caja.
+             * @example 50000
+             */
+            openingAmount: number;
+            /**
+             * @description La hora del reloj del dispositivo al hacer la operación, en ISO 8601 UTC con `Z`. El servidor la corrige con `clockOffsetMs`; una que no se puede leer no se rechaza: se usa la hora de llegada y se marca (ADR 0016).
+             * @example 2026-10-18T14:59:50.000Z
+             */
+            deviceTime: string;
+            /**
+             * @description Cuántos milisegundos adelanta el servidor al reloj del dispositivo en su última medición contra `GET /health`; `null` o ausente si nunca se midió. No forma parte de la huella de idempotencia: se mide de nuevo en cada intento.
+             * @example 4000
+             */
+            clockOffsetMs?: number | null;
+        };
+        LateSalesDto: {
+            /** @example 1 */
+            count: number;
+            /** @example 4000 */
+            cashAmount: number;
+        };
+        ShiftCashSummaryDto: {
+            openingAmount: number;
+            /** @description Efectivo cobrado en las ventas del turno que llegaron a tiempo. */
+            cashSales: number;
+            /** @description Efectivo que entró a la caja fuera de una venta. */
+            cashIn: number;
+            /** @description Efectivo que salió de la caja fuera de una venta (un pago, una devolución). */
+            cashOut: number;
+            /** @description Lo que debía haber: lo inicial, más lo cobrado, más lo que entró, menos lo que salió. */
+            expectedAmount: number;
+            countedAmount: number | null;
+            /** @description Contado menos esperado: negativo es que falta y positivo que sobra. `null` mientras el turno sigue abierto. */
+            difference: number | null;
+            /** @description Las ventas que ocurrieron DESPUÉS de cerrarse el turno y llegaron a él (por ejemplo, de un teléfono sin conexión): no entran en lo esperado y se muestran aparte. */
+            lateSales: components["schemas"]["LateSalesDto"];
+        };
+        ShiftDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            deviceId: string;
+            /**
+             * Format: uuid
+             * @description La persona del turno.
+             */
+            userId: string;
+            /**
+             * Format: date-time
+             * @description La hora efectiva de la apertura (ADR 0016).
+             */
+            openedAt: string;
+            /**
+             * Format: date-time
+             * @description `null` mientras el turno sigue abierto.
+             */
+            closedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Quien lo cerró: la persona del turno o alguien de la gerencia.
+             */
+            closedByUserId: string | null;
+            /** @example 50000 */
+            openingAmount: number;
+            /** @description Lo que la persona contó al cerrar; `null` mientras sigue abierto. */
+            countedAmount: number | null;
+            summary: components["schemas"]["ShiftCashSummaryDto"];
+        };
+        CloseShiftRequestDto: {
+            /**
+             * Format: uuid
+             * @description La clave de idempotencia (ADR 0019): repetir la operación con el mismo `operationId` y los mismos datos no la duplica.
+             */
+            operationId: string;
+            /**
+             * @description Pesos enteros que la persona contó en la caja.
+             * @example 187500
+             */
+            countedAmount: number;
+            /**
+             * @description La hora del reloj del dispositivo al hacer la operación, en ISO 8601 UTC con `Z`. El servidor la corrige con `clockOffsetMs`; una que no se puede leer no se rechaza: se usa la hora de llegada y se marca (ADR 0016).
+             * @example 2026-10-18T14:59:50.000Z
+             */
+            deviceTime: string;
+            /**
+             * @description Cuántos milisegundos adelanta el servidor al reloj del dispositivo en su última medición contra `GET /health`; `null` o ausente si nunca se midió. No forma parte de la huella de idempotencia: se mide de nuevo en cada intento.
+             * @example 4000
+             */
+            clockOffsetMs?: number | null;
+        };
+        ShiftSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            deviceId: string;
+            /**
+             * Format: uuid
+             * @description La persona del turno.
+             */
+            userId: string;
+            /**
+             * Format: date-time
+             * @description La hora efectiva de la apertura (ADR 0016).
+             */
+            openedAt: string;
+            /**
+             * Format: date-time
+             * @description `null` mientras el turno sigue abierto.
+             */
+            closedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Quien lo cerró: la persona del turno o alguien de la gerencia.
+             */
+            closedByUserId: string | null;
+            /** @example 50000 */
+            openingAmount: number;
+            /** @description Lo que la persona contó al cerrar; `null` mientras sigue abierto. */
+            countedAmount: number | null;
+        };
+        ShiftPageDto: {
+            items: components["schemas"]["ShiftSummaryDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
+        };
+        CashMovementRequestDto: {
+            /**
+             * Format: uuid
+             * @description La clave de idempotencia (ADR 0019): repetir la operación con el mismo `operationId` y los mismos datos no la duplica.
+             */
+            operationId: string;
+            /**
+             * Format: uuid
+             * @description Un turno ABIERTO del negocio.
+             */
+            shiftId: string;
+            /**
+             * @description `in` entra a la caja, `out` sale.
+             * @enum {string}
+             */
+            direction: "in" | "out";
+            /**
+             * @description Pesos enteros, de uno en adelante: el sentido lo dice `direction`.
+             * @example 20000
+             */
+            amount: number;
+            /**
+             * @description Obligatorio: un movimiento sin motivo es un hueco en la caja.
+             * @example Pago al proveedor de bebidas
+             */
+            reason: string;
+        };
+        CashMovementDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            operationId: string;
+            /** Format: uuid */
+            shiftId: string;
+            /** @enum {string} */
+            direction: "in" | "out";
+            amount: number;
+            reason: string | null;
+        };
+        SaleLineRequestDto: {
+            /** Format: uuid */
+            productId: string;
+            /**
+             * @description Milésimas de la unidad del producto: 1,5 kg = 1500. Un producto que se cuenta en unidades enteras no admite decimales.
+             * @example 1500
+             */
+            quantityMilli: number;
+            /**
+             * @description Pesos enteros por unidad, IVA incluido, TAL COMO LOS VIO EL CLIENTE. El servidor respeta este precio aunque el catálogo ya cambió, y marca la venta con `price-differs` si no es el de hoy.
+             * @example 4000
+             */
+            unitPrice: number;
+            /**
+             * @description Rebaja de la línea en pesos, con el IVA incluido. No puede pasar del valor de la línea.
+             * @example 0
+             */
+            discount: number;
+            /**
+             * @description Tarifa de IVA con que se vendió, en puntos básicos.
+             * @example 1900
+             * @enum {integer}
+             */
+            taxRateBp: 0 | 500 | 1900;
+        };
+        PaymentRequestDto: {
+            /** @enum {string} */
+            method: "cash" | "card" | "transfer";
+            /**
+             * @description Pesos enteros que quedaron en la caja o en la cuenta: SIN el vuelto. El efectivo de la caja es la suma de los cobros en efectivo.
+             * @example 10000
+             */
+            amount: number;
+            /**
+             * @description El comprobante de la tarjeta o de la transferencia.
+             * @example aprobación 77123
+             */
+            reference?: string | null;
+        };
+        SaleRequestDto: {
+            /**
+             * Format: uuid
+             * @description La clave de idempotencia (ADR 0019): repetir la venta con el mismo `operationId` y los mismos datos no la duplica.
+             */
+            operationId: string;
+            /**
+             * Format: uuid
+             * @description El turno de quien vende, ABIERTO o ya cerrado: una venta que llega a un turno cerrado se acepta y se marca `late-shift`.
+             */
+            shiftId: string;
+            /**
+             * @description El folio con que el dispositivo ya le dio el comprobante al cliente (ADR 0016). Si ya es de otra venta, la venta se guarda con otro folio y se marca como conflicto.
+             * @example AA-000142
+             */
+            folio: string;
+            /**
+             * @description El total que el dispositivo le cobró al cliente. El servidor calcula el suyo de las líneas y los compara: si difieren, guarda el del servidor y marca `total-differs`.
+             * @example 13000
+             */
+            total: number;
+            lines: components["schemas"]["SaleLineRequestDto"][];
+            /** @description Puede estar vacío solo en una venta de cero pesos. Si no suman el total, la venta se acepta y se marca `payment-mismatch`. */
+            payments: components["schemas"]["PaymentRequestDto"][];
+            /**
+             * @description La hora del reloj del dispositivo al vender, en ISO 8601 UTC con `Z`. El servidor la corrige con `clockOffsetMs`; una que no se puede leer no se rechaza: se usa la hora de llegada y se marca (ADR 0016).
+             * @example 2026-10-18T14:59:50.000Z
+             */
+            deviceTime: string;
+            /**
+             * @description Cuántos milisegundos adelanta el servidor al reloj del dispositivo en su última medición; `null` o ausente si nunca se midió. No forma parte de la huella de idempotencia.
+             * @example 4000
+             */
+            clockOffsetMs?: number | null;
+        };
+        SaleReviewDto: {
+            /**
+             * Format: date-time
+             * @description Cuándo se revisó.
+             */
+            reviewedAt: string;
+            /**
+             * Format: uuid
+             * @description Quién la revisó.
+             */
+            reviewedByUserId: string;
+            /** @description Lo que anotó quien la revisó. */
+            note: string | null;
+        };
+        SaleVoidDto: {
+            /**
+             * Format: date-time
+             * @description Cuándo se anuló.
+             */
+            voidedAt: string;
+            /**
+             * Format: uuid
+             * @description Quién la anuló.
+             */
+            voidedByUserId: string;
+            /**
+             * Format: uuid
+             * @description La operación de anular: bajo ella quedaron los movimientos que compensan.
+             */
+            operationId: string;
+            /** @description Por qué se anuló. */
+            reason: string;
+        };
+        SaleLineDto: {
+            /** Format: uuid */
+            productId: string;
+            quantityMilli: number;
+            unitPrice: number;
+            discount: number;
+            /** @enum {integer} */
+            taxRateBp: 0 | 500 | 1900;
+        };
+        PaymentDto: {
+            /** @enum {string} */
+            method: "cash" | "card" | "transfer";
+            amount: number;
+            reference: string | null;
+        };
+        RateSummaryDto: {
+            /** @enum {integer} */
+            rateBp: 0 | 500 | 1900;
+            /** @description Lo vendido a esta tarifa, con el IVA incluido. */
+            total: number;
+            /** @description La base gravable. */
+            base: number;
+            /** @description El IVA: lo que queda del total tras la base. */
+            tax: number;
+        };
+        SaleTotalsDto: {
+            total: number;
+            base: number;
+            tax: number;
+            /** @description Un renglón por tarifa, de menor a mayor. */
+            byRate: components["schemas"]["RateSummaryDto"][];
+        };
+        SaleDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            operationId: string;
+            /** Format: uuid */
+            shiftId: string;
+            /**
+             * Format: uuid
+             * @description El dispositivo del turno.
+             */
+            deviceId: string | null;
+            /**
+             * Format: uuid
+             * @description Quien la registró.
+             */
+            userId: string;
+            /**
+             * @description El folio con que se guardó: el que trajo el dispositivo, o ese mismo con `~` y ocho caracteres de la operación si estaba repetido.
+             * @example AA-000142
+             */
+            folio: string;
+            /**
+             * @description El folio que trajo el dispositivo, tal cual.
+             * @example AA-000142
+             */
+            folioReported: string;
+            /** @description El folio ya era de otra venta (ADR 0016). */
+            folioConflict: boolean;
+            /** @description El total que calculó el servidor. */
+            total: number;
+            /** @description Algún producto quedó con existencia menor que cero con esta venta: hay que ajustar el inventario (ADR 0013). */
+            needsAdjustment: boolean;
+            /** @description Lo que el servidor encontró raro al compararla con lo que sabe (ADR 0027). */
+            flags: ("price-differs" | "total-differs" | "payment-mismatch" | "late-shift" | "revoked-device" | "folio-device")[];
+            /** @description Lo raro de la hora de la operación (ADR 0016). */
+            timeFlags: ("clock-skew" | "clock-unverified" | "future" | "stale" | "unreadable")[];
+            /**
+             * Format: date-time
+             * @description La hora efectiva de la venta (ADR 0016).
+             */
+            occurredAt: string;
+            /**
+             * Format: date-time
+             * @description Cuándo se enteró el servidor.
+             */
+            receivedAt: string;
+            /** @description `null` mientras nadie la haya revisado (ADR 0027). */
+            review: components["schemas"]["SaleReviewDto"] | null;
+            /** @description `null` mientras no esté anulada (ADR 0027). Una venta anulada no se borra ni se edita. */
+            voided: components["schemas"]["SaleVoidDto"] | null;
+            /** @description Está en la bandeja «Requiere atención»: pide atención (existencia en negativo, folio repetido, una marca del servidor o una hora que no es de fiar) y nadie la ha revisado. */
+            attention: boolean;
+            /** @description En el orden en que el dispositivo las vendió. */
+            lines: components["schemas"]["SaleLineDto"][];
+            /** @description En el orden en que el dispositivo los cobró. */
+            payments: components["schemas"]["PaymentDto"][];
+            summary: components["schemas"]["SaleTotalsDto"];
+        };
+        SaleSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            operationId: string;
+            /** Format: uuid */
+            shiftId: string;
+            /**
+             * Format: uuid
+             * @description El dispositivo del turno.
+             */
+            deviceId: string | null;
+            /**
+             * Format: uuid
+             * @description Quien la registró.
+             */
+            userId: string;
+            /**
+             * @description El folio con que se guardó: el que trajo el dispositivo, o ese mismo con `~` y ocho caracteres de la operación si estaba repetido.
+             * @example AA-000142
+             */
+            folio: string;
+            /**
+             * @description El folio que trajo el dispositivo, tal cual.
+             * @example AA-000142
+             */
+            folioReported: string;
+            /** @description El folio ya era de otra venta (ADR 0016). */
+            folioConflict: boolean;
+            /** @description El total que calculó el servidor. */
+            total: number;
+            /** @description Algún producto quedó con existencia menor que cero con esta venta: hay que ajustar el inventario (ADR 0013). */
+            needsAdjustment: boolean;
+            /** @description Lo que el servidor encontró raro al compararla con lo que sabe (ADR 0027). */
+            flags: ("price-differs" | "total-differs" | "payment-mismatch" | "late-shift" | "revoked-device" | "folio-device")[];
+            /** @description Lo raro de la hora de la operación (ADR 0016). */
+            timeFlags: ("clock-skew" | "clock-unverified" | "future" | "stale" | "unreadable")[];
+            /**
+             * Format: date-time
+             * @description La hora efectiva de la venta (ADR 0016).
+             */
+            occurredAt: string;
+            /**
+             * Format: date-time
+             * @description Cuándo se enteró el servidor.
+             */
+            receivedAt: string;
+            /** @description `null` mientras nadie la haya revisado (ADR 0027). */
+            review: components["schemas"]["SaleReviewDto"] | null;
+            /** @description `null` mientras no esté anulada (ADR 0027). Una venta anulada no se borra ni se edita. */
+            voided: components["schemas"]["SaleVoidDto"] | null;
+            /** @description Está en la bandeja «Requiere atención»: pide atención (existencia en negativo, folio repetido, una marca del servidor o una hora que no es de fiar) y nadie la ha revisado. */
+            attention: boolean;
+        };
+        SalePageDto: {
+            items: components["schemas"]["SaleSummaryDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
+        };
+        SaleReviewRequestDto: {
+            /**
+             * @description Lo que se hizo con la venta, para que quede dicho. Una línea, sin saltos.
+             * @example Se ajustó el inventario de gaseosas
+             */
+            note?: string | null;
+        };
+        SaleReviewResponseDto: {
+            /**
+             * Format: date-time
+             * @description Cuándo se revisó.
+             */
+            reviewedAt: string;
+            /**
+             * Format: uuid
+             * @description Quién la revisó.
+             */
+            reviewedByUserId: string;
+            /** @description Lo que anotó quien la revisó. */
+            note: string | null;
+            /**
+             * Format: uuid
+             * @description La venta que se revisó.
+             */
+            saleId: string;
+        };
+        SaleVoidRequestDto: {
+            /**
+             * Format: uuid
+             * @description La clave de idempotencia, creada una sola vez (ADR 0019).
+             */
+            operationId: string;
+            /**
+             * Format: uuid
+             * @description Un turno ABIERTO de quien anula, de donde sale el efectivo que se devuelve. Hace falta si la venta tuvo efectivo (409 `shift-required` si no); sin efectivo se puede omitir.
+             */
+            shiftId?: string | null;
+            /**
+             * @description Por qué se anula, para que quede dicho. Una línea.
+             * @example Se equivocó de producto
+             */
+            reason: string;
+        };
+        SyncOperationDto: {
+            /**
+             * @description Lo que se hizo sin conexión: `shift-open` (`POST /v1/shifts`), `shift-close` (`POST /v1/shifts/{id}/close`) o `sale` (`POST /v1/sales`).
+             * @enum {string}
+             */
+            kind: "shift-open" | "shift-close" | "sale";
+            /**
+             * Format: uuid
+             * @description Solo al cerrar un turno (`shift-close`): el turno que se cierra, que en la ruta individual va en el camino.
+             */
+            shiftId?: string;
+            /** @description El cuerpo exacto de la ruta individual de esa clase, con su `operationId`. Se valida con las mismas reglas. */
+            body: {
+                [key: string]: unknown;
+            };
+        };
+        SyncRequestDto: {
+            /** @description Las operaciones, en el orden en que se hicieron. Se aplican una tras otra, cada una en su propia transacción: una que falla no deshace ni detiene a las demás. */
+            operations: components["schemas"]["SyncOperationDto"][];
+        };
         ProblemErrorDto: {
             /**
              * @description Puntero JSON (RFC 6901) al campo de la peticion que no sirve.
@@ -940,6 +1750,61 @@ export interface components {
             traceId: string;
             /** @description Los campos inválidos, cuando el error es de validación. */
             errors?: components["schemas"]["ProblemErrorDto"][];
+        };
+        SyncResultDto: {
+            /**
+             * Format: uuid
+             * @description El `operationId` de la operación, o `null` si su cuerpo ni siquiera lo traía.
+             */
+            operationId: string | null;
+            /**
+             * @description El estado HTTP que habría contestado la ruta individual: 201 si se aplicó, 200 si ya estaba aplicada (o al cerrar un turno), y el 4xx o 5xx que corresponda si no. El dispositivo decide con él como con una respuesta suelta (ADR 0009).
+             * @example 201
+             */
+            status: number;
+            /** @description `true` si el servidor ya la había aplicado antes: se perdió la respuesta, no la operación. Sustituye a la cabecera `Idempotent-Replayed`. */
+            replayed: boolean;
+            /** @description Lo que la ruta individual devuelve (el turno o la venta) cuando se aplicó; `null` si no. */
+            body: {
+                [key: string]: unknown;
+            } | null;
+            /** @description El error de siempre (`application/problem+json`) cuando no se aplicó; `null` si sí. */
+            problem: components["schemas"]["ProblemDetailsDto"] | null;
+        };
+        SyncResponseDto: {
+            /**
+             * Format: date-time
+             * @description La hora del servidor al contestar: con ella y las horas de salida y llegada, el dispositivo mide su reloj (ADR 0016).
+             */
+            serverTime: string;
+            /** @description Un resultado por operación, en el mismo orden en que llegaron. */
+            results: components["schemas"]["SyncResultDto"][];
+        };
+        ProductCopyPageDto: {
+            /**
+             * Format: date-time
+             * @description La hora del servidor al leer esta página. El dispositivo guarda la de la PRIMERA página de una descarga, le resta un minuto y la usa como `since` la próxima vez.
+             */
+            asOf: string;
+            items: components["schemas"]["ProductDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
+        };
+        StockLevelDto: {
+            /** Format: uuid */
+            productId: string;
+            /** @description La existencia de ahora, en milésimas de la unidad del producto. Puede ser negativa. */
+            quantityMilli: number;
+        };
+        StockCopyPageDto: {
+            /**
+             * Format: date-time
+             * @description La hora del servidor al leer esta página. El dispositivo guarda la de la PRIMERA página de una descarga, le resta un minuto y la usa como `since` la próxima vez.
+             */
+            asOf: string;
+            items: components["schemas"]["StockLevelDto"][];
+            /** @description Se pasa tal cual como `cursor` para pedir la página siguiente. `null` si no hay más. */
+            nextCursor: string | null;
         };
     };
     responses: never;
@@ -1851,6 +2716,598 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StockMovementDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    DevicesController_list: {
+        parameters: {
+            query?: {
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevicePageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    DevicesController_register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterDeviceRequestDto"];
+            };
+        };
+        responses: {
+            /** @description El dispositivo ya se había registrado con este `id`: es el mismo de antes. */
+            200: {
+                headers: {
+                    /** @description Siempre `true` en esta respuesta. */
+                    "Idempotent-Replayed"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    DevicesController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ShiftsController_list: {
+        parameters: {
+            query?: {
+                /** @description `true` deja solo los turnos abiertos y `false` solo los cerrados. */
+                open?: "true" | "false";
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftPageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ShiftsController_open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenShiftRequestDto"];
+            };
+        };
+        responses: {
+            /** @description El turno ya se había abierto con esta operación: es el mismo de antes. */
+            200: {
+                headers: {
+                    /** @description Siempre `true` en esta respuesta. */
+                    "Idempotent-Replayed"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ShiftsController_close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shiftId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseShiftRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    /** @description Siempre `true` en esta respuesta. */
+                    "Idempotent-Replayed"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ShiftsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shiftId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    CashMovementsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CashMovementRequestDto"];
+            };
+        };
+        responses: {
+            /** @description El movimiento ya se había registrado con esta operación: es el mismo de antes. */
+            200: {
+                headers: {
+                    /** @description Siempre `true` en esta respuesta. */
+                    "Idempotent-Replayed"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashMovementDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashMovementDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SalesController_list: {
+        parameters: {
+            query?: {
+                /** @description El folio exacto, tal como lo trajo el dispositivo: encuentra también una venta cuyo folio estaba repetido y se guardó con otro. */
+                folio?: string;
+                /** @description `true` es la bandeja «Requiere atención»: las ventas que piden atención y nadie ha revisado. `false`, todas las demás. Es de la gerencia (`sale:view-all`). */
+                attention?: "true" | "false";
+                /** @description Solo las ventas de este turno. */
+                shiftId?: string;
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalePageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SalesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaleRequestDto"];
+            };
+        };
+        responses: {
+            /** @description La venta ya se había registrado con esta operación: es la misma de antes. */
+            200: {
+                headers: {
+                    /** @description Siempre `true` en esta respuesta. */
+                    "Idempotent-Replayed"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SalesController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                saleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SalesController_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                saleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaleReviewRequestDto"];
+            };
+        };
+        responses: {
+            /** @description La venta ya estaba revisada: es la revisión de antes. */
+            200: {
+                headers: {
+                    /** @description Siempre `true` en esta respuesta. */
+                    "Idempotent-Replayed"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleReviewResponseDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleReviewResponseDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SalesController_voidSale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                saleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaleVoidRequestDto"];
+            };
+        };
+        responses: {
+            /** @description La venta ya se había anulado con esta operación: es la misma de antes. */
+            200: {
+                headers: {
+                    /** @description Siempre `true` en esta respuesta. */
+                    "Idempotent-Replayed"?: "true";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SyncController_apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncResponseDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SyncController_products: {
+        parameters: {
+            query?: {
+                /** @description Solo lo que cambió DESPUÉS de este instante (ISO 8601 UTC con `Z`). Sin él, todo. El dispositivo usa el `asOf` de su última descarga menos un minuto. */
+                since?: string;
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductCopyPageDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SyncController_stock: {
+        parameters: {
+            query?: {
+                /** @description Solo lo que cambió DESPUÉS de este instante (ISO 8601 UTC con `Z`). Sin él, todo. El dispositivo usa el `asOf` de su última descarga menos un minuto. */
+                since?: string;
+                /** @description El `nextCursor` de la página anterior, tal cual. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockCopyPageDto"];
                 };
             };
             /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
