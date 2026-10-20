@@ -9,6 +9,7 @@ import { createFakeCatalog } from '../../test/support/catalog';
 import { createFakeInventory } from '../../test/support/inventory';
 import { createFakePeople } from '../../test/support/people';
 import { createFakePurchasing } from '../../test/support/purchasing';
+import { createTestPwa } from '../../test/support/pwa';
 import { createTestThemePreference } from '../../test/support/theme';
 import { App } from './App';
 
@@ -34,6 +35,7 @@ function renderApp({
         catalog={createFakeCatalog()}
         inventory={createFakeInventory()}
         purchasing={createFakePurchasing()}
+        pwa={createTestPwa().pwa}
       />
     </MemoryRouter>,
   );

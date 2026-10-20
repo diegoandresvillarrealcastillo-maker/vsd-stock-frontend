@@ -12,6 +12,7 @@ import { resolveAuthConfig } from './auth-config';
 import { createAuth } from './create-auth';
 import { createConnectionMonitor } from './create-connection-monitor';
 import { createLocalWorkspace } from './create-local-workspace';
+import { createPwa } from './create-pwa';
 import { createThemePreference } from './create-theme-preference';
 
 // Punto de arranque: cablea los adaptadores del navegador, arma los casos de
@@ -53,6 +54,16 @@ const local = createLocalWorkspace({
   fillRandom: (bytes) => window.crypto.getRandomValues(bytes),
 });
 
+// La aplicacion instalable: solo la version desplegada instala el service worker (`import.meta.env.PROD`).
+const pwa = createPwa({
+  production: import.meta.env.PROD,
+  navigator: window.navigator,
+  document,
+  reload: () => {
+    window.location.reload();
+  },
+});
+
 const people = new BusinessPeopleUseCase(auth.api);
 const catalog = new CatalogUseCase(auth.api);
 const inventory = new InventoryUseCase(auth.api);
@@ -70,6 +81,7 @@ createRoot(container).render(
         catalog={catalog}
         inventory={inventory}
         purchasing={purchasing}
+        pwa={pwa}
       />
     </BrowserRouter>
   </StrictMode>,
