@@ -1,10 +1,12 @@
 import type { ConnectionMonitor } from '../domain/ports/in/connection-monitor';
 import type { BusinessPeople } from '../domain/ports/in/business-people';
 import type { Catalog } from '../domain/ports/in/catalog';
+import type { AppUpdates } from '../domain/ports/in/app-updates';
 import type { Inventory } from '../domain/ports/in/inventory';
 import type { LoadMe } from '../domain/ports/in/load-me';
 import type { Purchasing } from '../domain/ports/in/purchasing';
 import type { SessionManager } from '../domain/ports/in/session-manager';
+import type { StorageProtectionStatus } from '../domain/ports/in/storage-protection';
 import type { ThemePreference } from '../domain/ports/in/theme-preference';
 import { AuthProvider } from './auth/AuthProvider';
 import { CatalogProvider } from './catalog/CatalogProvider';
@@ -13,6 +15,8 @@ import { InventoryProvider } from './inventory/InventoryProvider';
 import { MotionProvider } from './motion/MotionProvider';
 import { PeopleProvider } from './people/PeopleProvider';
 import { PurchasingProvider } from './purchasing/PurchasingProvider';
+import { PwaProvider } from './pwa/PwaProvider';
+import { UpdateNotice } from './pwa/UpdateNotice';
 import { AppRoutes } from './routes/AppRoutes';
 import { ThemeProvider } from './theme/ThemeProvider';
 
@@ -29,6 +33,7 @@ export function App({
   catalog,
   inventory,
   purchasing,
+  pwa,
 }: {
   theme: ThemePreference;
   connection: ConnectionMonitor;
@@ -37,23 +42,27 @@ export function App({
   catalog: Catalog;
   inventory: Inventory;
   purchasing: Purchasing;
+  pwa: { updates: AppUpdates; storage: StorageProtectionStatus };
 }) {
   return (
     <ThemeProvider preference={theme}>
       <ConnectionProvider monitor={connection}>
-        <MotionProvider>
-          <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
-            <PeopleProvider people={people}>
-              <CatalogProvider catalog={catalog}>
-                <InventoryProvider inventory={inventory}>
-                  <PurchasingProvider purchasing={purchasing}>
-                    <AppRoutes />
-                  </PurchasingProvider>
-                </InventoryProvider>
-              </CatalogProvider>
-            </PeopleProvider>
-          </AuthProvider>
-        </MotionProvider>
+        <PwaProvider updates={pwa.updates} storage={pwa.storage}>
+          <MotionProvider>
+            <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
+              <PeopleProvider people={people}>
+                <CatalogProvider catalog={catalog}>
+                  <InventoryProvider inventory={inventory}>
+                    <PurchasingProvider purchasing={purchasing}>
+                      <AppRoutes />
+                      <UpdateNotice />
+                    </PurchasingProvider>
+                  </InventoryProvider>
+                </CatalogProvider>
+              </PeopleProvider>
+            </AuthProvider>
+          </MotionProvider>
+        </PwaProvider>
       </ConnectionProvider>
     </ThemeProvider>
   );

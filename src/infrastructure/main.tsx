@@ -11,6 +11,7 @@ import { resolveApiBaseUrl } from './api-base-url';
 import { resolveAuthConfig } from './auth-config';
 import { createAuth } from './create-auth';
 import { createConnectionMonitor } from './create-connection-monitor';
+import { createPwa } from './create-pwa';
 import { createThemePreference } from './create-theme-preference';
 
 // Punto de arranque: cablea los adaptadores del navegador, arma los casos de
@@ -44,6 +45,16 @@ const auth = createAuth({
   now: () => new Date(),
 });
 
+// La aplicacion instalable: solo la version desplegada instala el service worker (`import.meta.env.PROD`).
+const pwa = createPwa({
+  production: import.meta.env.PROD,
+  navigator: window.navigator,
+  document,
+  reload: () => {
+    window.location.reload();
+  },
+});
+
 const people = new BusinessPeopleUseCase(auth.api);
 const catalog = new CatalogUseCase(auth.api);
 const inventory = new InventoryUseCase(auth.api);
@@ -60,6 +71,7 @@ createRoot(container).render(
         catalog={catalog}
         inventory={inventory}
         purchasing={purchasing}
+        pwa={pwa}
       />
     </BrowserRouter>
   </StrictMode>,

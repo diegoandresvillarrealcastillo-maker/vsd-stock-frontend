@@ -21,6 +21,7 @@
     "test/contract",
     "test/design",
     "test/docs",
+    "test/pwa",
     "test/tooling",
     "test/support/contrast.ts",
     "test/support/contrast.spec.ts"

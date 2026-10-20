@@ -10,9 +10,10 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit --project tsconfig.json && vite build",
+    "build": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project tsconfig.sw.json && vite build && node --disable-warning=ExperimentalWarning scripts/build-service-worker.ts",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project tsconfig.node.json",
+    "budget": "node scripts/check-bundle-size.ts",
+    "typecheck": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project tsconfig.sw.json && tsc --noEmit --project tsconfig.node.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
