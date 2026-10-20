@@ -1,0 +1,25 @@
+{
+  // TypeScript del service worker (service-worker/sw.ts). Corre en un worker, no en la pagina: lleva la biblioteca de
+  // los workers y NO la del documento, y por eso no comparte el tsconfig de la aplicacion.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    // Node 24 le quita los tipos y no entiende los enums ni nada que necesite compilarse.
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["service-worker"]
+}

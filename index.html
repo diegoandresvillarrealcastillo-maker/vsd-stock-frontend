@@ -7,6 +7,14 @@
     <title>VSD Stock</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <!--
+      La aplicacion instalable (C3-07): el manifiesto, el icono del iPhone y el color de la barra del navegador, el mismo
+      de la banda de la cabecera en cada tema (la prueba test/pwa/manifest.spec.ts lo comprueba contra los tokens).
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0a1a3f" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e1f44" media="(prefers-color-scheme: dark)" />
+    <!--
       Pinta el tema antes de que arranque React: si esperara a React, se veria un
       destello del tema equivocado. Decide igual que ThemePreferenceUseCase
       (lo guardado, y si no hay, la preferencia del sistema); la prueba
