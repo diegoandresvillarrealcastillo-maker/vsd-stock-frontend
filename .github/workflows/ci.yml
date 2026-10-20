@@ -143,6 +143,10 @@ jobs:
       - name: Compilar
         run: npm run build
 
+      # El peso de lo que baja el navegador tiene techo (C3-07): si un cambio se pasa, se discute en el PR.
+      - name: Medir el peso contra el presupuesto
+        run: npm run budget
+
   contrato:
     name: Contrato con el backend
     runs-on: ubuntu-24.04
