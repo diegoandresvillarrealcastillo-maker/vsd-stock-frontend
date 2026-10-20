@@ -17,6 +17,8 @@ export default tseslint.config(
     ignores: [
       'dist/**',
       'coverage/**',
+      'reports/**',
+      '.stryker-tmp/**',
       'node_modules/**',
       '*.config.mjs',
       'eslint/**',

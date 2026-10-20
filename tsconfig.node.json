@@ -15,12 +15,14 @@
   },
   "include": [
     "vite.config.ts",
+    "vitest.mutation.config.ts",
     "scripts",
     "test/architecture",
     "test/contract",
     "test/design",
     "test/docs",
     "test/pwa",
+    "test/tooling",
     "test/support/contrast.ts",
     "test/support/contrast.spec.ts"
   ]
