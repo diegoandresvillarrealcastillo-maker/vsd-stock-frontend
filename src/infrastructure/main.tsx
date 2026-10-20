@@ -12,6 +12,7 @@ import { resolveAuthConfig } from './auth-config';
 import { createAuth } from './create-auth';
 import { createConnectionMonitor } from './create-connection-monitor';
 import { createLocalWorkspace } from './create-local-workspace';
+import { createPwa } from './create-pwa';
 import { createReadCopy } from './create-read-copy';
 import { createSyncEngine } from './create-sync-engine';
 import { createThemePreference } from './create-theme-preference';
@@ -55,6 +56,16 @@ const local = createLocalWorkspace({
   fillRandom: (bytes) => window.crypto.getRandomValues(bytes),
 });
 
+// La aplicacion instalable: solo la version desplegada instala el service worker (`import.meta.env.PROD`).
+const pwa = createPwa({
+  production: import.meta.env.PROD,
+  navigator: window.navigator,
+  document,
+  reload: () => {
+    window.location.reload();
+  },
+});
+
 // El motor de sincronizacion: envia la cola de quien trabaja cuando hay conexion, de a un lote y una pestaña a la vez (ADR 0009 y 0028).
 const sync = createSyncEngine({
   api: auth.api,
@@ -86,6 +97,7 @@ createRoot(container).render(
         catalog={catalog}
         inventory={inventory}
         purchasing={purchasing}
+        pwa={pwa}
       />
     </BrowserRouter>
   </StrictMode>,

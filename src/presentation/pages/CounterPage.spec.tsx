@@ -154,7 +154,10 @@ describe('CounterPage', () => {
       await waitFor(() => {
         expect(local.workspace.current()).toBeNull();
       });
-      expect(screen.getByTestId('ruta').textContent).toBe('/ingresar');
+      // Soltar a la persona y navegar son dos pasos: se espera al segundo en vez de suponer que ya paso (con la maquina cargada no pasa a tiempo).
+      await waitFor(() => {
+        expect(screen.getByTestId('ruta').textContent).toBe('/ingresar');
+      });
       expect(local.stores.forgotten).toEqual([]);
       expect(local.stores.dataOf('ana').pending).toBe(2);
       expect(local.pointer.get()).toBe('ana');
