@@ -294,8 +294,26 @@ jobs:
         working-directory: vsd-stock-backend
         run: npm ci
 
+      # La descarga del navegador desde el ejecutor es lenta e irregular (de 1 a 24 minutos). La clave lleva la version de Playwright:
+      # otro Playwright baja otros navegadores. Un PR lee lo que guardo su rama base, asi que la primera corrida en `desarrollo` la llena.
+      - name: Recuperar el navegador de la cache
+        id: navegador-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ matrix.browser }}-${{ hashFiles('node_modules/@playwright/test/package.json') }}
+
+      # Con la cache llena no descarga nada: solo instala las librerias del sistema que el navegador necesita.
       - name: Instalar el navegador
         run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      # Se guarda aqui y no al final: una prueba en rojo no tiene que perder lo que costo bajar.
+      - name: Guardar el navegador en la cache
+        if: steps.navegador-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ matrix.browser }}-${{ hashFiles('node_modules/@playwright/test/package.json') }}
 
       - name: Probar la web real en el navegador
         run: npx playwright test --project=${{ matrix.browser }}

@@ -77,6 +77,12 @@ describe('the document', () => {
     expect(documento).toMatch(/Firefox y WebKit se corren y se informan, pero no bloquean/);
   });
 
+  it('explains the browser cache, where it lives and why it exists', () => {
+    expect(documento).toContain('~/.cache/ms-playwright');
+    expect(documento).toContain('La descarga del navegador es lenta e irregular');
+    expect(documento).toMatch(/un PR lee la caché de su rama base/i);
+  });
+
   it('keeps the findings, the ones fixed and the ones left open, so nobody finds them again', () => {
     expect(documento).toContain('shiftId');
     expect(documento).toContain('Arreglado');
@@ -171,6 +177,39 @@ describe('the job of the CI', () => {
   it('installs only the browser it is going to use, with the libraries it needs, and runs only that project', () => {
     expect(bloque).toContain('run: npx playwright install --with-deps ${{ matrix.browser }}');
     expect(bloque).toContain('run: npx playwright test --project=${{ matrix.browser }}');
+  });
+
+  it('keeps the downloaded browser between runs, keyed by browser and Playwright version', () => {
+    const pasos = sinComentarios(bloque);
+
+    expect(pasos).toContain('uses: actions/cache/restore@v6');
+    expect(pasos).toContain('path: ~/.cache/ms-playwright');
+    expect(pasos).toContain(
+      "key: playwright-${{ matrix.browser }}-${{ hashFiles('node_modules/@playwright/test/package.json') }}",
+    );
+  });
+
+  it('restores it before installing and saves it right after, so a failing test does not lose the download', () => {
+    const pasos = sinComentarios(bloque);
+    const restaurar = pasos.indexOf('actions/cache/restore@v6');
+    const instalar = pasos.indexOf('run: npx playwright install');
+    const guardar = pasos.indexOf('actions/cache/save@v6');
+    const probar = pasos.indexOf('run: npx playwright test');
+
+    expect(restaurar).toBeGreaterThan(-1);
+    expect(restaurar).toBeLessThan(instalar);
+    expect(instalar).toBeLessThan(guardar);
+    expect(guardar).toBeLessThan(probar);
+  });
+
+  it('saves only when the restore missed, and under the very key it looked for', () => {
+    const pasos = sinComentarios(bloque);
+    const claves = [...pasos.matchAll(/^\s+key: (.+)$/gm)].map((coincidencia) => coincidencia[1]);
+
+    expect(claves).toHaveLength(2);
+    expect(claves[0]).toBe(claves[1]);
+    expect(pasos).toContain('id: navegador-cache');
+    expect(pasos).toContain("if: steps.navegador-cache.outputs.cache-hit != 'true'");
   });
 
   it('saves the report as an artifact even when a test fails', () => {

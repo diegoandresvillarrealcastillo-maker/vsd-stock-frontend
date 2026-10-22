@@ -67,6 +67,13 @@ sigue rechazándose, y hay pruebas que lo vigilan. Lo que lleva `VITE_` queda de
   la primera corrida ya sirvió: WebKit encontró un fallo real.
 - En el CI los informes (`playwright-report/` y `test-results/`, con las capturas y el _trace_ de lo que falló) se guardan como artefacto
   `informes-navegador-<navegador>`. Un trace se abre con `npx playwright show-trace <archivo>.zip`.
+- **La descarga del navegador es lenta e irregular** en el ejecutor del CI: el 22 de octubre tardó 24 minutos para Firefox en el PR #50 y unos
+  9 para Chromium después de fusionarlo, mientras Firefox terminaba todo su trabajo en 3. Por eso el trabajo guarda
+  `~/.cache/ms-playwright` en la caché de GitHub, con la clave `playwright-<navegador>-<hash del package.json de @playwright/test>`: cambiar la versión
+  de Playwright baja otros navegadores y estrena otra entrada. Se guarda **justo después de instalar** (no al final), para que una prueba en rojo
+  no pierda lo descargado. Un PR lee la caché de su rama base: la primera corrida en `desarrollo` tras un cambio de versión la llena, y los demás PR la
+  encuentran (una promoción a `preproduccion` no, porque su base es otra rama). Si la caché falla o se borra, el trabajo sigue funcionando, solo que
+  lento: el plazo del trabajo (30 minutos) sigue siendo el techo.
 
 Resultado de la corrida con la que se cerró C3-15, en Windows: **Chromium 16/16 (58 s), Firefox 16/16 (1,4 min), WebKit 16/16 (1,3 min)**.
 La primera corrida, antes de los arreglos de abajo, dejó en rojo tres pruebas de accesibilidad en Chromium y dos pruebas en WebKit.
