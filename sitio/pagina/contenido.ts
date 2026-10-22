@@ -37,6 +37,11 @@ export interface EjemploIva {
   readonly iva: number;
 }
 
+/** Una decision escrita del backend que sostiene lo que la pagina dice: su numero, a donde lleva y de que trata. */
+export interface Sello extends Enlace {
+  readonly detalle: string;
+}
+
 export interface Testimonio {
   readonly cita: string;
   readonly autor: string;
@@ -46,6 +51,8 @@ export interface Testimonio {
 
 /** Las secciones de la pagina y el nombre con que se las enlaza (`#como-funciona`). */
 const anclas = {
+  inicio: 'inicio',
+  problema: 'problema',
   comoFunciona: 'como-funciona',
   funciones: 'funciones',
   demo: 'demo',
@@ -53,6 +60,7 @@ const anclas = {
   confianza: 'confianza',
   loQueViene: 'lo-que-viene',
   preguntas: 'preguntas',
+  piloto: 'piloto',
 } as const;
 
 const adr = (archivo: string): string =>
@@ -74,7 +82,14 @@ export const contenido = {
       'VSD Stock es el punto de venta de la tienda de barrio: vende aunque se caiga el internet, calcula el IVA de cada precio y cuadra la caja por turno. Versión en pruebas.',
   },
 
+  marca: 'VSD Stock',
+
   anclas,
+
+  /** Lo que un lector de pantalla necesita oir y la vista no necesita ver. */
+  accesibilidad: {
+    externo: 'se abre en otra pestaña',
+  },
 
   anuncio: {
     etiqueta: 'EN PRUEBAS',
@@ -83,6 +98,10 @@ export const contenido = {
   },
 
   navegacion: {
+    saltar: 'Saltar al contenido',
+    principal: 'Navegación principal',
+    // El nombre visible del logo es «VSD Stock»: el nombre accesible lo contiene y dice a donde lleva.
+    inicio: 'VSD Stock, ir al inicio',
     enlaces: [
       { texto: 'Cómo funciona', href: `#${anclas.comoFunciona}` },
       { texto: 'Funciones', href: `#${anclas.funciones}` },
@@ -92,8 +111,16 @@ export const contenido = {
     cta: { texto: 'Ser tienda piloto', href: WHATSAPP_URL } as Enlace,
     abrirMenu: 'Abrir el menú',
     cerrarMenu: 'Cerrar el menú',
-    temaClaro: 'Cambiar al tema claro',
-    temaOscuro: 'Cambiar al tema oscuro',
+    // Un solo nombre para los dos estados: el servidor no sabe que tema eligio la persona, y el nombre no debe cambiar al cargar.
+    cambiarTema: 'Cambiar entre tema claro y oscuro',
+  },
+
+  /** La barra de abajo del telefono: aparece cuando el hero ya paso. */
+  barraContacto: {
+    etiqueta: 'Invitación a ser tienda piloto',
+    texto: 'Buscamos tiendas piloto para probar VSD Stock.',
+    boton: 'Escríbenos',
+    cerrar: 'Cerrar este aviso',
   },
 
   hero: {
@@ -123,6 +150,8 @@ export const contenido = {
     },
     interruptor: 'Cortar internet',
     estados: { conectado: 'Conectado', sinConexion: 'Sin conexión' },
+    // El formato del folio de una venta (serie del equipo y consecutivo): un ejemplo, no una venta real.
+    folio: 'K7-000142',
     porEnviar: 'por enviar',
     guardada: 'Guardada en este equipo. Se envía cuando haya conexión.',
     descripcion:
@@ -231,6 +260,23 @@ export const contenido = {
         roles: ['dueño', 'administrador', 'cajero'],
       },
     ] as readonly Tarjeta[],
+    /**
+     * Lo que muestra cada tarjeta debajo de su titulo. Son datos, no frases: la pagina los pinta con el dominio (formatPesos,
+     * describeDifference, formatSignedQuantity), asi no dice un numero distinto del que calcula el producto.
+     */
+    miniaturas: {
+      sinConexion: { pendientes: 1 },
+      iva: { precio: 'Precio', base: 'Base', iva: 'IVA' },
+      caja: { etiqueta: 'Al cerrar el turno', diferencia: -2000 },
+      inventario: {
+        etiqueta: 'Movimientos',
+        movimientos: [
+          { tipo: 'Venta', milesimas: -1000 },
+          { tipo: 'Anulación', milesimas: 1000 },
+        ],
+      },
+      estante: { sistema: 'El sistema dice que no hay', accion: 'Vendes igual y queda marcada' },
+    },
   },
 
   /** Los ejemplos de IVA de la calculadora y de la tarjeta: datos, no frases. */
@@ -260,6 +306,8 @@ export const contenido = {
     titulo: 'Tu facturación sigue donde está. VSD Stock lleva el inventario y la caja.',
     columnaHace: 'Lo que hace hoy',
     columnaNoHace: 'Lo que no hace',
+    // La palabra que lee un lector de pantalla donde la vista ve una marca (✓ o ✕).
+    marcas: { hace: 'Sí', noHace: 'No' },
     hace: [
       'Vende y registra el cobro sin conexión',
       'Cuadra la caja por turno',
@@ -314,11 +362,24 @@ export const contenido = {
         ] as readonly Enlace[],
       },
     ],
+    sellosTitulo: 'Las decisiones que lo sostienen',
     sellos: [
-      { texto: 'ADR 0014', href: adr('0014-dinero-impuestos-y-redondeo.md') },
-      { texto: 'ADR 0017', href: adr('0017-roles-permisos-y-modo-sin-conexion.md') },
-      { texto: 'ADR 0032', href: adr('0032-un-contador-reviso-la-mecanica-del-iva.md') },
-    ] as readonly Enlace[],
+      {
+        texto: 'ADR 0014',
+        detalle: 'Dinero, impuestos y redondeo',
+        href: adr('0014-dinero-impuestos-y-redondeo.md'),
+      },
+      {
+        texto: 'ADR 0017',
+        detalle: 'Roles, permisos y modo sin conexión',
+        href: adr('0017-roles-permisos-y-modo-sin-conexion.md'),
+      },
+      {
+        texto: 'ADR 0032',
+        detalle: 'Un contador revisó la mecánica del IVA',
+        href: adr('0032-un-contador-reviso-la-mecanica-del-iva.md'),
+      },
+    ] as readonly Sello[],
     /**
      * Hoy no hay ninguno y la pagina no lo muestra. Una cita real entra aqui con el permiso por escrito de la persona; el
      * componente que la pinta solo existe cuando esta lista deja de estar vacia.
