@@ -25,21 +25,22 @@ el backend en marcha: ver [Conexión con el backend](#conexión-con-el-backend).
 
 ## Scripts
 
-| Script                      | Qué hace                                                                             |
-| --------------------------- | ------------------------------------------------------------------------------------ |
-| `npm run dev`               | Servidor de desarrollo de Vite.                                                      |
-| `npm run build`             | Revisa los tipos y genera la versión de producción en `dist/`.                       |
-| `npm run preview`           | Sirve `dist/` para probar la versión de producción.                                  |
-| `npm run budget`            | Falla si lo que baja el navegador pesa más que el presupuesto (después de compilar). |
-| `npm test`                  | Ejecuta las pruebas (Vitest, jsdom y Testing Library).                               |
-| `npm run test:coverage`     | Pruebas con cobertura; falla si `domain/` o `application/` bajan del 80 %.           |
-| `npm run lint`              | ESLint, incluidas las **fronteras de la arquitectura**.                              |
-| `npm run format:check`      | Comprueba el formato con Prettier (`npm run format` lo corrige).                     |
-| `npm run typecheck`         | Revisa los tipos de la aplicación y de las herramientas.                             |
-| `npm run contract:sync`     | Copia el contrato OpenAPI y los vectores de cálculo del backend; regenera los tipos. |
-| `npm run contract:check`    | Comprueba que ambas copias coinciden con las del backend (lo mismo que hace el CI).  |
-| `npm run contract:generate` | Regenera los tipos a partir de la copia del contrato, sin red.                       |
-| `npm run lighthouse`        | Audita `dist/` con Lighthouse (necesita Chrome y `npm run build` antes).             |
+| Script                      | Qué hace                                                                                 |
+| --------------------------- | ---------------------------------------------------------------------------------------- |
+| `npm run dev`               | Servidor de desarrollo de Vite.                                                          |
+| `npm run build`             | Revisa los tipos y genera la versión de producción en `dist/`.                           |
+| `npm run preview`           | Sirve `dist/` para probar la versión de producción.                                      |
+| `npm run budget`            | Falla si lo que baja el navegador pesa más que el presupuesto (después de compilar).     |
+| `npm test`                  | Ejecuta las pruebas (Vitest, jsdom y Testing Library).                                   |
+| `npm run test:coverage`     | Pruebas con cobertura; falla si `domain/` o `application/` bajan del 80 %.               |
+| `npm run lint`              | ESLint, incluidas las **fronteras de la arquitectura**.                                  |
+| `npm run format:check`      | Comprueba el formato con Prettier (`npm run format` lo corrige).                         |
+| `npm run typecheck`         | Revisa los tipos de la aplicación y de las herramientas.                                 |
+| `npm run contract:sync`     | Copia el contrato OpenAPI y los vectores de cálculo del backend; regenera los tipos.     |
+| `npm run contract:check`    | Comprueba que ambas copias coinciden con las del backend (lo mismo que hace el CI).      |
+| `npm run contract:generate` | Regenera los tipos a partir de la copia del contrato, sin red.                           |
+| `npm run lighthouse`        | Audita `dist/` con Lighthouse (necesita Chrome y `npm run build` antes).                 |
+| `npm run e2e`               | Pruebas en navegadores de verdad (Chromium, Firefox y WebKit); `e2e:chromium`, solo uno. |
 
 ## Arquitectura
 
@@ -461,7 +462,7 @@ naranja del logo (`#f97801`) solo como acento.**
 - **Pruebas primero:** cada pieza nace de una prueba que se vio fallar (ADR 0007).
 - **Hooks de Husky:** antes de cada commit se corren ESLint y Prettier sobre lo que cambia, y se valida el
   mensaje con commitlint.
-- **CI** (GitHub Actions), siete trabajos:
+- **CI** (GitHub Actions), ocho trabajos:
   - escaneo de secretos (gitleaks sobre todo el historial);
   - convención de commits;
   - calidad del código (estilo y fronteras, formato, tipos, pruebas con cobertura —incluidos los tipos
@@ -470,6 +471,8 @@ naranja del logo (`#f97801`) solo como acento.**
     coinciden con las del backend);
   - accesibilidad y rendimiento con Lighthouse (accesibilidad 100; la emulación es un Moto G Power con la CPU 4
     veces más lenta y red 4G lenta, ver [`docs/rendimiento.md`](docs/rendimiento.md));
+  - navegador real (Chromium, Firefox y WebKit): la web compilada contra la API y la base reales, sin red, con dos pestañas y con
+    varios dispositivos, y axe en cada pantalla ([`docs/pruebas-en-navegador.md`](docs/pruebas-en-navegador.md)); solo Chromium bloquea;
   - análisis de código con CodeQL;
   - vulnerabilidades de las dependencias de producción.
 
@@ -484,6 +487,7 @@ naranja del logo (`#f97801`) solo como acento.**
 - Cómo se abre, se cierra y se ve el turno de caja sin conexión: [`docs/turno.md`](docs/turno.md).
 - Cómo se vende, se cobra y se da el comprobante sin conexión: [`docs/punto-de-venta.md`](docs/punto-de-venta.md).
 - Cómo se ven, se revisan y se anulan las ventas hechas: [`docs/ventas.md`](docs/ventas.md).
+- Cómo se prueba todo en navegadores de verdad (qué se prueba, cómo correrlo, la pila y lo que encontró): [`docs/pruebas-en-navegador.md`](docs/pruebas-en-navegador.md).
 - El recorrido de la aplicación completa con el que se cierra cada ciclo, paso a paso y con lo que debe pasar:
   [`docs/recorrido-del-ciclo-2.md`](docs/recorrido-del-ciclo-2.md).
 - Todos los ADR del proyecto, también los de este repositorio, viven en el backend:

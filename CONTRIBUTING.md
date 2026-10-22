@@ -111,6 +111,21 @@ primero `npm run build`). Con Lighthouse la accesibilidad tiene que dar 100.
 Husky corre ESLint y Prettier sobre lo que cambia antes de cada commit, y valida el mensaje. **No uses
 `--no-verify`**: el CI repite todo y no se puede saltar.
 
+### Pruebas en un navegador de verdad (C3-15)
+
+Las pruebas de `e2e/` abren la web ya compilada en Chromium, Firefox y WebKit contra la API y la base reales (sin red, recargando, con
+dos pestañas y con varios dispositivos) y pasan axe por cada pantalla. Necesitan el backend clonado al lado y su base de trabajo
+(`npm run db:up` allá):
+
+```bash
+npm run e2e:chromium      # el que bloquea el CI; npm run e2e corre los tres
+```
+
+Cuando cambies algo de lo que se ve o de cómo se envía, corre al menos Chromium. En el CI el trabajo es **«Navegador real
+(chromium)»**: es el que Diego marca como obligatorio cuando esté en verde; Firefox y WebKit se corren y se informan, pero no
+bloquean. Cómo está armada la pila, qué probó cada archivo y qué encontró: [`docs/pruebas-en-navegador.md`](docs/pruebas-en-navegador.md).
+Si cambias de qué dirección habla la web, **vuelve a compilar con `npm run build:e2e`** y las direcciones de la pila.
+
 ### Roturas a propósito con Stryker (C3-17)
 
 Una prueba que pasa no prueba que vigile algo. [Stryker](https://stryker-mutator.io) rompe el código **a propósito**, de a una

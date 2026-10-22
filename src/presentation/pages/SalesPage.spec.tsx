@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { QueuedOperation } from '../../domain/model/outbox';
 import type { Role } from '../../domain/model/permissions';
@@ -8,6 +8,7 @@ import { createFakeSalesHistory, testSaleRecord } from '../../../test/support/sa
 import { renderScreen } from '../../../test/support/screens';
 import { FakeShifts, openState } from '../../../test/support/shifts';
 import { createTestLocal } from '../../../test/support/local';
+import { FakeSyncEngine } from '../../../test/support/sync-engine';
 import { SalesPage } from './SalesPage';
 
 const SHIFT = openState().shift.shiftId;
@@ -44,6 +45,7 @@ interface MountOptions {
   sales?: ReturnType<typeof createFakeSalesHistory>;
   shifts?: FakeShifts;
   queue?: QueuedOperation[];
+  sync?: FakeSyncEngine;
 }
 
 function mount(options: MountOptions = {}) {
@@ -63,6 +65,7 @@ function mount(options: MountOptions = {}) {
     sales,
     people,
     shifts: options.shifts ?? new FakeShifts(openState()),
+    ...(options.sync === undefined ? {} : { sync: options.sync }),
     path: options.path ?? '/mostrador/ventas',
   });
   return { ...view, sales, people };
@@ -294,6 +297,36 @@ describe('SalesPage', () => {
       expect(await rowOf('AA-000142')).toBeDefined();
       expect(sales.list).toHaveBeenLastCalledWith({ view: 'shift', shiftId: SHIFT, cursor: 'p2' });
       expect(screen.queryByRole('button', { name: 'Cargar más' })).toBeNull();
+    });
+  });
+
+  describe('when this device sends something while the list is open', () => {
+    it('asks again, so a sale that was on its way shows up in the list', async () => {
+      const sales = createFakeSalesHistory([]);
+      const sync = new FakeSyncEngine();
+      mount({ sales, sync, path: '/mostrador/ventas?vista=atencion' });
+      expect(await screen.findByText('Todo en orden: ninguna venta pide atención.')).toBeDefined();
+
+      sales.list.mockResolvedValue({ items: [sale(1)], nextCursor: null });
+      act(() => {
+        sync.set({ lastSyncedAt: new Date('2026-10-19T14:00:00.000Z') });
+      });
+
+      expect(await rowOf('AA-000141')).toBeDefined();
+      expect(screen.queryByText('Todo en orden: ninguna venta pide atención.')).toBeNull();
+    });
+
+    it('does not ask again when nothing was sent, only the count of what waits changed', async () => {
+      const sales = createFakeSalesHistory();
+      const sync = new FakeSyncEngine();
+      mount({ sales, sync });
+      await list();
+
+      act(() => {
+        sync.set({ pending: 2 });
+      });
+
+      expect(sales.list).toHaveBeenCalledTimes(1);
     });
   });
 

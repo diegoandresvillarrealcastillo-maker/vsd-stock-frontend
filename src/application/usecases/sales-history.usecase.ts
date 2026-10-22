@@ -33,7 +33,7 @@ export class SalesHistoryUseCase implements SalesHistory {
       path: '/v1/sales',
       query: {
         limit: PAGE_SIZE,
-        ...(query.view === 'shift' ? { shift: query.shiftId } : {}),
+        ...(query.view === 'shift' ? { shiftId: query.shiftId } : {}),
         ...(query.view === 'attention' ? { attention: true } : {}),
         ...(query.cursor === undefined ? {} : { cursor: query.cursor }),
       },

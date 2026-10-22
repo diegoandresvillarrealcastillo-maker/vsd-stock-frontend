@@ -53,7 +53,7 @@ describe('SalesHistoryUseCase', () => {
       const result = await useCase.list({ view: 'shift', shiftId: 'shift-1' });
 
       expect(sent).toEqual([
-        { method: 'GET', path: '/v1/sales', query: { limit: 30, shift: 'shift-1' } },
+        { method: 'GET', path: '/v1/sales', query: { limit: 30, shiftId: 'shift-1' } },
       ]);
       expect(result.items.map((sale) => sale.folio)).toEqual(['AA-1', 'AA-2']);
       expect(result.nextCursor).toBe('p2');

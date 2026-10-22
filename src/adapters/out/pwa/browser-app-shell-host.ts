@@ -59,9 +59,11 @@ export class BrowserAppShellHost implements AppShellHost {
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
       if (worker === null) return;
+      // Se mira AHORA, antes de que esta instalacion pueda tomar el control: WebKit entrega «installed» cuando la pagina ya ve el
+      // control tomado, y sin version anterior no hay nada que actualizar (es la primera instalacion).
+      const hadOlderVersion = container.controller !== null;
       worker.addEventListener('statechange', () => {
-        // Sin version anterior no hay nada que actualizar: es la primera instalacion.
-        if (worker.state === 'installed' && container.controller !== null) this.announce();
+        if (worker.state === 'installed' && hadOlderVersion) this.announce();
       });
     });
 

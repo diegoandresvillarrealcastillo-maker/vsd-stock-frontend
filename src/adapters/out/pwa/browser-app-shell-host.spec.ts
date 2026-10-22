@@ -129,6 +129,20 @@ describe('BrowserAppShellHost', () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
+    it('is not an update either when the page already sees itself controlled by the time it learns the first install finished', async () => {
+      // WebKit entrega «installed» ya con el control tomado: lo que cuenta es si habia version anterior al EMPEZAR a instalar.
+      const { container, host } = setup();
+      const listener = vi.fn();
+      host.onUpdateReady(listener);
+      await host.register();
+
+      const worker = container!.registration.foundNewVersion();
+      container!.controller = {};
+      worker.becomes('installed');
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
     it('is announced right away to whoever listens when one was already waiting at start', async () => {
       const { container, host } = setup();
       container!.controller = {};

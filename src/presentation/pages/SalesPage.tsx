@@ -18,6 +18,7 @@ import { STATUS_TONES } from '../sales/status-tone';
 import { useLocalSales } from '../sales/use-local-sales';
 import { useSellerNames } from '../sales/use-seller-names';
 import { useShift } from '../shift/ShiftProvider';
+import { useSync } from '../sync/SyncProvider';
 
 const SUBTITLES: Record<SalesView, string> = {
   shift: 'Las de tu turno de hoy.',
@@ -43,6 +44,7 @@ export function SalesPage() {
   const { active } = useLocal();
   const { history, attention } = useSales();
   const { state: shift } = useShift();
+  const { state: sync } = useSync();
   const [params] = useSearchParams();
   const local = useLocalSales();
   const manager = active !== null && can(active.profile.role, 'sale:view-all');
@@ -60,7 +62,8 @@ export function SalesPage() {
             ...(view === 'shift' && shiftId !== null ? { shiftId } : {}),
             ...(cursor === undefined ? {} : { cursor }),
           }),
-    [view, shiftId],
+    // `lastSyncedAt` solo cambia cuando el equipo envio algo: una venta que iba en camino al abrir la pantalla llega a la lista.
+    [view, shiftId, sync.lastSyncedAt?.getTime() ?? 0],
   );
 
   if (active === null) return null;

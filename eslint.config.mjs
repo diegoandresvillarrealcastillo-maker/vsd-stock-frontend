@@ -19,6 +19,9 @@ export default tseslint.config(
       'coverage/**',
       'reports/**',
       '.stryker-tmp/**',
+      'test-results/**',
+      'playwright-report/**',
+      'blob-report/**',
       'node_modules/**',
       '*.config.mjs',
       'eslint/**',
@@ -76,7 +79,7 @@ export default tseslint.config(
 
   // ---------- Pruebas ----------
   {
-    files: ['src/**/*.spec.{ts,tsx}', 'test/**/*.spec.ts'],
+    files: ['src/**/*.spec.{ts,tsx}', 'test/**/*.spec.ts', 'e2e/**/*.ts'],
     rules: {
       // En las pruebas se construyen dobles y datos a proposito imperfectos.
       '@typescript-eslint/no-unsafe-assignment': 'off',

@@ -1,7 +1,7 @@
 # ============================================================
 #  VSD Stock (frontend) - Integracion continua
 # ============================================================
-#  Barrera automatica del proyecto. Este archivo cubre seis cosas:
+#  Barrera automatica del proyecto. Este archivo cubre siete cosas:
 #
 #    1. que no entre ningun secreto al repositorio;
 #    2. que todo commit siga Conventional Commits y cite su Issue;
@@ -12,7 +12,11 @@
 #    5. que la compilacion pase Lighthouse: accesibilidad perfecta y buen
 #       rendimiento en un movil de gama media con red lenta (simulado);
 #    6. que las pruebas del dominio y de la aplicacion noten el codigo roto a
-#       proposito (Stryker). Es informativo: no bloquea hasta que se marque.
+#       proposito (Stryker). Es informativo: no bloquea hasta que se marque;
+#    7. que la web ya compilada funcione en navegadores de verdad contra la API
+#       y la base reales (C3-15): sin red, recargando, con dos pestañas y con
+#       varios dispositivos, y con axe en cada pantalla. Chromium bloquea cuando
+#       se marque; Firefox y WebKit se corren y se informan.
 #
 #  CodeQL (codeql.yml) y las vulnerabilidades de las dependencias
 #  (dependencias.yml) van en archivos aparte para poder programarlos.
@@ -229,6 +233,81 @@ jobs:
         with:
           name: informes-roturas
           path: reports/mutation/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  navegador:
+    name: Navegador real (${{ matrix.browser }})
+    runs-on: ubuntu-24.04
+    # C3-15 (ADR 0030): la web real, ya compilada, en un navegador de verdad contra la API real y una base real. Chromium es el
+    # navegador del telefono Android del negocio de referencia: ese trabajo ("Navegador real (chromium)") es el que Diego marca como
+    # obligatorio cuando este en verde. Firefox y WebKit se corren y se informan, pero no bloquean (`continue-on-error`): sus
+    # diferencias se miran, no se exigen. WebKit ya encontro un fallo real de la primera visita (ver docs/pruebas-en-navegador.md).
+    continue-on-error: ${{ matrix.browser != 'chromium' }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: stock
+          POSTGRES_DB: stock_test
+          # Igual que en el CI del backend: vive lo que dura el trabajo y no guarda datos de nadie.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stock -d stock_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      # Las pruebas levantan solas la identidad de mentira, la API y la web (playwright.config.ts); aqui solo se les dice donde esta
+      # la base y el clon del backend.
+      E2E_DB_PORT: '5432'
+      VSD_BACKEND_DIR: ${{ github.workspace }}/vsd-stock-backend
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      # El backend es publico. La misma rama que usa el trabajo del contrato: la base del Pull Request o, en un push, la que lo recibe.
+      - name: Descargar el backend
+        uses: actions/checkout@v7
+        with:
+          repository: diegoandresvillarrealcastillo-maker/vsd-stock-backend
+          ref: ${{ github.base_ref || github.ref_name }}
+          path: vsd-stock-backend
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar las dependencias del backend
+        working-directory: vsd-stock-backend
+        run: npm ci
+
+      - name: Instalar el navegador
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Probar la web real en el navegador
+        run: npx playwright test --project=${{ matrix.browser }}
+
+      - name: Guardar el informe
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informes-navegador-${{ matrix.browser }}
+          path: |
+            playwright-report/
+            test-results/
           if-no-files-found: ignore
           retention-days: 14
 

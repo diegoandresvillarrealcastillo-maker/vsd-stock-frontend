@@ -11,9 +11,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project tsconfig.sw.json && vite build && node --disable-warning=ExperimentalWarning scripts/build-service-worker.ts",
+    "build:e2e": "vite build --mode e2e && node --disable-warning=ExperimentalWarning scripts/build-service-worker.ts",
     "preview": "vite preview",
+    "e2e": "playwright test",
+    "e2e:chromium": "playwright test --project=chromium",
     "budget": "node scripts/check-bundle-size.ts",
-    "typecheck": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project tsconfig.sw.json && tsc --noEmit --project tsconfig.node.json",
+    "typecheck": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project tsconfig.sw.json && tsc --noEmit --project tsconfig.node.json && tsc --noEmit --project tsconfig.e2e.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -49,9 +52,11 @@
     "react-router": "^7.18.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.64.1",
     "@stryker-mutator/core": "^10.0.0",
     "@stryker-mutator/vitest-runner": "^10.0.0",
     "@tailwindcss/vite": "^4.3.3",

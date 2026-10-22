@@ -89,6 +89,41 @@ describe('resolveAuthConfig', () => {
     ).toThrow(/https/);
   });
 
+  it('allows plain http to this machine in the version compiled for the browser tests, which needs the compiled app to have its service worker', () => {
+    expect(
+      resolveAuthConfig({
+        DEV: false,
+        MODE: 'e2e',
+        VITE_AUTH_URL: 'http://127.0.0.1:54329/auth/v1',
+        VITE_AUTH_PUBLISHABLE_KEY: KEY_OK,
+      }),
+    ).toEqual({ authUrl: 'http://127.0.0.1:54329/auth/v1', publishableKey: KEY_OK });
+  });
+
+  it('refuses plain http to another machine even in the version compiled for the browser tests', () => {
+    expect(() =>
+      resolveAuthConfig({
+        DEV: false,
+        MODE: 'e2e',
+        VITE_AUTH_URL: 'http://abc.supabase.co/auth/v1',
+        VITE_AUTH_PUBLISHABLE_KEY: KEY_OK,
+      }),
+    ).toThrow(/https/);
+  });
+
+  it('refuses plain http to this machine in any other compiled mode: only the browser tests have the switch', () => {
+    for (const mode of ['production', 'staging', 'E2E', '']) {
+      expect(() =>
+        resolveAuthConfig({
+          DEV: false,
+          MODE: mode,
+          VITE_AUTH_URL: 'http://127.0.0.1:54329/auth/v1',
+          VITE_AUTH_PUBLISHABLE_KEY: KEY_OK,
+        }),
+      ).toThrow(/https/);
+    }
+  });
+
   it('refuses plain http to another machine even in development', () => {
     expect(() =>
       resolveAuthConfig({
