@@ -4,7 +4,15 @@ interface BuildEnvironment {
   VITE_AUTH_PUBLISHABLE_KEY?: string | undefined;
   /** Verdadero con `npm run dev`. */
   DEV: boolean;
+  /** El modo de compilacion (`vite build --mode e2e`): solo el de las pruebas en navegador tiene permiso de hablar http a esta maquina. */
+  MODE?: string | undefined;
 }
+
+/**
+ * El modo con el que se compila la web para las pruebas en navegador (`npm run build:e2e`, ADR 0030): es una version COMPILADA (tiene su
+ * service worker, que es lo que se prueba) pero habla con el servicio de identidad de mentira, que escucha en http en esta maquina.
+ */
+const BROWSER_TEST_MODE = 'e2e';
 
 export interface AuthConfig {
   /** La direccion de Supabase Auth, sin barra final. */
@@ -53,7 +61,8 @@ export function resolveAuthConfig(env: BuildEnvironment): AuthConfig | null {
     );
   }
 
-  return { authUrl: validatedUrl(url, env.DEV), publishableKey: validatedKey(key) };
+  const development = env.DEV || env.MODE === BROWSER_TEST_MODE;
+  return { authUrl: validatedUrl(url, development), publishableKey: validatedKey(key) };
 }
 
 function validatedUrl(value: string, development: boolean): string {
