@@ -52,6 +52,36 @@ Cloudflare Pages da HTTPS sin configurar nada y en su plan gratuito.
    (esquema y host, **sin barra al final**, sin ruta). Un error ahí se ve en el navegador como «blocked by CORS policy» y la aplicación
    dice que no hay conexión con el servidor. Después de cambiarla, Render reinicia la API.
 
+## Si el panel solo ofrece crear un Worker: la subida directa
+
+El 22 de octubre de 2026, en una cuenta de Cloudflare nueva, el asistente de **Workers & Pages → Create** solo ofrecía crear un **Worker**, y
+los pasos 1 a 5 (_Connect to Git_) no existían en la pantalla. Se publica igual en **Cloudflare Pages**, sin Git, desde un computador con
+Node 24. Es el mismo proyecto de Pages (la misma dirección `*.pages.dev`, los mismos encabezados de `public/_headers`); cambia **cómo llega
+el código**. **No uses `wrangler deploy`:** ese comando crea un Worker, no un proyecto de Pages. El comando es `wrangler pages deploy`.
+
+En una copia limpia de la rama `preproduccion` (PowerShell; las tres variables son las del paso 4 y se escriben ahí mismo, sin guardarlas en
+ningún archivo):
+
+```powershell
+git switch preproduccion; git pull
+npm ci
+$env:VITE_API_URL = 'https://TU-API.onrender.com'
+$env:VITE_AUTH_URL = 'https://REF.supabase.co/auth/v1'
+$env:VITE_AUTH_PUBLISHABLE_KEY = 'sb_publishable_...'
+npm run build
+Remove-Item Env:VITE_API_URL, Env:VITE_AUTH_URL, Env:VITE_AUTH_PUBLISHABLE_KEY
+npx wrangler login
+npx wrangler pages project create vsd-stock-pre --production-branch preproduccion
+npx wrangler pages deploy dist --project-name vsd-stock-pre --branch preproduccion --commit-dirty=true
+```
+
+- `wrangler login` abre el navegador para entrar a Cloudflare: no se pega ninguna clave. `project create` solo se hace la primera vez (si el
+  proyecto ya existe, falla y no pasa nada).
+- Si la subida imprime otra dirección para la rama `preproduccion`, esa es la de la web, y es la que va en `CORS_ORIGINS` (paso 6).
+- **No hay despliegue automático:** la web de PRE cambia cuando alguien repite `npm run build` y el `deploy`. Si `preproduccion` recibe una
+  promoción y nadie lo hace, la web se queda con la versión vieja sin que nada avise. Después de cada promoción, comprobar con
+  `npm run verify:deploy` (abajo) que la web responde y mirar en Cloudflare que el último despliegue sea de hoy.
+
 ## Lo que el repositorio ya trae
 
 - **`public/_headers`:** Cloudflare Pages lo lee del propio sitio y no lo sirve. Lo que dice:
@@ -105,3 +135,6 @@ API ni la base de datos. Una migración de la base **no** se revierte sola (`doc
 - **Las ramas de vista previa** quedan apagadas (paso 2). Si algún día se encienden, sus direcciones tendrían que entrar a `CORS_ORIGINS`
   una por una (no se acepta un comodín), y compilarían contra la API de PRE.
 - **PROD.** Está en pausa; cuando exista, será otro proyecto de Cloudflare Pages, otra rama y otras variables, con su propio ADR.
+- **El despliegue automático de la web.** Con la subida directa no existe (ver arriba). Para PROD hay que decidir entre conectar Git, si el
+  panel lo ofrece, o una acción del CI que corra `wrangler pages deploy` con un token de API de Cloudflare guardado como secreto del
+  repositorio. No se decidió aquí: va en el ADR de PROD, antes de que PROD exista.
