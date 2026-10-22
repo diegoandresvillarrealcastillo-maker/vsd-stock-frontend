@@ -1,0 +1,9 @@
+{
+  // TypeScript de las pruebas en navegador (C3-15). Corren en Node, pero algunas ordenes se ejecutan DENTRO de la pagina
+  // (`page.evaluate`) y necesitan los tipos del DOM, que ya trae el tsconfig de la aplicacion.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["e2e", "playwright.config.ts"]
+}

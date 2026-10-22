@@ -1,0 +1,28 @@
+# Reglas de Cloudflare Pages (ADR 0031 del backend). Se copian a dist/ al compilar y las lee el sitio mismo.
+# Una regla que calza con una ruta se SUMA a las demas que le calzan, y un mismo encabezado en dos reglas se junta con coma:
+# por eso la regla de todo (/*) no lleva Cache-Control, o se mezclaria con la del service worker y la de los archivos con huella.
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# La pagina, el service worker y el manifiesto se vuelven a preguntar siempre: asi una version nueva se encuentra
+# (el navegador compara sw.js byte a byte) y nadie se queda con una pagina que apunta a archivos que ya no existen.
+/
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# Los archivos que Vite compila llevan una huella del contenido en el nombre: si cambia el archivo, cambia el nombre.
+# Por eso se guardan un ano y no se vuelven a preguntar.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

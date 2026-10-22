@@ -1,0 +1,26 @@
+# Configuracion del escaneo de secretos.
+#
+# Parte de las reglas por defecto de gitleaks. La tentacion al ver un falso
+# positivo es relajar la regla; aqui se hace lo contrario: si hace falta
+# perdonar algo, se nombra el valor exacto y se explica por que.
+#
+# Un escaner de secretos que grita demasiado acaba ignorandose, y un escaner
+# que se ignora es peor que no tenerlo: da tranquilidad sin darla.
+
+[extend]
+useDefault = true
+
+# Valores FALSOS de las pruebas del cliente de identidad: la contrasena con la que se comprueba que el cuerpo de "crear cuenta"
+# lleva lo que se escribio y viaja solo al servicio de identidad, y la clave publicable de ejemplo con la que se prueba la
+# lectura de la configuracion. No son de ninguna cuenta ni de ningun proyecto. La regla de claves genericas los toma por una
+# clave porque se escriben junto a un nombre como `password` o `KEY`. Se nombra cada valor exacto; no se perdona ninguna regla.
+[[allowlists]]
+description = "Valores falsos de las pruebas del cliente de identidad"
+regexes = ['''^(S3cretoLargo123|sb_publishable_FALSA1234567890)$''']
+
+# El identificador de persona de las pruebas del almacenamiento local (C3-08): un UUID inventado que no es de ninguna cuenta. La
+# regla de claves genericas lo toma por una clave porque se escribe junto a un nombre como `authUserId` o `AUTH_ID`. Se nombra el
+# valor exacto; no se perdona ninguna regla.
+[[allowlists]]
+description = "Identificador falso de una persona en las pruebas del almacenamiento local"
+regexes = ['''^9b2f6c1e-0d5a-4c1b-8f3e-2a7d6e5c4b3a$''']

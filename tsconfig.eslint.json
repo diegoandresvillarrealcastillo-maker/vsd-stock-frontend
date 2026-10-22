@@ -1,0 +1,19 @@
+{
+  // Lo que ESLint necesita para analizar con tipos todos los archivos: la
+  // aplicacion, las pruebas, las pruebas en navegador y la configuracion de Vite y de Playwright.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "types": ["vite/client", "node"]
+  },
+  "include": [
+    "src",
+    "test",
+    "scripts",
+    "e2e",
+    "vite.config.ts",
+    "vitest.mutation.config.ts",
+    "playwright.config.ts"
+  ]
+}

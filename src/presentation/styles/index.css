@@ -1,0 +1,131 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens de diseno de VSD Stock (ADR 0008). Se definen UNA vez, aqui, y se usan
+ * desde Tailwind como utilidades (bg-surface, text-fg-muted, rounded-lg...).
+ *
+ * `static` fuerza a Tailwind a escribir todos los tokens como variables CSS,
+ * aunque ninguna clase los use todavia: asi el modo oscuro, que los reemplaza
+ * mas abajo, siempre tiene algo que reemplazar.
+ *
+ * Las duraciones y las curvas tambien existen en JavaScript
+ * (src/presentation/motion/tokens.ts) porque Framer Motion las necesita ahi.
+ * test/design/tokens.spec.ts comprueba que ambos lados digan lo mismo.
+ */
+@theme static {
+  /* ---------- Tipografia ----------
+   * Fuentes del sistema: la primera pantalla no espera ninguna descarga, y la
+   * aplicacion tiene que abrir sin conexion. */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+
+  /* ---------- Espacio ----------
+   * Base de 4 px (--spacing). `gutter` es el margen lateral de las pantallas y
+   * `touch` el tamano minimo de cualquier objetivo tactil: 44 px (WCAG 2.2). */
+  --spacing: 0.25rem;
+  --spacing-gutter: 1rem;
+  --spacing-touch: 2.75rem;
+
+  /* ---------- Radio ---------- */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* ---------- Sombra ---------- */
+  --shadow-sm: 0 1px 2px 0 rgb(20 33 27 / 0.08);
+  --shadow-md: 0 4px 10px -2px rgb(20 33 27 / 0.12);
+  --shadow-lg: 0 12px 24px -6px rgb(20 33 27 / 0.16);
+
+  /* ---------- Movimiento ---------- */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --duration-pulse: 1600ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* ---------- Color: tema claro ----------
+   * Azul oscuro y blanco como base; el naranja del logo de VSD Stock solo como
+   * acento. Los valores salen del archivo de Figma "VSD Stock - Sistema de
+   * diseno". Cada par de texto sobre fondo cumple contraste AA (4.5:1) y cada
+   * borde o foco, 3:1; las pruebas lo comprueban.
+   *
+   * `band` es la banda de marca (la del logo): es azul oscuro en los dos temas,
+   * porque las letras blancas del logo no se leen sobre fondo blanco. */
+  --color-surface: #ffffff;
+  --color-surface-raised: #f1f5fc;
+  --color-fg: #0a1a3f;
+  --color-fg-muted: #44547a;
+  --color-primary: #123a8c;
+  --color-primary-hover: #0d2e73;
+  --color-on-primary: #ffffff;
+  --color-accent: #f97801;
+  --color-accent-hover: #e36c00;
+  --color-on-accent: #0a1a3f;
+  --color-accent-text: #b04a00;
+  --color-success: #0b7a43;
+  --color-border: #7384a8;
+  --color-focus: #0868f8;
+  --color-skeleton: #e2e9f5;
+  --color-band: #0a1a3f;
+  --color-on-band: #ffffff;
+}
+
+/* ---------- Color: tema oscuro ----------
+ * Se activa con data-theme="dark" en la raiz: lo pone el script de index.html
+ * antes del primer pintado y el boton de tema despues. Reemplaza los mismos
+ * tokens, asi que las clases (bg-surface, text-fg...) no cambian de un tema al
+ * otro. El naranja del acento no cambia: es la marca. */
+:root[data-theme='dark'] {
+  --color-surface: #07122b;
+  --color-surface-raised: #0e1f44;
+  --color-fg: #f3f6ff;
+  --color-fg-muted: #a8b7d9;
+  --color-primary: #ffffff;
+  --color-primary-hover: #dbe6ff;
+  --color-on-primary: #0a1a3f;
+  --color-accent: #f97801;
+  --color-accent-hover: #e36c00;
+  --color-on-accent: #0a1a3f;
+  --color-accent-text: #ff9a3d;
+  --color-success: #4ade80;
+  --color-border: #7d90bb;
+  --color-focus: #ff9a3d;
+  --color-skeleton: #1a2d5a;
+  --color-band: #0e1f44;
+  --color-on-band: #ffffff;
+}
+
+@layer base {
+  html {
+    /* Los controles del navegador (barras de desplazamiento, formularios) siguen el tema. */
+    color-scheme: light;
+  }
+
+  html[data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-surface);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+  }
+}

@@ -1,0 +1,356 @@
+# ============================================================
+#  VSD Stock (frontend) - Integracion continua
+# ============================================================
+#  Barrera automatica del proyecto. Este archivo cubre siete cosas:
+#
+#    1. que no entre ningun secreto al repositorio;
+#    2. que todo commit siga Conventional Commits y cite su Issue;
+#    3. que el codigo pase estilo, fronteras de la arquitectura, formato,
+#       tipos, pruebas con cobertura (incluidos los tipos generados del
+#       contrato) y compilacion;
+#    4. que la copia del contrato OpenAPI coincida con la del backend;
+#    5. que la compilacion pase Lighthouse: accesibilidad perfecta y buen
+#       rendimiento en un movil de gama media con red lenta (simulado);
+#    6. que las pruebas del dominio y de la aplicacion noten el codigo roto a
+#       proposito (Stryker). Es informativo: no bloquea hasta que se marque;
+#    7. que la web ya compilada funcione en navegadores de verdad contra la API
+#       y la base reales (C3-15): sin red, recargando, con dos pestañas y con
+#       varios dispositivos, y con axe en cada pantalla. Chromium bloquea cuando
+#       se marque; Firefox y WebKit se corren y se informan.
+#
+#  CodeQL (codeql.yml) y las vulnerabilidades de las dependencias
+#  (dependencias.yml) van en archivos aparte para poder programarlos.
+#
+#  Los nombres de los trabajos coinciden con los del backend a proposito:
+#  asi se exigen igual en el conjunto de reglas de las ramas.
+# ============================================================
+
+name: CI
+
+on:
+  # Cualquier Pull Request, sin filtrar por rama destino: filtrarlo a las tres
+  # ramas fijas dejaria sin CI a los Pull Request apilados, y un PR sin una
+  # sola comprobacion se lee como si no hubiera nada que comprobar.
+  pull_request:
+  push:
+    branches: [desarrollo, preproduccion, produccion]
+
+# Principio de minimo privilegio: el CI solo necesita leer el codigo.
+permissions:
+  contents: read
+
+# Si se empuja dos veces seguidas, la ejecucion anterior se cancela.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: '8.30.1'
+  # Los hooks de Husky son una comodidad local; en el CI no hacen falta.
+  HUSKY: '0'
+
+jobs:
+  secretos:
+    name: Escaneo de secretos
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descargar el codigo con el historial completo
+        uses: actions/checkout@v7
+        with:
+          # Gitleaks revisa todos los commits, no solo el ultimo:
+          # un secreto borrado despues sigue estando en el historial.
+          fetch-depth: 0
+
+      - name: Instalar Gitleaks
+        run: |
+          set -euo pipefail
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --silent --show-error --fail --location "$url" --output gitleaks.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          rm -f gitleaks gitleaks.tar.gz
+          gitleaks version
+
+      - name: Buscar secretos en todo el historial
+        # --redact evita que el secreto encontrado quede impreso en el
+        # registro del trabajo, que seria una segunda filtracion.
+        # --config explicito: si el archivo se moviera o se renombrara, se
+        # prefiere que el trabajo falle a que escanee con las reglas por
+        # defecto sin avisar.
+        run: gitleaks git . --config .gitleaks.toml --redact --no-banner --verbose
+
+  commits:
+    name: Convencion de commits
+    runs-on: ubuntu-24.04
+    # Solo en los PR de cada ticket. Una promocion (desarrollo -> preproduccion
+    # -> produccion) trae commits que ya se revisaron al entrar a desarrollo y
+    # que no se pueden corregir sin reescribir una rama compartida. Saltado, el
+    # trabajo cuenta como aprobado para la proteccion de la rama.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref != 'desarrollo' &&
+      github.head_ref != 'preproduccion'
+    steps:
+      - name: Descargar el codigo con el historial completo
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias sin ejecutar scripts
+        # commitlint y su configuracion son dependencias de desarrollo del
+        # proyecto: las versiones las fija package-lock.json, no el CI.
+        run: npm ci --ignore-scripts
+
+      - name: Validar los mensajes de commit del Pull Request
+        env:
+          # Se pasan por variable de entorno y no interpoladas dentro del
+          # script, para no inyectar contenido del evento en la shell.
+          COMMIT_DESDE: ${{ github.event.pull_request.base.sha }}
+          COMMIT_HASTA: ${{ github.event.pull_request.head.sha }}
+        run: npx commitlint --from "$COMMIT_DESDE" --to "$COMMIT_HASTA" --verbose
+
+  calidad:
+    name: Calidad del codigo
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        # npm ci respeta package-lock.json al pie de la letra: el CI instala
+        # exactamente las mismas versiones que hay en el equipo.
+        run: npm ci
+
+      - name: Revisar el estilo y las fronteras de la arquitectura
+        run: npm run lint
+
+      - name: Revisar el formato
+        run: npm run format:check
+
+      - name: Revisar los tipos
+        run: npm run typecheck
+
+      - name: Ejecutar las pruebas con cobertura
+        # Falla si domain/ o application/ bajan del 80 %.
+        run: npm run test:coverage
+
+      - name: Compilar
+        run: npm run build
+
+      # El peso de lo que baja el navegador tiene techo (C3-07): si un cambio se pasa, se discute en el PR.
+      - name: Medir el peso contra el presupuesto
+        run: npm run budget
+
+  contrato:
+    name: Contrato con el backend
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # Sin `npm ci`: el script solo usa lo que trae Node 24, que ejecuta
+      # TypeScript quitando los tipos. Asi tambien se comprueba que corre asi.
+      - name: Comparar la copia del contrato con la del backend
+        env:
+          # La rama del backend que corresponde: la base del Pull Request o, en un
+          # push, la rama que lo recibe. Se pasan por variable de entorno y no
+          # interpoladas dentro del script, para no inyectar contenido en la shell.
+          CONTRACT_REF: ${{ github.base_ref || github.ref_name }}
+          # Evita el limite de consultas anonimas de la API de GitHub.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/contract.ts check
+
+  roturas:
+    name: Roturas a proposito (Stryker)
+    runs-on: ubuntu-24.04
+    # Informativo (C3-17): rompe a proposito el codigo del dominio y de la aplicacion
+    # y mira si alguna prueba lo nota. El puntaje tiene un piso en
+    # stryker.config.json y el trabajo queda en rojo si baja de el, pero NO esta en
+    # el conjunto de reglas de las ramas: no bloquea ningun Pull Request hasta que
+    # Diego lo marque como obligatorio. Por eso no lleva
+    # `continue-on-error`: marcado como obligatorio, tiene que poder fallar.
+    # Ningun otro trabajo lo espera (`needs`).
+    #
+    # La primera corrida, sin nada guardado, rompe unas 2.100 cosas y tarda mas de una
+    # hora en un ejecutor de pocos nucleos (28 minutos con ocho). Por eso Stryker corre en
+    # modo incremental: guarda lo que aprendio en reports/stryker-incremental.json y la
+    # siguiente corrida solo repite lo que cambio. La memoria se busca primero en la rama
+    # del Pull Request y despues en la base (`desarrollo`), donde la deja cada push.
+    timeout-minutes: 120
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Recuperar lo que aprendio la corrida anterior
+        uses: actions/cache/restore@v6
+        with:
+          path: reports/stryker-incremental.json
+          key: roturas-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            roturas-${{ github.head_ref || github.ref_name }}-
+            roturas-${{ github.base_ref || github.ref_name }}-
+
+      - name: Romper el codigo a proposito y ver si las pruebas lo notan
+        run: npm run mutation
+
+      # Se guarda aunque el puntaje haya bajado del piso: lo aprendido sirve igual.
+      - name: Guardar lo que aprendio esta corrida
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: reports/stryker-incremental.json
+          key: roturas-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
+
+      - name: Guardar el informe
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informes-roturas
+          path: reports/mutation/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  navegador:
+    name: Navegador real (${{ matrix.browser }})
+    runs-on: ubuntu-24.04
+    # C3-15 (ADR 0030): la web real, ya compilada, en un navegador de verdad contra la API real y una base real. Chromium es el
+    # navegador del telefono Android del negocio de referencia: ese trabajo ("Navegador real (chromium)") es el que Diego marca como
+    # obligatorio cuando este en verde. Firefox y WebKit se corren y se informan, pero no bloquean (`continue-on-error`): sus
+    # diferencias se miran, no se exigen. WebKit ya encontro un fallo real de la primera visita (ver docs/pruebas-en-navegador.md).
+    continue-on-error: ${{ matrix.browser != 'chromium' }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: stock
+          POSTGRES_DB: stock_test
+          # Igual que en el CI del backend: vive lo que dura el trabajo y no guarda datos de nadie.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stock -d stock_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      # Las pruebas levantan solas la identidad de mentira, la API y la web (playwright.config.ts); aqui solo se les dice donde esta
+      # la base y el clon del backend.
+      E2E_DB_PORT: '5432'
+      VSD_BACKEND_DIR: ${{ github.workspace }}/vsd-stock-backend
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      # El backend es publico. La misma rama que usa el trabajo del contrato: la base del Pull Request o, en un push, la que lo recibe.
+      - name: Descargar el backend
+        uses: actions/checkout@v7
+        with:
+          repository: diegoandresvillarrealcastillo-maker/vsd-stock-backend
+          ref: ${{ github.base_ref || github.ref_name }}
+          path: vsd-stock-backend
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar las dependencias del backend
+        working-directory: vsd-stock-backend
+        run: npm ci
+
+      # Lo lento del trabajo es `apt` (`--with-deps`), no el navegador: el 22 de octubre bajar los paquetes del sistema desde
+      # azure.archive.ubuntu.com fue a 30-55 kB/s (23 min con Firefox, 8 con Chromium) y el navegador de Playwright se bajo en 3 s.
+      # Chromium, el que bloquea, solo recibia 9 paquetes de apt y todos eran fuentes de texto (las librerias ya las trae el ejecutor):
+      # sin `--with-deps` no depende del espejo. Firefox y WebKit si necesitan sus librerias (40 y 181 paquetes) y no bloquean.
+      - name: Instalar Chromium sin los paquetes del sistema
+        if: matrix.browser == 'chromium'
+        run: npx playwright install chromium
+
+      - name: Instalar el navegador y sus librerias del sistema
+        if: matrix.browser != 'chromium'
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Probar la web real en el navegador
+        run: npx playwright test --project=${{ matrix.browser }}
+
+      - name: Guardar el informe
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informes-navegador-${{ matrix.browser }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  accesibilidad:
+    name: Accesibilidad y rendimiento (Lighthouse)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar
+        run: npm run build
+
+      # Lighthouse sirve dist/ y lo audita con la emulacion de un movil de gama
+      # media (Moto G Power), la CPU 4 veces mas lenta y una red 4G lenta
+      # simulada. La accesibilidad tiene que ser perfecta; el rendimiento y las
+      # buenas practicas solo avisan si bajan de 0,9.
+      - name: Auditar la compilacion
+        run: npm run lighthouse
+
+      - name: Guardar los informes
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informes-lighthouse
+          path: .lighthouseci/
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,85 @@
+{
+  "name": "vsd-stock-frontend",
+  "version": "0.1.0",
+  "description": "PWA de VSD Stock: inventario, punto de venta, caja y reportes para MiPymes",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project tsconfig.sw.json && vite build && node --disable-warning=ExperimentalWarning scripts/build-service-worker.ts",
+    "build:e2e": "vite build --mode e2e && node --disable-warning=ExperimentalWarning scripts/build-service-worker.ts",
+    "preview": "vite preview",
+    "e2e": "playwright test",
+    "e2e:chromium": "playwright test --project=chromium",
+    "budget": "node scripts/check-bundle-size.ts",
+    "typecheck": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project tsconfig.sw.json && tsc --noEmit --project tsconfig.node.json && tsc --noEmit --project tsconfig.e2e.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "mutation": "node scripts/mutation.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "contract:generate": "openapi-typescript contract/openapi.json --output src/adapters/out/api/schema.d.ts",
+    "contract:sync": "node scripts/contract.ts sync && npm run contract:generate",
+    "contract:check": "node scripts/contract.ts check",
+    "lighthouse": "npx --yes @lhci/cli@0.15.1 autorun --config=lighthouserc.json",
+    "prepare": "husky"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,mjs,mts,yml,yaml,html,css}": [
+      "prettier --write"
+    ]
+  },
+  "dependencies": {
+    "framer-motion": "^14.3.0",
+    "idb": "^8.0.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router": "^7.18.4"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.64.1",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "fake-indexeddb": "^6.2.6",
+    "husky": "^9.1.7",
+    "jsdom": "^29.1.1",
+    "lint-staged": "^17.6.0",
+    "openapi-typescript": "^7.13.0",
+    "prettier": "^3.9.10",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}
