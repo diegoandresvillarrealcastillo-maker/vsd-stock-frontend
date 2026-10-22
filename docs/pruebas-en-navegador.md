@@ -67,6 +67,12 @@ sigue rechazándose, y hay pruebas que lo vigilan. Lo que lleva `VITE_` queda de
   la primera corrida ya sirvió: WebKit encontró un fallo real.
 - En el CI los informes (`playwright-report/` y `test-results/`, con las capturas y el _trace_ de lo que falló) se guardan como artefacto
   `informes-navegador-<navegador>`. Un trace se abre con `npx playwright show-trace <archivo>.zip`.
+- **Lo lento del CI es `apt`, no el navegador.** El 22 de octubre `npx playwright install --with-deps` bajó los paquetes del sistema desde
+  `azure.archive.ubuntu.com` a 30-55 kB/s: 23 min 10 s para Firefox (44 MB) y 7 min 58 s para Chromium (26 MB), mientras el navegador de Playwright
+  se bajó en 3 s. Chromium, que es el que bloquea, solo recibía 9 paquetes y todos eran fuentes de texto (las librerías ya las trae el ejecutor), así
+  que **Chromium se instala sin `--with-deps`** y no depende del espejo. **Firefox y WebKit siguen con `--with-deps`** porque sí necesitan sus
+  librerías (40 y 181 paquetes): pueden tardar lo que tarde el espejo y, como no bloquean, solo hacen esperar al PR; a los 30 minutos el trabajo se corta.
+  Si algún día el Chromium del CI se queja de una librería o de una fuente que falta, se vuelve a `--with-deps` en ese paso y se mide de nuevo.
 
 Resultado de la corrida con la que se cerró C3-15, en Windows: **Chromium 16/16 (58 s), Firefox 16/16 (1,4 min), WebKit 16/16 (1,3 min)**.
 La primera corrida, antes de los arreglos de abajo, dejó en rojo tres pruebas de accesibilidad en Chromium y dos pruebas en WebKit.
