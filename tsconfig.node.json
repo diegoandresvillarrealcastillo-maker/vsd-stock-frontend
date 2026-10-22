@@ -15,6 +15,8 @@
   },
   "include": [
     "vite.config.ts",
+    "sitio/vite.config.ts",
+    "sitio/pagina/destinos.ts",
     "vitest.mutation.config.ts",
     "scripts",
     "test/architecture",
@@ -22,6 +24,7 @@
     "test/design",
     "test/docs",
     "test/pwa",
+    "test/sitio",
     "test/tooling",
     "test/support/contrast.ts",
     "test/support/contrast.spec.ts"

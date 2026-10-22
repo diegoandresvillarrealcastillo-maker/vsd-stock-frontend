@@ -43,6 +43,7 @@ const APPLICATION_SPEC = 'src/application/usecases/example.spec.ts';
 const ADAPTER_IN = 'src/adapters/in/connection/example.ts';
 const ADAPTER_OUT = 'src/adapters/out/api/example.ts';
 const PRESENTATION = 'src/presentation/components/example.tsx';
+const SITE = 'sitio/pagina/example.tsx';
 
 const forbidden: readonly Violation[] = [
   // ---------- domain ----------
@@ -231,6 +232,77 @@ const forbidden: readonly Violation[] = [
     rule: 'no-restricted-imports',
     hint: 'casos de uso',
   },
+  // ---------- sitio (la landing, ADR 0033): del dominio y las mascotas, nada mas ----------
+  {
+    name: 'the site imports a use case of the application, and is told what to do instead',
+    file: SITE,
+    code: "import { x } from '../../src/application/usecases/selling';",
+    rule: 'no-restricted-imports',
+    hint: 'que viva en domain/',
+  },
+  {
+    name: 'a section of the site, in a folder of its own, imports a use case',
+    file: 'sitio/pagina/secciones/hero.tsx',
+    code: "import { x } from '../../../src/application/usecases/selling';",
+    rule: 'no-restricted-imports',
+    hint: 'sitio/',
+  },
+  {
+    name: 'a plain .ts file of the site imports an adapter',
+    file: 'sitio/pagina/contenido.ts',
+    code: "import { x } from '../../src/adapters/out/api/client';",
+    rule: 'no-restricted-imports',
+    hint: 'sitio/',
+  },
+  {
+    name: 'the site imports an adapter',
+    file: SITE,
+    code: "import { x } from '../../src/adapters/out/api/client';",
+    rule: 'no-restricted-imports',
+    hint: 'sitio/',
+  },
+  {
+    name: 'the site imports infrastructure',
+    file: SITE,
+    code: "import { x } from '../../src/infrastructure/api-base-url';",
+    rule: 'no-restricted-imports',
+    hint: 'sitio/',
+  },
+  {
+    name: 'the site imports a screen of the app',
+    file: SITE,
+    code: "import { App } from '../../src/presentation/App';",
+    rule: 'no-restricted-imports',
+    hint: 'sitio/',
+  },
+  {
+    name: 'the site imports a component of the app, not only its screens',
+    file: SITE,
+    code: "import { Button } from '../../src/presentation/components/button';",
+    rule: 'no-restricted-imports',
+    hint: 'sitio/',
+  },
+  {
+    name: 'the site imports the logo of the app, which is not a mascot',
+    file: SITE,
+    code: "import logo from '../../src/presentation/assets/logo-stock.webp';",
+    rule: 'no-restricted-imports',
+    hint: 'sitio/',
+  },
+  {
+    name: 'the site re-exports from the application',
+    file: SITE,
+    code: "export { x } from '../../src/application/usecases/selling';",
+    rule: 'no-restricted-imports',
+    hint: 'sitio/',
+  },
+  {
+    name: 'a test of the site imports a use case too',
+    file: 'sitio/pagina/example.spec.tsx',
+    code: "import { x } from '../../src/application/usecases/selling';",
+    rule: 'no-restricted-imports',
+    hint: 'sitio/',
+  },
 ];
 
 const allowed: readonly { readonly name: string; readonly file: string; readonly code: string }[] =
@@ -280,6 +352,25 @@ const allowed: readonly { readonly name: string; readonly file: string; readonly
         "import type { CheckConnection } from '../../application/usecases/check-connection';",
         "import type { ConnectionStatus } from '../../domain/model/connection-status';",
         "import { Button } from './button';",
+      ].join('\n'),
+    },
+    {
+      name: 'the site imports the pure domain and the mascots of the app',
+      file: SITE,
+      code: [
+        "import { splitTaxIncluded } from '../../src/domain/model/tax';",
+        "import ori from '../../src/presentation/assets/mascotas/ori-dormida.webp';",
+      ].join('\n'),
+    },
+    {
+      name: 'the site imports React, an animation library, fonts and its own files',
+      file: SITE,
+      code: [
+        "import { useState } from 'react';",
+        "import { m } from 'framer-motion';",
+        "import '@fontsource-variable/inter/wght.css';",
+        "import { Hero } from './secciones/hero';",
+        "import { contenido } from '../contenido';",
       ].join('\n'),
     },
     {

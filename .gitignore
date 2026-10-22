@@ -24,6 +24,9 @@ node_modules/
 # carpeta del codigo fuente que se llame igual (fallo que ya nos costo
 # tiempo en VSD Health).
 /dist/
+# La landing (ADR 0033) se compila a su propia carpeta: la salida del navegador y la que se prerenderiza.
+/sitio/dist/
+/sitio/dist-ssr/
 /build/
 /out/
 .vite/
