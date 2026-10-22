@@ -168,11 +168,69 @@ describe('the job of the CI', () => {
     expect(bloque).toMatch(/working-directory: vsd-stock-backend\n\s+run: npm ci/);
   });
 
-  it('asks for the backend branch that matches, the way the contract job does', () => {
-    expect(bloque).toContain('ref: ${{ github.base_ref || github.ref_name }}');
-    expect(trabajo('contrato')).toContain(
-      'CONTRACT_REF: ${{ github.base_ref || github.ref_name }}',
+  // Un Pull Request apilado tiene por base la rama de otro PR, que solo existe en este repositorio: pedirsela al backend daba 404
+  // (contrato) y un `git checkout` roto (navegadores). La rama se elige una vez por trabajo y los dos usan lo que se eligio.
+  describe('the backend branch', () => {
+    const URL_DEL_BACKEND =
+      'https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend';
+
+    /** El paso que elige la rama: desde su nombre hasta el siguiente paso del trabajo. */
+    function paso(clave: string): string {
+      const texto = sinComentarios(trabajo(clave));
+      const inicio = texto.indexOf('- name: Elegir la rama del backend');
+      expect(
+        inicio,
+        `falta el paso que elige la rama en el trabajo ${clave}`,
+      ).toBeGreaterThanOrEqual(0);
+      const resto = texto.slice(inicio + 1);
+      const siguiente = resto.search(/^ {6}- name:/m);
+      return siguiente === -1 ? resto : resto.slice(0, siguiente);
+    }
+
+    it.each(['contrato', 'navegador'])('is chosen in a step of the %s job', (clave) => {
+      const elegir = paso(clave);
+
+      expect(elegir).toContain('id: backend');
+      expect(elegir).toContain('RAMA: ${{ github.base_ref || github.ref_name }}');
+      expect(elegir).toContain(
+        `git ls-remote --exit-code --heads ${URL_DEL_BACKEND} "refs/heads/$RAMA"`,
+      );
+      expect(elegir).toContain('echo "ref=$RAMA" >> "$GITHUB_OUTPUT"');
+      expect(elegir).toContain('echo "ref=desarrollo" >> "$GITHUB_OUTPUT"');
+    });
+
+    it.each(['contrato', 'navegador'])(
+      'only falls back to desarrollo when the backend says it does not have the branch, not when the network fails (%s job)',
+      (clave) => {
+        const elegir = paso(clave);
+
+        expect(elegir).toMatch(/elif \[ \$\? -eq 2 \]; then\n\s+echo "ref=desarrollo"/);
+        expect(elegir).toMatch(/else\n\s+exit 1\n\s+fi/);
+      },
     );
+
+    it('is the one the contract is compared against', () => {
+      const delContrato = sinComentarios(trabajo('contrato'));
+
+      expect(delContrato).toContain('CONTRACT_REF: ${{ steps.backend.outputs.ref }}');
+      expect(delContrato).not.toContain('CONTRACT_REF: ${{ github.base_ref');
+    });
+
+    it('is the one that is downloaded for the browsers', () => {
+      expect(bloque).toContain('ref: ${{ steps.backend.outputs.ref }}');
+      expect(sinComentarios(bloque)).not.toMatch(/ref: \$\{\{ github\.base_ref/);
+    });
+
+    it('is chosen before it is used', () => {
+      for (const clave of ['contrato', 'navegador']) {
+        const texto = sinComentarios(trabajo(clave));
+
+        expect(texto.indexOf('id: backend'), clave).toBeGreaterThanOrEqual(0);
+        expect(texto.indexOf('id: backend'), clave).toBeLessThan(
+          texto.indexOf('steps.backend.outputs.ref'),
+        );
+      }
+    });
   });
 
   it('installs only the browser it is going to use, with the libraries it needs, and runs only that project', () => {
