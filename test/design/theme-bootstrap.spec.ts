@@ -10,8 +10,13 @@ import { THEME_STORAGE_KEY } from '../../src/adapters/out/theme/theme-storage-ke
 // si esperara a React, la persona veria un destello del tema equivocado. Ese
 // script no pasa por el caso de uso, asi que estas pruebas lo ejecutan de
 // verdad y comprueban que decide igual que el resto de la aplicacion.
+/** El contenido del primer script en linea. Las etiquetas de HTML no distinguen mayusculas ni espacios antes del `>` final. */
+function inlineScript(page: string): string {
+  return /<script>([\s\S]*?)<\/script\s*>/i.exec(page)?.[1] ?? '';
+}
+
 const html = readFileSync(resolve(import.meta.dirname, '../../index.html'), 'utf8');
-const script = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '';
+const script = inlineScript(html);
 
 interface Scenario {
   saved?: string | null;
@@ -45,6 +50,20 @@ function run({
   runInNewContext(script, { window, document: { documentElement: root } });
   return { theme: root.dataset['theme'], asked };
 }
+
+describe('reading the inline script out of a page', () => {
+  it('finds it whatever the case of its tags', () => {
+    expect(inlineScript('<SCRIPT>paint()</SCRIPT>')).toBe('paint()');
+  });
+
+  it('finds it when the closing tag has spaces before the final bracket', () => {
+    expect(inlineScript('<script>paint()</script >')).toBe('paint()');
+  });
+
+  it('gives an empty script when the page has none, so the next tests fail loudly', () => {
+    expect(inlineScript('<p>hola</p>')).toBe('');
+  });
+});
 
 describe('theme bootstrap script in index.html', () => {
   it('exists, as a classic inline script in the head, so it runs before the first paint', () => {
