@@ -77,6 +77,13 @@ describe('the document', () => {
     expect(documento).toMatch(/Firefox y WebKit se corren y se informan, pero no bloquean/);
   });
 
+  it('explains why the CI is slow some days: the apt mirror, not the browser', () => {
+    expect(documento).toContain('azure.archive.ubuntu.com');
+    expect(documento).toContain('el navegador de Playwright se bajó en 3 s');
+    expect(documento).toContain('Chromium se instala sin `--with-deps`');
+    expect(documento).toContain('Firefox y WebKit siguen con `--with-deps`');
+  });
+
   it('keeps the findings, the ones fixed and the ones left open, so nobody finds them again', () => {
     expect(documento).toContain('shiftId');
     expect(documento).toContain('Arreglado');
@@ -171,6 +178,23 @@ describe('the job of the CI', () => {
   it('installs only the browser it is going to use, with the libraries it needs, and runs only that project', () => {
     expect(bloque).toContain('run: npx playwright install --with-deps ${{ matrix.browser }}');
     expect(bloque).toContain('run: npx playwright test --project=${{ matrix.browser }}');
+  });
+
+  it('installs Chromium, the one that blocks, without the system packages, so a slow apt mirror cannot hold it', () => {
+    const pasos = sinComentarios(bloque);
+
+    expect(pasos).toMatch(
+      /if: matrix\.browser == 'chromium'\n\s+run: npx playwright install chromium\n/,
+    );
+    expect(pasos).not.toMatch(/install --with-deps chromium/);
+  });
+
+  it('keeps the system packages for Firefox and WebKit, which do need their libraries', () => {
+    const pasos = sinComentarios(bloque);
+
+    expect(pasos).toMatch(
+      /if: matrix\.browser != 'chromium'\n\s+run: npx playwright install --with-deps \$\{\{ matrix\.browser \}\}\n/,
+    );
   });
 
   it('saves the report as an artifact even when a test fails', () => {

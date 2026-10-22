@@ -294,7 +294,16 @@ jobs:
         working-directory: vsd-stock-backend
         run: npm ci
 
-      - name: Instalar el navegador
+      # Lo lento del trabajo es `apt` (`--with-deps`), no el navegador: el 22 de octubre bajar los paquetes del sistema desde
+      # azure.archive.ubuntu.com fue a 30-55 kB/s (23 min con Firefox, 8 con Chromium) y el navegador de Playwright se bajo en 3 s.
+      # Chromium, el que bloquea, solo recibia 9 paquetes de apt y todos eran fuentes de texto (las librerias ya las trae el ejecutor):
+      # sin `--with-deps` no depende del espejo. Firefox y WebKit si necesitan sus librerias (40 y 181 paquetes) y no bloquean.
+      - name: Instalar Chromium sin los paquetes del sistema
+        if: matrix.browser == 'chromium'
+        run: npx playwright install chromium
+
+      - name: Instalar el navegador y sus librerias del sistema
+        if: matrix.browser != 'chromium'
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Probar la web real en el navegador
