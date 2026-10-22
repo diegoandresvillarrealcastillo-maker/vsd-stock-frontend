@@ -87,6 +87,36 @@ describe('docs/despliegue-de-la-web.md', () => {
     expect(guide).toMatch(/sin (conexi[óo]n|red|internet)/i);
   });
 
+  it('gives the direct upload, for when the panel only offers to create a Worker, with the commands that worked', () => {
+    expect(guide).toMatch(/solo ofrec[ií]a crear un \*\*Worker\*\*/);
+    expect(guide).toContain(
+      'npx wrangler pages project create vsd-stock-pre --production-branch preproduccion',
+    );
+    expect(guide).toContain(
+      'npx wrangler pages deploy dist --project-name vsd-stock-pre --branch preproduccion',
+    );
+    // El error que se comete en ese panel: `wrangler deploy` crea un Worker, no un proyecto de Pages.
+    expect(guide).toContain('`wrangler deploy`');
+  });
+
+  it('says there is no automatic deployment with the direct upload, so an old web does not go unnoticed', () => {
+    expect(guide).toMatch(/no hay despliegue autom[áa]tico/i);
+    expect(guide).toMatch(/se queda con la versi[óo]n vieja/i);
+  });
+
+  it('keeps the variables out of the shell after building, and never asks for a secret one', () => {
+    expect(guide).toContain('Remove-Item Env:VITE_API_URL');
+    expect(guide).not.toMatch(/\$env:VITE_AUTH_PUBLISHABLE_KEY = 'sb_secret_/);
+  });
+
+  it('leaves the automatic deployment for PROD as something that was not decided here', () => {
+    const notDecided =
+      guide.split(/^## /m).find((part) => part.startsWith('Lo que no se decidió aquí')) ?? '';
+
+    expect(notDecided).toMatch(/despliegue autom[áa]tico/i);
+    expect(notDecided).toMatch(/ADR/);
+  });
+
   it('says how to go back', () => {
     expect(guide).toMatch(/rollback/i);
   });
