@@ -16,6 +16,8 @@
     "dev:sitio": "vite --config sitio/vite.config.ts",
     "build:sitio": "tsc --noEmit --project sitio/tsconfig.json && vite build --config sitio/vite.config.ts && vite build --config sitio/vite.config.ts --ssr pagina/entry-server.tsx --outDir dist-ssr && node --disable-warning=ExperimentalWarning scripts/build-sitio.ts",
     "preview:sitio": "vite preview --config sitio/vite.config.ts",
+    "publish:sitio": "node --disable-warning=ExperimentalWarning scripts/publicar-sitio.ts",
+    "verify:sitio": "node --disable-warning=ExperimentalWarning scripts/verificar-sitio.ts",
     "e2e": "playwright test",
     "e2e:chromium": "playwright test --project=chromium",
     "e2e:sitio": "playwright test --config e2e/sitio/playwright.config.ts",

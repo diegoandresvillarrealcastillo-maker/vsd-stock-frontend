@@ -510,3 +510,4 @@ naranja del logo (`#f97801`) solo como acento.**
   el CORS que necesita la API, en el
   [ADR 0012](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0012-cors-con-lista-explicita-de-origenes-y-sin-credenciales.md).
 - Cómo se publica la web de PRE en Cloudflare Pages (pasos, variables, encabezados y comprobación): [`docs/despliegue-de-la-web.md`](docs/despliegue-de-la-web.md).
+- Cómo se compila, se publica y se comprueba la landing, en su propio proyecto de Cloudflare Pages (vista previa por rama, dirección pública solo desde `desarrollo` fusionado y lo que verifica `npm run verify:sitio`): [`docs/sitio.md`](docs/sitio.md).

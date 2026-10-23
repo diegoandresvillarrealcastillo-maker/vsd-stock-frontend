@@ -71,12 +71,13 @@ $env:VITE_AUTH_PUBLISHABLE_KEY = 'sb_publishable_...'
 npm run build
 Remove-Item Env:VITE_API_URL, Env:VITE_AUTH_URL, Env:VITE_AUTH_PUBLISHABLE_KEY
 npx wrangler login
-npx wrangler pages project create vsd-stock-pre --production-branch preproduccion
+npx wrangler pages project create vsd-stock-pre --production-branch preproduccion --force
 npx wrangler pages deploy dist --project-name vsd-stock-pre --branch preproduccion --commit-dirty=true
 ```
 
 - `wrangler login` abre el navegador para entrar a Cloudflare: no se pega ninguna clave. `project create` solo se hace la primera vez (si el
-  proyecto ya existe, falla y no pasa nada).
+  proyecto ya existe, falla y no pasa nada). El `--force` hace falta con Wrangler 4.151 o posterior: sin él, la creación se manda a Workers y falla con
+  «Missing entry-point to Worker script».
 - Si la subida imprime otra dirección para la rama `preproduccion`, esa es la de la web, y es la que va en `CORS_ORIGINS` (paso 6).
 - **No hay despliegue automático:** la web de PRE cambia cuando alguien repite `npm run build` y el `deploy`. Si `preproduccion` recibe una
   promoción y nadie lo hace, la web se queda con la versión vieja sin que nada avise. Después de cada promoción, comprobar con
