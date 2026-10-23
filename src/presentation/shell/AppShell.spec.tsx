@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Role } from '../../domain/model/permissions';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createTestConnection } from '../../../test/support/connection';
@@ -15,6 +15,11 @@ import { MotionProvider } from '../motion/MotionProvider';
 import { SyncProvider } from '../sync/SyncProvider';
 import { ThemeProvider } from '../theme/ThemeProvider';
 import { AppShell } from './AppShell';
+
+/** Una pantalla que no llega a dibujarse, como un archivo perezoso que no bajo. */
+function ScreenThatBreaks(): ReactNode {
+  throw new Error('Failed to fetch dynamically imported module');
+}
 
 async function setup({
   role = 'owner',
@@ -62,6 +67,7 @@ async function setup({
         <Route index element={<p>Pantalla de inicio</p>} />
         <Route path="catalogo" element={<p>Pantalla de catálogo</p>} />
         <Route path="personas" element={<p>Pantalla de personas</p>} />
+        <Route path="inventario" element={<ScreenThatBreaks />} />
       </Route>
     </Routes>,
     { wrapper: Providers },
@@ -209,6 +215,32 @@ describe('AppShell', () => {
       fireEvent.click(within(nav()).getByRole('link', { name: 'Inicio' }));
 
       expect(screen.getByText('Pantalla de inicio')).toBeDefined();
+    });
+  });
+
+  describe('a screen that does not open (C4-R0)', () => {
+    beforeEach(() => {
+      // React cuenta en la consola lo que atrapa el limite; esta prueba lo provoca a proposito.
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('says so inside the frame: the menu stays, so the person is not left with a blank page', async () => {
+      await setup({ at: '/inventario' });
+
+      expect(screen.getByRole('alert').textContent).toContain('No se pudo abrir esta pantalla');
+      expect(labels()).toEqual(['Inicio', 'Catálogo', 'Inventario', 'Compras', 'Personas']);
+    });
+
+    it('lets go of the warning when the person goes to another screen', async () => {
+      await setup({ at: '/inventario' });
+
+      fireEvent.click(within(nav()).getByRole('link', { name: 'Catálogo' }));
+
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.getByText('Pantalla de catálogo')).toBeDefined();
     });
   });
 });
