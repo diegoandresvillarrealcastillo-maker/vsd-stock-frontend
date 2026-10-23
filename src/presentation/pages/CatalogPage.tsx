@@ -13,6 +13,7 @@ import { LoadFailed } from '../components/LoadFailed';
 import { RowsSkeleton } from '../components/RowsSkeleton';
 import { SubmitButton } from '../components/SubmitButton';
 import { useCatalog } from '../catalog/CatalogProvider';
+import { MascotaDePantalla } from '../mascotas/MascotaDePantalla';
 import { useLoad } from '../forms/use-load';
 import { usePagedLoad } from '../forms/use-paged-load';
 import { useSearchTerm } from '../forms/use-search-term';
@@ -159,15 +160,22 @@ export function CatalogPage() {
       {state.status === 'ready' && (
         <>
           {state.items.length === 0 ? (
-            <p className="text-base text-fg-muted">
-              {search !== ''
-                ? `No encontramos productos con «${search}». Prueba con otro nombre, SKU o código de barras.`
-                : status === 'archived'
-                  ? 'No hay productos archivados.'
-                  : canManage
-                    ? 'Todavía no tienes productos.'
-                    : 'Todavía no hay productos. Pídele a quien administra que los cree.'}
-            </p>
+            <div className="flex items-center gap-4">
+              {/* Fungito (C4-M3) duerme solo cuando el catalogo esta vacio: una busqueda sin resultados o la lista de archivados
+                  vacia no son un catalogo vacio. */}
+              {search === '' && status !== 'archived' && (
+                <MascotaDePantalla personaje="fungito" estado="dormida" className="shrink-0" />
+              )}
+              <p className="text-base text-fg-muted">
+                {search !== ''
+                  ? `No encontramos productos con «${search}». Prueba con otro nombre, SKU o código de barras.`
+                  : status === 'archived'
+                    ? 'No hay productos archivados.'
+                    : canManage
+                      ? 'Todavía no tienes productos.'
+                      : 'Todavía no hay productos. Pídele a quien administra que los cree.'}
+              </p>
+            </div>
           ) : (
             <ul aria-label="Productos" className="flex flex-col">
               {state.items.map((product) => (

@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { itemOfPath, navigationFor } from '../../domain/model/navigation';
 import { useAccount } from '../auth/AuthProvider';
+import { MascotasToggle } from '../components/MascotasToggle';
 import { NeedsConnection } from '../components/NeedsConnection';
 import { ScreenLoader } from '../components/ScreenLoader';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -48,6 +49,7 @@ export function AppShell() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ThemeToggle />
+            <MascotasToggle />
             <SessionControls />
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { createTestConnection } from '../../../test/support/connection';
+import { createTestMascotsPreference } from '../../../test/support/mascots';
 import { setPrefersReducedMotion } from '../../../test/support/match-media';
 import { createTestPwa } from '../../../test/support/pwa';
 import { renderWithProviders } from '../../../test/support/render';
@@ -157,6 +158,100 @@ describe('ConnectionPanel', () => {
 
       const classes = screen.getByRole('button', { name: 'Reintentar' }).className.split(/\s+/);
       expect(classes).toContain('min-h-touch');
+    });
+  });
+
+  describe('Ori (C4-M3)', () => {
+    const ori = () => within(screen.getByRole('status')).queryByRole('img');
+    // El hueco vacio con el tamaño de la mascota: sin el, la tarjeta salta cuando el servidor contesta.
+    const reserved = () => document.querySelector('[data-reserva-de-mascota]');
+
+    function withMascots(saved: boolean | null = null) {
+      const connection = createTestConnection();
+      const mascots = createTestMascotsPreference({ saved });
+      renderWithProviders(<ConnectionPanel />, {
+        connection: connection.monitor,
+        mascots: mascots.preference,
+      });
+      return { ...connection, ...mascots };
+    }
+
+    it('does not say anything with the drawing while it still does not know: it is checking', () => {
+      withMascots();
+
+      expect(ori()).toBeNull();
+    });
+
+    it('keeps the place where Ori will be while it checks, so the card does not jump when the server answers', () => {
+      withMascots();
+
+      expect(reserved()).not.toBeNull();
+    });
+
+    it('wakes Ori up when the server answers: awake, with a calm face', async () => {
+      const { health } = withMascots();
+
+      await act(async () => {
+        await health.succeed(SERVER_TIME);
+      });
+
+      expect(ori()?.getAttribute('alt')).toBe('Ori, con gesto tranquilo');
+      expect(ori()?.getAttribute('src')).toContain('ori-normal');
+      expect(reserved()).toBeNull();
+    });
+
+    it('puts Ori to sleep when there is no connection: the sales are saved on the device and sent when it returns', async () => {
+      const { health } = withMascots();
+
+      await act(async () => {
+        await health.fail();
+      });
+
+      expect(ori()?.getAttribute('alt')).toBe('Ori, durmiendo');
+      expect(ori()?.getAttribute('src')).toContain('ori-dormida');
+    });
+
+    it('puts Ori to sleep at once when the browser reports no network, without waiting for the server', () => {
+      const connection = createTestConnection({ online: false });
+      renderWithProviders(<ConnectionPanel />, { connection: connection.monitor });
+
+      expect(ori()?.getAttribute('alt')).toBe('Ori, durmiendo');
+    });
+
+    it('wakes Ori up again when the connection returns', async () => {
+      const { health, hints } = withMascots();
+      await act(async () => {
+        await health.fail();
+      });
+      expect(ori()?.getAttribute('alt')).toBe('Ori, durmiendo');
+
+      await act(async () => {
+        hints.emit(true);
+        await health.succeed(SERVER_TIME);
+      });
+
+      expect(ori()?.getAttribute('alt')).toBe('Ori, con gesto tranquilo');
+    });
+
+    it('is never what tells the state: the words and the icon say it with or without the drawing', async () => {
+      const { health } = withMascots(false);
+
+      await act(async () => {
+        await health.fail();
+      });
+
+      expect(within(screen.getByRole('status')).getByText('Sin conexión')).toBeDefined();
+    });
+
+    it('leaves no drawing and no empty place when the person turned the mascots off', async () => {
+      const { health } = withMascots(false);
+      expect(reserved()).toBeNull();
+
+      await act(async () => {
+        await health.succeed(SERVER_TIME);
+      });
+
+      expect(ori()).toBeNull();
     });
   });
 

@@ -7,12 +7,14 @@ import { createTestAuth, testMe, testSession } from '../../../test/support/auth'
 import { createTestConnection } from '../../../test/support/connection';
 import { createTestLocal } from '../../../test/support/local';
 import { FakeSyncEngine } from '../../../test/support/sync-engine';
+import { createTestMascotsPreference } from '../../../test/support/mascots';
 import { createTestThemePreference } from '../../../test/support/theme';
 import { AuthProvider } from '../auth/AuthProvider';
 import { ConnectionProvider } from '../connection/ConnectionProvider';
 import { LocalWorkspaceProvider } from '../local/LocalWorkspaceProvider';
 import { MotionProvider } from '../motion/MotionProvider';
 import { SyncProvider } from '../sync/SyncProvider';
+import { MascotasProvider } from '../mascotas/MascotasProvider';
 import { ThemeProvider } from '../theme/ThemeProvider';
 import { AppShell } from './AppShell';
 
@@ -40,6 +42,7 @@ async function setup({
   auth.answer(testMe('ana', role, businessName));
   const connection = createTestConnection();
   const theme = createTestThemePreference();
+  const mascots = createTestMascotsPreference();
   const local = createTestLocal();
   prepare?.(local);
 
@@ -47,15 +50,17 @@ async function setup({
     return (
       <ThemeProvider preference={theme.preference}>
         <ConnectionProvider monitor={connection.monitor}>
-          <MotionProvider>
-            <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
-              <LocalWorkspaceProvider workspace={local.workspace}>
-                <SyncProvider engine={sync}>
-                  <MemoryRouter initialEntries={[at]}>{children}</MemoryRouter>
-                </SyncProvider>
-              </LocalWorkspaceProvider>
-            </AuthProvider>
-          </MotionProvider>
+          <MascotasProvider preference={mascots.preference}>
+            <MotionProvider>
+              <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
+                <LocalWorkspaceProvider workspace={local.workspace}>
+                  <SyncProvider engine={sync}>
+                    <MemoryRouter initialEntries={[at]}>{children}</MemoryRouter>
+                  </SyncProvider>
+                </LocalWorkspaceProvider>
+              </AuthProvider>
+            </MotionProvider>
+          </MascotasProvider>
         </ConnectionProvider>
       </ThemeProvider>
     );
@@ -74,7 +79,7 @@ async function setup({
   );
   // Espera a que se sepa quien es la persona.
   await waitFor(() => expect(screen.queryByText(/cargando tu cuenta/i)).toBeNull());
-  return { auth, connection, theme, local, sync };
+  return { auth, connection, theme, mascots, local, sync };
 }
 
 const nav = () => screen.getByRole('navigation', { name: 'Principal' });
@@ -184,6 +189,25 @@ describe('AppShell', () => {
       await setup();
 
       expect(screen.getByRole('button', { name: /cambiar a tema/i })).toBeDefined();
+    });
+
+    it('has the button to turn the mascots off, in the header with the theme one', async () => {
+      await setup();
+
+      const header = screen.getByRole('banner');
+      expect(
+        within(header)
+          .getByRole('button', { name: 'Mostrar mascotas' })
+          .getAttribute('aria-pressed'),
+      ).toBe('true');
+    });
+
+    it('turns the mascots off for the whole frame when it is pressed', async () => {
+      const { mascots } = await setup();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Mostrar mascotas' }));
+
+      expect(mascots.preference.enabled()).toBe(false);
     });
   });
 

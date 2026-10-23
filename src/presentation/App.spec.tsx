@@ -16,11 +16,13 @@ import { createFakeSalesHistory } from '../../test/support/sales';
 import { FakeSelling } from '../../test/support/selling';
 import { FakeShifts } from '../../test/support/shifts';
 import { FakeSyncEngine } from '../../test/support/sync-engine';
+import { createTestMascotsPreference } from '../../test/support/mascots';
 import { createTestThemePreference } from '../../test/support/theme';
 import { App } from './App';
 
 function renderApp({
   theme = createTestThemePreference().preference,
+  mascots = createTestMascotsPreference().preference,
   connection = createTestConnection(),
   auth = createTestAuth(),
   sync = new FakeSyncEngine(),
@@ -31,6 +33,7 @@ function renderApp({
   path = '/ingresar',
 }: {
   theme?: ReturnType<typeof createTestThemePreference>['preference'];
+  mascots?: ReturnType<typeof createTestMascotsPreference>['preference'];
   connection?: ReturnType<typeof createTestConnection>;
   auth?: TestAuth;
   sync?: FakeSyncEngine;
@@ -44,6 +47,7 @@ function renderApp({
     <MemoryRouter initialEntries={[path]}>
       <App
         theme={theme}
+        mascots={mascots}
         connection={connection.monitor}
         auth={auth}
         local={createTestLocal().workspace}
@@ -181,6 +185,19 @@ describe('App', () => {
 
     expect(applied).toEqual(['light', 'dark']);
     expect(screen.getByRole('button', { name: 'Cambiar a tema claro' })).toBeDefined();
+  });
+
+  it('gives the whole interface the mascots: Ori sleeps without a connection, and the header button takes the mascots away', async () => {
+    const connection = renderApp({ auth: signedIn('owner'), path: '/' });
+    await act(async () => {
+      await connection.health.fail();
+    });
+    expect(screen.getByRole('img', { name: 'Ori, durmiendo' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar mascotas' }));
+
+    expect(screen.queryByRole('img', { name: 'Ori, durmiendo' })).toBeNull();
+    expect(screen.getByText('Sin conexión')).toBeDefined();
   });
 
   it('starts watching the connection when it opens, and shows what the server answers', async () => {
