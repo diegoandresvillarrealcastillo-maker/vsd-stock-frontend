@@ -34,6 +34,20 @@ html {
   }
 }
 
+/* Quien pidio menos movimiento no ve moverse nada: ni una transicion, ni una animacion. Es una red para toda la pagina, no una lista
+ * de cosas por apagar: lo que se agregue manana tambien queda quieto sin que nadie se acuerde. La duracion es de una centesima de
+ * milisegundo y no cero para que `transitionend` y `animationend` sigan llegando a quien los espera. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* El fondo de cuadricula del hero: lineas finas que se desvanecen hacia los bordes, como una hoja de contabilidad. */
 .cuadricula {
   background-image:

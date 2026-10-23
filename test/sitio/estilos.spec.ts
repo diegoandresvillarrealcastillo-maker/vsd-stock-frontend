@@ -45,6 +45,18 @@ describe('the rules of the landing that only the browser can show', () => {
     }
   });
 
+  it('turns off every transition and every animation for who asked for less motion, not only the ones somebody remembered', () => {
+    const bloque =
+      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\*,\s*\*::before,\s*\*::after\s*\{([^}]*)\}/.exec(
+        css,
+      )?.[1] ?? '';
+
+    expect(bloque).toMatch(/animation-duration:\s*0\.01ms\s*!important/);
+    expect(bloque).toMatch(/animation-iteration-count:\s*1\s*!important/);
+    expect(bloque).toMatch(/transition-duration:\s*0\.01ms\s*!important/);
+    expect(bloque).toMatch(/scroll-behavior:\s*auto\s*!important/);
+  });
+
   it('does not draw the sale that travels for who asked for less motion, even if something put it on the page', () => {
     expect(css).toMatch(
       /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.viaje\s*\{\s*display:\s*none/,

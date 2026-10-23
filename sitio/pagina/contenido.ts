@@ -95,6 +95,7 @@ export const contenido = {
   },
 
   anuncio: {
+    nombre: 'Aviso',
     etiqueta: 'EN PRUEBAS',
     texto: 'Vender, caja y modo sin conexión ya funcionan. Buscamos tiendas piloto',
     enlace: { texto: 'Escríbenos por WhatsApp', href: WHATSAPP_URL },

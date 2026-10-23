@@ -107,6 +107,8 @@ sincronización y la pantalla de venta) cabe en los 38 KB que quedan; si no cupi
 
 ## Lighthouse: lo más cercano a un teléfono de gama baja
 
+> La landing (`sitio/`) se mide aparte, con el mismo perfil y sus propios umbrales y presupuesto: [`rendimiento-de-la-landing.md`](rendimiento-de-la-landing.md).
+
 **Decisión (2026-10-16):** el equipo no tiene un teléfono de gama baja, así que la comprobación en un
 dispositivo real se sustituye por Lighthouse en cada PR. Lighthouse audita `dist/` con la emulación de un
 **Moto G Power (2022)**, la **CPU 4 veces más lenta** y una **red 4G lenta simulada** (1,6 Mbps de bajada y
