@@ -191,7 +191,8 @@ describe('the job of the CI', () => {
       const elegir = paso(clave);
 
       expect(elegir).toContain('id: backend');
-      expect(elegir).toContain('RAMA: ${{ github.base_ref || github.ref_name }}');
+      expect(elegir).toContain('PROPIA: ${{ github.head_ref || github.ref_name }}');
+      expect(elegir).toContain('BASE: ${{ github.base_ref }}');
       expect(elegir).toContain(
         `git ls-remote --exit-code --heads ${URL_DEL_BACKEND} "refs/heads/$RAMA"`,
       );
@@ -199,13 +200,28 @@ describe('the job of the CI', () => {
       expect(elegir).toContain('echo "ref=desarrollo" >> "$GITHUB_OUTPUT"');
     });
 
+    // Los tickets que tocan los dos repositorios usan el mismo nombre de rama en los dos: la del propio PR es la que trae el cambio del
+    // backend que este necesita, aunque su base sea la rama de otro ticket que solo tocó el frontend.
     it.each(['contrato', 'navegador'])(
-      'only falls back to desarrollo when the backend says it does not have the branch, not when the network fails (%s job)',
+      'tries the branch of the pull request itself first, then its base, then desarrollo (%s job)',
       (clave) => {
         const elegir = paso(clave);
 
-        expect(elegir).toMatch(/elif \[ \$\? -eq 2 \]; then\n\s+echo "ref=desarrollo"/);
-        expect(elegir).toMatch(/else\n\s+exit 1\n\s+fi/);
+        expect(elegir).toContain('for RAMA in "$PROPIA" "$BASE"; do');
+        expect(elegir).toMatch(/\[ -n "\$RAMA" \] \|\| continue/);
+        expect(elegir.indexOf('for RAMA in')).toBeLessThan(elegir.indexOf('echo "ref=desarrollo"'));
+      },
+    );
+
+    it.each(['contrato', 'navegador'])(
+      'only moves on to the next one when the backend says it does not have the branch, not when the network fails (%s job)',
+      (clave) => {
+        const elegir = paso(clave);
+
+        expect(elegir).toMatch(
+          /CODIGO=\$\?\n\s+if \[ "\$CODIGO" -ne 2 \]; then\n\s+exit 1\n\s+fi\n\s+fi\n\s+done\n\s+echo "ref=desarrollo"/,
+        );
+        expect(elegir).toMatch(/echo "ref=\$RAMA" >> "\$GITHUB_OUTPUT"\n\s+exit 0/);
       },
     );
 
@@ -219,6 +235,15 @@ describe('the job of the CI', () => {
     it('is the one that is downloaded for the browsers', () => {
       expect(bloque).toContain('ref: ${{ steps.backend.outputs.ref }}');
       expect(sinComentarios(bloque)).not.toMatch(/ref: \$\{\{ github\.base_ref/);
+    });
+
+    it('is explained to whoever contributes, in the order it is tried', () => {
+      const guia = prosa('CONTRIBUTING.md');
+
+      expect(guia).toMatch(
+        /la rama del backend es la primera que el backend tenga de estas: la de tu propio Pull Request[^.]*, la base del Pull Request y `desarrollo`\./,
+      );
+      expect(guia).toContain('se llama igual en los dos repositorios');
     });
 
     it('is chosen before it is used', () => {
