@@ -458,6 +458,13 @@ describe('the examples of VAT shown by the page are the ones the domain calculat
     });
   });
 
+  it('open the calculator on the example of the card of VAT, which is one of the five that were reviewed', () => {
+    const { ejemplo } = contenido.calculadora;
+
+    expect(ejemplo).toEqual(contenido.funciones.tarjetas.find((t) => t.id === 'iva')?.ejemplo);
+    expect(contenido.ejemplosIva).toContainEqual(expect.objectContaining(ejemplo));
+  });
+
   it('gives the cash count a fixed expected amount, in whole pesos', () => {
     expect(Number.isInteger(contenido.comoFunciona.arqueo.esperado)).toBe(true);
     expect(contenido.comoFunciona.arqueo.esperado).toBeGreaterThan(0);

@@ -177,16 +177,17 @@ function Telefono({ estado }: { readonly estado: EstadoDeLaVenta }) {
  * Como viaja una venta, dibujado y vivo (C4-L4): del mostrador a la cola de envio, de ahi por internet al servidor y al libro de
  * movimientos. El interruptor «Cortar internet» rompe el enlace y la venta se queda en la cola, en el equipo; al volver la red
  * la cola baja una venta tras otra. La logica es una maquina de estados aparte (`diagrama/maquina.ts`) y esto solo la dibuja.
- * Todo el texto sale de `contenido`.
+ * Todo el texto sale de `contenido`. `id` es con lo que empiezan los `id` de las piezas del dibujo (titulo, descripcion y puntas de
+ * flecha): el dibujo sale dos veces en la pagina (arriba y en la banda de la demo) y cada uno apunta a las suyas.
  */
-export function DiagramaVenta() {
+export function DiagramaVenta({ id = 'diagrama' }: { readonly id?: string }) {
   const { estado, viaje, alternar, referir } = useVentaEnVivo(diagrama.folio);
   const conectado = estado.conectado;
   const enCola = estado.cola.length;
   return (
     <figure
       ref={referir}
-      className="rounded-2xl border border-rule bg-surface-raised p-4 shadow-md sm:p-6"
+      className="rounded-2xl border border-rule bg-surface-raised p-4 text-fg shadow-md sm:p-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <figcaption className="font-mono text-xs font-medium uppercase tracking-[0.14em] text-fg-muted">
@@ -199,16 +200,16 @@ export function DiagramaVenta() {
       </div>
       <svg
         role="img"
-        aria-labelledby="diagrama-titulo"
-        aria-describedby="diagrama-descripcion"
+        aria-labelledby={`${id}-titulo`}
+        aria-describedby={`${id}-descripcion`}
         viewBox="0 0 480 340"
         className="mt-4 h-auto w-full font-sans"
       >
-        <title id="diagrama-titulo">{diagrama.titulo}</title>
-        <desc id="diagrama-descripcion">{diagrama.descripcion}</desc>
+        <title id={`${id}-titulo`}>{diagrama.titulo}</title>
+        <desc id={`${id}-descripcion`}>{diagrama.descripcion}</desc>
         <defs>
           <marker
-            id="diagrama-flecha"
+            id={`${id}-flecha`}
             viewBox="0 0 10 10"
             refX="8"
             refY="5"
@@ -219,7 +220,7 @@ export function DiagramaVenta() {
             <path d="M1 1.5 8 5 1 8.5Z" className="fill-border" />
           </marker>
           <marker
-            id="diagrama-flecha-acento"
+            id={`${id}-flecha-acento`}
             viewBox="0 0 10 10"
             refX="8"
             refY="5"
@@ -232,14 +233,14 @@ export function DiagramaVenta() {
         </defs>
 
         <g fill="none" strokeWidth="2" strokeLinecap="round">
-          <path d="M202 72H276" className="stroke-border" markerEnd="url(#diagrama-flecha)" />
+          <path d="M202 72H276" className="stroke-border" markerEnd={`url(#${id}-flecha)`} />
           <g data-enlace={conectado ? 'activo' : 'cortado'}>
             {conectado ? (
               <path
                 d="M375 122V216"
                 className="stroke-accent"
                 strokeDasharray="2 7"
-                markerEnd="url(#diagrama-flecha-acento)"
+                markerEnd={`url(#${id}-flecha-acento)`}
               />
             ) : (
               <>
@@ -253,7 +254,7 @@ export function DiagramaVenta() {
               </>
             )}
           </g>
-          <path d="M278 268H204" className="stroke-border" markerEnd="url(#diagrama-flecha)" />
+          <path d="M278 268H204" className="stroke-border" markerEnd={`url(#${id}-flecha)`} />
         </g>
 
         <circle

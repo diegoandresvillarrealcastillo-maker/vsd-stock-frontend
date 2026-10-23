@@ -1,12 +1,23 @@
-import { act, render as mount, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { act, fireEvent, render as mount, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   FakeIntersectionObserver,
   installIntersectionObserver,
 } from '../../test/support/intersection-observer';
 import { contenido } from './contenido';
+import type { SondaDePre } from './demos/estadoDePre';
 import { render } from './entry-server';
 import { Sitio } from './Sitio';
+
+// El chip de la demo de PRE le pregunta a una API de verdad al montarse; aqui la sonda es una que nunca llega a saber nada, para que
+// la pagina no salga a internet ni cambie de estado a mitad de una prueba. La consulta se prueba en `demos/estadoDePre.spec.ts`.
+vi.mock('./demos/estadoDePre', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./demos/estadoDePre')>()),
+  sondaDeLaPagina: (): SondaDePre => ({
+    leer: () => 'verificando',
+    suscribir: () => () => undefined,
+  }),
+}));
 
 // La pagina completa (C4-L3): diez secciones estaticas y accesibles. Lo que se vigila desde aqui es lo que no puede romperse nunca:
 // que se pueda leer sin ejecutar JavaScript (el HTML prerenderizado), que el navegador monte lo mismo encima, que la estructura
@@ -224,39 +235,69 @@ describe('what each section shows', () => {
     expect(funciones?.textContent).toContain(contenido.funciones.tarjetas[1]?.nota ?? 'falta');
   });
 
-  it('puts a live VAT calculator under the cards of the functions, open on the example of the VAT card, and nowhere else', () => {
+  it('puts the VAT calculator in the demo band, open on the example of the VAT card, and not under the cards of the functions', async () => {
     const { container } = mount(<Sitio />);
+    const banda = container.querySelector<HTMLElement>(`#${contenido.anclas.demo}`);
     const funciones = container.querySelector<HTMLElement>(`#${contenido.anclas.funciones}`);
-    if (funciones === null) throw new Error('falta la seccion de las funciones');
+    if (banda === null || funciones === null) throw new Error('faltan la banda o las funciones');
     const ejemplo = contenido.funciones.tarjetas.find((t) => t.id === 'iva')?.ejemplo;
-    const campo = within(funciones).getByLabelText<HTMLInputElement>(contenido.calculadora.campo);
 
-    expect(
-      within(funciones).getByRole('heading', { name: contenido.calculadora.titulo }),
-    ).toBeTruthy();
+    // No baja hasta que alguien abre su pestana.
+    expect(screen.queryByLabelText(contenido.calculadora.campo)).toBeNull();
+    fireEvent.click(within(banda).getByRole('tab', { name: contenido.demo.pestanas.iva }));
+    const campo = await within(banda).findByLabelText<HTMLInputElement>(
+      contenido.calculadora.campo,
+    );
+
+    expect(within(banda).getByRole('heading', { name: contenido.calculadora.titulo })).toBeTruthy();
     expect(ejemplo).toBeDefined();
     expect(campo.value).toBe(String(ejemplo?.total));
-    expect(within(funciones).getByRole('radio', { name: '19 %' })).toHaveProperty('checked', true);
-    expect(funciones.querySelectorAll('article input')).toHaveLength(0);
+    expect(within(banda).getByRole('radio', { name: '19 %' })).toHaveProperty('checked', true);
+    expect(funciones.querySelectorAll('input')).toHaveLength(0);
     expect(screen.getAllByLabelText(contenido.calculadora.campo)).toHaveLength(1);
   });
 
-  it('puts the cash count of the example under the three steps, open on a drawer that is short', () => {
+  it('puts the cash count of the example in the demo band, open on a drawer that is short, and not under the three steps', async () => {
     const { container } = mount(<Sitio />);
+    const banda = container.querySelector<HTMLElement>(`#${contenido.anclas.demo}`);
     const pasos = container.querySelector<HTMLElement>(`#${contenido.anclas.comoFunciona}`);
+    if (banda === null || pasos === null) throw new Error('faltan la banda o los pasos');
     const { arqueo } = contenido.comoFunciona;
 
-    expect(within(pasos ?? container).getByRole('heading', { name: arqueo.titulo })).toBeTruthy();
-    expect(within(pasos ?? container).getByLabelText<HTMLInputElement>(arqueo.campo).value).toBe(
-      String(arqueo.contado),
-    );
-    expect(pasos?.textContent).toContain('Faltan $ 2.000');
-    expect(pasos?.textContent).toContain('Esperabas $ 170.000 y contaste $ 168.000.');
+    expect(screen.queryByLabelText(arqueo.campo)).toBeNull();
+    fireEvent.click(within(banda).getByRole('tab', { name: contenido.demo.pestanas.caja }));
+    const campo = await within(banda).findByLabelText<HTMLInputElement>(arqueo.campo);
+
+    expect(within(banda).getByRole('heading', { name: arqueo.titulo })).toBeTruthy();
+    expect(campo.value).toBe(String(arqueo.contado));
+    expect(banda.textContent).toContain('Faltan $ 2.000');
+    expect(banda.textContent).toContain('Esperabas $ 170.000 y contaste $ 168.000.');
+    expect(pasos.querySelectorAll('input')).toHaveLength(0);
     expect(screen.getAllByLabelText(arqueo.campo)).toHaveLength(1);
   });
 
-  it('never repeats an id, so every label and every description points at its own field', () => {
+  it('puts the live sale diagram twice, at the top and in the first tab of the demo band, each one with its own ids', () => {
     const { container } = mount(<Sitio />);
+    const banda = container.querySelector<HTMLElement>(`#${contenido.anclas.demo}`);
+    const inicio = container.querySelector<HTMLElement>(`#${contenido.anclas.inicio}`);
+
+    expect(
+      within(inicio ?? container).getAllByRole('img', { name: contenido.diagrama.titulo }),
+    ).toHaveLength(1);
+    expect(
+      within(banda ?? container).getAllByRole('img', { name: contenido.diagrama.titulo }),
+    ).toHaveLength(1);
+    expect(screen.getAllByRole('switch', { name: contenido.diagrama.interruptor })).toHaveLength(2);
+  });
+
+  it('never repeats an id, even with every tab of the demo open, so every label and every description points at its own field', async () => {
+    const { container } = mount(<Sitio />);
+    const banda = container.querySelector<HTMLElement>(`#${contenido.anclas.demo}`);
+    if (banda === null) throw new Error('falta la banda de la demo');
+    fireEvent.click(within(banda).getByRole('tab', { name: contenido.demo.pestanas.iva }));
+    await within(banda).findByLabelText(contenido.calculadora.campo);
+    fireEvent.click(within(banda).getByRole('tab', { name: contenido.demo.pestanas.caja }));
+    await within(banda).findByLabelText(contenido.comoFunciona.arqueo.campo);
     const ids = [...container.querySelectorAll('[id]')].map((n) => n.id);
 
     expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
@@ -459,7 +500,10 @@ describe('the details that a section can lose without anyone noticing', () => {
 
   it('draws how a sale travels, with a name, a description and the four places in order', () => {
     const { container } = mount(<Sitio />);
-    const dibujo = screen.getByRole('img', { name: contenido.diagrama.titulo });
+    // Desde C4-L6 el dibujo sale dos veces: el de la entrada, que es este, y el de la primera pestana de la banda de la demo.
+    const dibujo = within(seccion(container, contenido.anclas.inicio)).getByRole('img', {
+      name: contenido.diagrama.titulo,
+    });
     const { nodos, estados } = contenido.diagrama;
 
     const descripcion = document.getElementById(dibujo.getAttribute('aria-describedby') ?? '');
@@ -473,7 +517,6 @@ describe('the details that a section can lose without anyone noticing', () => {
     for (const nombre of [nodos.mostrador, nodos.cola, nodos.servidor, nodos.libro]) {
       expect(puestos).toContain(nombre);
     }
-    expect(seccion(container, contenido.anclas.inicio).contains(dibujo)).toBe(true);
   });
 
   it('writes the title and the text of every card of the functions, and the state of the connection', () => {

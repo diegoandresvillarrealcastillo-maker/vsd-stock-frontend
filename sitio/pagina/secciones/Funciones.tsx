@@ -1,13 +1,11 @@
 import { contenedor, respiro, tarjeta } from '../clases';
 import { EncabezadoSeccion, Seccion } from '../componentes/Seccion';
 import { contenido } from '../contenido';
-import { CalculadoraIva } from './CalculadoraIva';
 import { MiniaturaFuncion } from './MiniaturaFuncion';
 
-/** Las seis cosas que hace un mostrador con VSD Stock, cada una con lo que muestra en pantalla, y debajo la calculadora de IVA para probarla. */
+/** Las seis cosas que hace un mostrador con VSD Stock, cada una con lo que muestra en pantalla. */
 export function Funciones() {
   const { funciones, anclas } = contenido;
-  const ejemploDeIva = funciones.tarjetas.find((funcion) => funcion.id === 'iva')?.ejemplo;
   return (
     <Seccion ancla={anclas.funciones} className={respiro}>
       <div className={contenedor}>
@@ -32,11 +30,6 @@ export function Funciones() {
             </article>
           ))}
         </div>
-        {ejemploDeIva !== undefined && (
-          <div className="mt-4">
-            <CalculadoraIva id="calculadora" ejemplo={ejemploDeIva} />
-          </div>
-        )}
       </div>
     </Seccion>
   );
