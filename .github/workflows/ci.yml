@@ -176,23 +176,32 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      # La rama del backend que corresponde: la base del Pull Request o, en un push, la rama que lo recibe, si el backend la tiene.
-      # Un Pull Request apilado tiene por base la rama de otro PR, que solo existe en este repositorio (el contrato daba 404 y los
-      # navegadores un `git checkout` roto): ahi se usa `desarrollo`. `ls-remote` sale con 2 cuando la rama no existe y con otro
-      # codigo si la red falla; solo el 2 vuelve a `desarrollo`, para que un fallo de red no pase por una rama que falta.
-      # La rama llega por variable de entorno y no interpolada en el script, para no inyectar contenido en la shell.
+      # La rama del backend que corresponde, la primera que el backend tenga de estas: la del propio Pull Request (en un push, la que lo
+      # recibe), la base del Pull Request y `desarrollo`. Los tickets que tocan los dos repositorios usan el mismo nombre de rama en
+      # los dos, asi que la propia trae el cambio del backend que este PR necesita aunque su base sea la rama de otro ticket que solo
+      # toco el frontend. La base sola no alcanza: un Pull Request apilado tiene por base una rama que quiza solo existe en este
+      # repositorio (el contrato daba 404 y los navegadores un `git checkout` roto). `ls-remote` sale con 2 cuando la rama no existe y
+      # con otro codigo si la red falla; solo el 2 pasa a la siguiente, para que un fallo de red no pase por una rama que falta.
+      # Las ramas llegan por variable de entorno y no interpoladas en el script, para no inyectar contenido en la shell.
       - name: Elegir la rama del backend
         id: backend
         env:
-          RAMA: ${{ github.base_ref || github.ref_name }}
+          PROPIA: ${{ github.head_ref || github.ref_name }}
+          BASE: ${{ github.base_ref }}
         run: |
-          if git ls-remote --exit-code --heads https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend "refs/heads/$RAMA" > /dev/null; then
-            echo "ref=$RAMA" >> "$GITHUB_OUTPUT"
-          elif [ $? -eq 2 ]; then
-            echo "ref=desarrollo" >> "$GITHUB_OUTPUT"
-          else
-            exit 1
-          fi
+          for RAMA in "$PROPIA" "$BASE"; do
+            [ -n "$RAMA" ] || continue
+            if git ls-remote --exit-code --heads https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend "refs/heads/$RAMA" > /dev/null; then
+              echo "ref=$RAMA" >> "$GITHUB_OUTPUT"
+              exit 0
+            else
+              CODIGO=$?
+              if [ "$CODIGO" -ne 2 ]; then
+                exit 1
+              fi
+            fi
+          done
+          echo "ref=desarrollo" >> "$GITHUB_OUTPUT"
 
       # Sin `npm ci`: el script solo usa lo que trae Node 24, que ejecuta
       # TypeScript quitando los tipos. Asi tambien se comprueba que corre asi.
@@ -299,20 +308,27 @@ jobs:
       - name: Descargar el codigo
         uses: actions/checkout@v7
 
-      # La misma eleccion de rama que hace el trabajo del contrato (ver alli por que): la base del PR si el backend la tiene, y si no,
-      # `desarrollo`.
+      # La misma eleccion de rama que hace el trabajo del contrato (ver alli por que): la del propio PR si el backend la tiene, y si
+      # no, la base del PR y, al final, `desarrollo`.
       - name: Elegir la rama del backend
         id: backend
         env:
-          RAMA: ${{ github.base_ref || github.ref_name }}
+          PROPIA: ${{ github.head_ref || github.ref_name }}
+          BASE: ${{ github.base_ref }}
         run: |
-          if git ls-remote --exit-code --heads https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend "refs/heads/$RAMA" > /dev/null; then
-            echo "ref=$RAMA" >> "$GITHUB_OUTPUT"
-          elif [ $? -eq 2 ]; then
-            echo "ref=desarrollo" >> "$GITHUB_OUTPUT"
-          else
-            exit 1
-          fi
+          for RAMA in "$PROPIA" "$BASE"; do
+            [ -n "$RAMA" ] || continue
+            if git ls-remote --exit-code --heads https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend "refs/heads/$RAMA" > /dev/null; then
+              echo "ref=$RAMA" >> "$GITHUB_OUTPUT"
+              exit 0
+            else
+              CODIGO=$?
+              if [ "$CODIGO" -ne 2 ]; then
+                exit 1
+              fi
+            fi
+          done
+          echo "ref=desarrollo" >> "$GITHUB_OUTPUT"
 
       # El backend es publico.
       - name: Descargar el backend
