@@ -93,11 +93,15 @@ function decodificar(texto: string): string {
 
 const normalizar = (texto: string): string => texto.replace(/\s+/g, ' ').trim();
 
-/** El texto que una persona lee sin ejecutar JavaScript: sin scripts, estilos ni comentarios, sin etiquetas y con las entidades leidas. */
+/**
+ * El texto que una persona lee sin ejecutar JavaScript: sin scripts, estilos ni comentarios, sin etiquetas y con las entidades leidas.
+ * Un navegador cierra un script o un estilo en `</script` seguido de espacio, `/` o `>` (aunque lleve atributos) y un comentario en `-->` o
+ * `--!>`: las expresiones lo respetan para no contar como texto lo que el navegador no muestra.
+ */
 function textoVisible(html: string): string {
   const sinCodigo = html
-    .replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, ' ')
-    .replace(/<!--[\s\S]*?-->/g, ' ');
+    .replace(/<(script|style)\b[\s\S]*?<\/\1(?:[\s/][^>]*)?>/gi, ' ')
+    .replace(/<!--[\s\S]*?--!?>/g, ' ');
   return normalizar(decodificar(sinCodigo.replace(/<[^>]*>/g, ' ')));
 }
 
@@ -325,7 +329,7 @@ function terceros(captura: Captura): Resultado {
   const { html } = captura.pagina;
   const hallados: string[] = [];
 
-  for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+  for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script(?:[\s/][^>]*)?>/gi)) {
     const atributos = m[1] ?? '';
     const src = valorDe(atributos, 'src');
     if (src !== undefined && esAjeno(src, captura.origen)) hallados.push(`un script de ${src}`);
@@ -467,7 +471,9 @@ async function main(): Promise<void> {
 
   const comprobaciones = evaluarSitio(captura, esperado);
   console.log(informe(comprobaciones));
-  process.exit(codigoDeSalida(comprobaciones));
+  // Se fija el codigo y se deja que Node termine solo: si se sale de golpe con conexiones de `fetch` cerrandose, Node en Windows aborta
+  // (UV_HANDLE_CLOSING) y tapa el resultado.
+  process.exitCode = codigoDeSalida(comprobaciones);
 }
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {

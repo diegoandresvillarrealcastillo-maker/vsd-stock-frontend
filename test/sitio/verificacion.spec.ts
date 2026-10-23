@@ -184,6 +184,29 @@ describe('the page', () => {
     expect(fallan(conPagina({ html }))).toEqual([TEXTO]);
   });
 
+  it.each([' foo="bar"', '\t\n bar', ' '])(
+    'does not count as text what is inside a script or a style whose end tag is written %j: a browser closes it there',
+    (cierre) => {
+      const pagina = (codigo: string): string =>
+        `<!doctype html><html><head><title>${TITULO}</title></head><body><div id="root"></div>${codigo}<a href="${WHATSAPP}">x</a></body></html>`;
+
+      expect(
+        fallan(conPagina({ html: pagina(`<script>var t = "${ENCABEZADO}";</script${cierre}>`) })),
+      ).toEqual([TEXTO]);
+      expect(
+        fallan(
+          conPagina({ html: pagina(`<style>a::after{content:"${ENCABEZADO}"}</style${cierre}>`) }),
+        ),
+      ).toEqual([TEXTO]);
+    },
+  );
+
+  it('does not count as text a comment that ends with --!>, which a browser also accepts', () => {
+    const html = `<!doctype html><html><head><title>${TITULO}</title></head><body><div id="root"></div><!-- <b>${ENCABEZADO}</b> --!><a href="${WHATSAPP}">x</a></body></html>`;
+
+    expect(fallan(conPagina({ html }))).toEqual([TEXTO]);
+  });
+
   it('fails every check that reads the page when it could not be asked for, not only the first one', () => {
     expect(fallan({ ...buena(), pagina: null })).toEqual([
       RESPONDE,
@@ -568,6 +591,17 @@ describe('analytics and third parties', () => {
     },
   );
 
+  it.each([' foo="bar"', '\t\n bar', ' '])(
+    'reads a script whose end tag is written %j: a browser closes it there too, and the analytics inside is still analytics',
+    (cierre) => {
+      expect(
+        conScript(
+          `<script>var u = "https://static.cloudflareinsights.com/beacon.min.js";</script${cierre}>`,
+        ),
+      ).toEqual([SIN_TERCEROS]);
+    },
+  );
+
   it('does not pass with an address that cannot be read: it is not known to be the site itself', () => {
     expect(conScript('<script src="https://"></script>')).toEqual([SIN_TERCEROS]);
   });
@@ -701,7 +735,11 @@ describe('the way the network is asked, which no test with hand-made answers can
   });
 
   it('ends the command with the exit code of the checks, so that a failure is seen by whoever runs it', () => {
-    expect(fuente).toContain('process.exit(codigoDeSalida(comprobaciones));');
+    expect(fuente).toContain('process.exitCode = codigoDeSalida(comprobaciones);');
+    // Con `process.exit()` justo despues de pedir a la red, Node en Windows puede abortar con UV_HANDLE_CLOSING y tapar el resultado.
+    expect(fuente.slice(fuente.indexOf('const comprobaciones = evaluarSitio'))).not.toMatch(
+      /process\.exit\(/,
+    );
   });
 });
 
