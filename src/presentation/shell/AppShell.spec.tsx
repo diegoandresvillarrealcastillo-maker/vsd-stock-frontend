@@ -94,7 +94,14 @@ describe('AppShell', () => {
     it.each(['admin', 'owner'] as const)('offers %s every page', async (role) => {
       await setup({ role });
 
-      expect(labels()).toEqual(['Inicio', 'Catálogo', 'Inventario', 'Compras', 'Personas']);
+      expect(labels()).toEqual([
+        'Inicio',
+        'Catálogo',
+        'Inventario',
+        'Compras',
+        'Reportes',
+        'Personas',
+      ]);
     });
 
     it('points each link at its path', async () => {
@@ -103,7 +110,14 @@ describe('AppShell', () => {
       const hrefs = within(nav())
         .getAllByRole('link')
         .map((link) => link.getAttribute('href'));
-      expect(hrefs).toEqual(['/', '/catalogo', '/inventario', '/compras', '/personas']);
+      expect(hrefs).toEqual([
+        '/',
+        '/catalogo',
+        '/inventario',
+        '/compras',
+        '/reportes',
+        '/personas',
+      ]);
     });
 
     it('marks the page the person is on, for a screen reader too', async () => {
@@ -231,7 +245,14 @@ describe('AppShell', () => {
       await setup({ at: '/inventario' });
 
       expect(screen.getByRole('alert').textContent).toContain('No se pudo abrir esta pantalla');
-      expect(labels()).toEqual(['Inicio', 'Catálogo', 'Inventario', 'Compras', 'Personas']);
+      expect(labels()).toEqual([
+        'Inicio',
+        'Catálogo',
+        'Inventario',
+        'Compras',
+        'Reportes',
+        'Personas',
+      ]);
     });
 
     it('lets go of the warning when the person goes to another screen', async () => {

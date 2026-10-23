@@ -15,9 +15,19 @@ describe('what the menu offers each role', () => {
     expect(idsFor('cashier')).toEqual(['home', 'catalog', 'inventory']);
   });
 
-  it('offers the management purchases and the people too', () => {
-    expect(idsFor('admin')).toEqual(['home', 'catalog', 'inventory', 'purchases', 'people']);
-    expect(idsFor('owner')).toEqual(['home', 'catalog', 'inventory', 'purchases', 'people']);
+  it('offers the management purchases, the monthly report and the people too', () => {
+    const all = ['home', 'catalog', 'inventory', 'purchases', 'reports', 'people'];
+    expect(idsFor('admin')).toEqual(all);
+    expect(idsFor('owner')).toEqual(all);
+  });
+
+  it('does not offer the report to a cashier: it is for whoever has report:sales', () => {
+    expect(idsFor('cashier')).not.toContain('reports');
+    expect(NAVIGATION.find((item) => item.id === 'reports')).toMatchObject({
+      path: '/reportes',
+      label: 'Reportes',
+      action: 'report:sales',
+    });
   });
 
   it('only ever offers what the permission table of the backend lets that role do', () => {

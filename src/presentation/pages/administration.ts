@@ -8,6 +8,7 @@ export { CategoriesPage } from './CategoriesPage';
 export { EditProductPage } from './EditProductPage';
 export { HomePage } from './HomePage';
 export { InvitePage } from './InvitePage';
+export { MonthlyReportPage } from './MonthlyReportPage';
 export { NewProductPage } from './NewProductPage';
 export { NewPurchasePage } from './NewPurchasePage';
 export { PeoplePage } from './PeoplePage';

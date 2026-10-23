@@ -27,7 +27,7 @@ import { lazyScreen } from './lazy-screen';
 import { RequireAction } from './RequireAction';
 
 // C4-R0: las pantallas del marco de administracion bajan cuando alguien entra a ellas, no con el arranque. Entrar, empezar y el
-// mostrador (lo que se usa todo el dia) siguen viajando con el arranque. `ScreenLoader`, en el marco, es donde esperan. Las 14 salen
+// mostrador (lo que se usa todo el dia) siguen viajando con el arranque. `ScreenLoader`, en el marco, es donde esperan. Las 15 salen
 // de un mismo archivo (`pages/administration.ts`): un solo `import()` es un solo trozo, que baja una vez.
 const administration = () => import('../pages/administration');
 const AdjustStockPage = lazyScreen(administration, 'AdjustStockPage');
@@ -36,6 +36,7 @@ const CategoriesPage = lazyScreen(administration, 'CategoriesPage');
 const EditProductPage = lazyScreen(administration, 'EditProductPage');
 const HomePage = lazyScreen(administration, 'HomePage');
 const InvitePage = lazyScreen(administration, 'InvitePage');
+const MonthlyReportPage = lazyScreen(administration, 'MonthlyReportPage');
 const NewProductPage = lazyScreen(administration, 'NewProductPage');
 const NewPurchasePage = lazyScreen(administration, 'NewPurchasePage');
 const PeoplePage = lazyScreen(administration, 'PeoplePage');
@@ -137,6 +138,7 @@ export function AppRoutes() {
           <Route path="nueva" element={guarded('purchase:create', <NewPurchasePage />)} />
           <Route path="proveedores" element={guarded('purchase:create', <SuppliersPage />)} />
         </Route>
+        <Route path="reportes" element={guarded('report:sales', <MonthlyReportPage />)} />
         <Route path="personas">
           <Route index element={guarded('user:manage-cashiers', <PeoplePage />)} />
           <Route path="nueva" element={guarded('user:manage-cashiers', <InvitePage />)} />
