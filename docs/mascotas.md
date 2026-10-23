@@ -80,12 +80,12 @@ Mismo nombre (`<personaje>-<estado>.webp`), WebP de 256 por 256 píxeles con fon
 
 | Estado     | Qué dibuja                               | Cuándo aparece                                                                                                            | ¿El producto ya lo hace? |
 | ---------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| normal     | Postura elegante, con las alas en reposo | Cuando no queda nada por enviar: «Nada por enviar»                                                                        | Sí                       |
+| normal     | Postura elegante, con las alas en reposo | Cuando no queda nada por enviar («Nada por enviar») o mientras la cola sale hacia el servidor («Enviando…»)               | Sí                       |
 | feliz      | Alas inclinadas hacia arriba             | Cuando todo lo guardado en el equipo ya llegó al servidor: «Todo enviado»                                                 | Sí                       |
 | celebrando | Revolotea entre confeti de papel         | Cuando vuelve la red tras un corte largo y todo se envía sin una falla. Hoy el producto no lo distingue de «Todo enviado» | No                       |
 | dormida    | Plegada en el suelo, con «zzz»           | Cuando no hay conexión: las ventas se guardan en el equipo y se envían al volver la red («Sin conexión»)                  | Sí                       |
 
-Ori dormida es el estado que mejor cuenta lo que hace VSD Stock: la tienda no se detiene aunque se caiga la red. Por eso es la mascota del diagrama de la landing (C4-L4).
+Ori dormida es el estado que mejor cuenta lo que hace VSD Stock: la tienda no se detiene aunque se caiga la red. Por eso es la mascota del diagrama de la landing (C4-L4), donde vive dentro del teléfono del mostrador y toma la cara según el envío (`rostroDeOri`, en `sitio/pagina/diagrama/maquina.ts`): dormida sin conexión, feliz solo cuando todo llegó **y** el libro tiene al menos una venta (sin ninguna venta enviada no hay nada que celebrar) y normal el resto del tiempo. El detalle está en [`diagrama-de-la-venta.md`](diagrama-de-la-venta.md).
 
 ## Lo que las historias prometen y el producto todavía no hace
 

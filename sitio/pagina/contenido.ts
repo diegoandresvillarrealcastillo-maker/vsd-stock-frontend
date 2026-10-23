@@ -153,7 +153,11 @@ export const contenido = {
     // El formato del folio de una venta (serie del equipo y consecutivo): un ejemplo, no una venta real.
     folio: 'K7-000142',
     porEnviar: 'por enviar',
+    // Las dos notas de la ultima venta son las del comprobante de la aplicacion (ReceiptPage): la que espera y la que ya llego.
     guardada: 'Guardada en este equipo. Se envía cuando haya conexión.',
+    enviada: 'Guardada y enviada al servidor.',
+    ultimaVenta: 'Última venta',
+    telefono: 'Pantalla del teléfono del mostrador',
     descripcion:
       'Con internet, la venta sale del mostrador, pasa por la cola de envío y llega al servidor, que la anota en el libro de movimientos. Sin internet, se queda en la cola, en el equipo, hasta que vuelva la conexión.',
   },

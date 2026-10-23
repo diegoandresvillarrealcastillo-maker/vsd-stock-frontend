@@ -32,6 +32,37 @@ describe('the rules of the landing that only the browser can show', () => {
     );
   });
 
+  it('moves the sale that travels through the diagram with transform and opacity only, the way ADR 0008 asks', () => {
+    const keyframes = [
+      ...css.matchAll(/@keyframes viaje-(?:horizontal|vertical)\s*\{([\s\S]*?)\n\}/g),
+    ];
+
+    expect(keyframes).toHaveLength(2);
+    for (const [, cuerpo] of keyframes) {
+      const propiedades = [...(cuerpo ?? '').matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]);
+      expect(new Set(propiedades)).toEqual(new Set(['opacity', 'transform']));
+    }
+  });
+
+  it('does not draw the sale that travels for who asked for less motion, even if something put it on the page', () => {
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.viaje\s*\{\s*display:\s*none/,
+    );
+  });
+
+  it('takes how far and how long the sale travels from the component, so the clock of the drawing is the only one', () => {
+    expect(css).toMatch(/\.viaje\s*\{[^}]*animation-duration:\s*var\(--duracion\)/);
+    expect(css).toMatch(/translateX\(var\(--recorrido\)\)/);
+    expect(css).toMatch(/translateY\(var\(--recorrido\)\)/);
+  });
+
+  it('gives the phone of the diagram a frame that is seen in both themes: the navy of the band is lost against the dark page', () => {
+    expect(css).toMatch(/--color-bisel:\s*var\(--color-band\)/);
+    expect(css).toMatch(
+      /:root\[data-theme='dark'\]\s*\{[^}]*--color-bisel:\s*var\(--color-border\)/,
+    );
+  });
+
   it('keeps the highlighter of the title without the yellow of the browser', () => {
     expect(css).toMatch(/\.marca\s*\{[^}]*color:\s*inherit/);
   });
