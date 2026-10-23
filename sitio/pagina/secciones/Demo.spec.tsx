@@ -67,21 +67,34 @@ const elegir = (nombre: string): void => {
 const campoDeIva = (): HTMLElement | null => screen.queryByLabelText(calculadora.campo);
 const campoDeCaja = (): HTMLElement | null => screen.queryByLabelText(comoFunciona.arqueo.campo);
 
+// Las pruebas que esperan a que baje una calculadora o el arqueo (importacion perezosa) esperaban el segundo por defecto de `findBy`, y con la
+// suite completa y la maquina cargada la descarga se pasaba (issue #82). Ahora esperan hasta 10 s y la prueba tiene mas margen que la espera.
+const ESPERA_DE_LA_DESCARGA_MS = 10_000;
+const LIMITE_DE_LA_PRUEBA_MS = 20_000;
+
 // Esta prueba va primera a proposito: la descarga de la calculadora se hace una sola vez por archivo de pruebas, y la puerta solo
 // sirve para verla mientras todavia no ha bajado. Si otra prueba la pidiera antes, esta fallaria en voz alta.
 describe('la banda de la demo: lo que se descarga y cuando', () => {
-  it('muestra un esqueleto mientras baja la calculadora, y la calculadora cuando llega', async () => {
-    render(<Demo />);
+  it(
+    'muestra un esqueleto mientras baja la calculadora, y la calculadora cuando llega',
+    async () => {
+      render(<Demo />);
 
-    elegir('IVA');
+      elegir('IVA');
 
-    expect(screen.getByText(demo.cargando)).toBeTruthy();
-    expect(campoDeIva()).toBeNull();
+      expect(screen.getByText(demo.cargando)).toBeTruthy();
+      expect(campoDeIva()).toBeNull();
 
-    hoisted.abrirPuerta();
-    expect(await screen.findByLabelText(calculadora.campo)).toBeTruthy();
-    expect(screen.queryByText(demo.cargando)).toBeNull();
-  });
+      hoisted.abrirPuerta();
+      expect(
+        await screen.findByLabelText(calculadora.campo, undefined, {
+          timeout: ESPERA_DE_LA_DESCARGA_MS,
+        }),
+      ).toBeTruthy();
+      expect(screen.queryByText(demo.cargando)).toBeNull();
+    },
+    LIMITE_DE_LA_PRUEBA_MS,
+  );
 
   it('no descarga ni arma la demo de IVA ni la de Caja hasta que alguien las elige', () => {
     render(<Demo />);
@@ -134,56 +147,88 @@ describe('la banda de la demo: las pestanas', () => {
     expect(within(panel).getByText(demo.vender.texto)).toBeTruthy();
   });
 
-  it('en IVA abre la calculadora con el ejemplo de la tarjeta: 11.900 al 19 % es base 10.000 e IVA 1.900', async () => {
-    hoisted.abrirPuerta();
-    render(<Demo />);
+  it(
+    'en IVA abre la calculadora con el ejemplo de la tarjeta: 11.900 al 19 % es base 10.000 e IVA 1.900',
+    async () => {
+      hoisted.abrirPuerta();
+      render(<Demo />);
 
-    elegir('IVA');
+      elegir('IVA');
 
-    const campo = await screen.findByLabelText<HTMLInputElement>(calculadora.campo);
-    expect(campo.value).toBe('11900');
-    const panel = screen.getByRole('tabpanel', { name: 'IVA' });
-    expect(within(panel).getByText('$ 10.000', { selector: 'dd' })).toBeTruthy();
-    expect(within(panel).getByText('$ 1.900', { selector: 'dd' })).toBeTruthy();
-  });
+      const campo = await screen.findByLabelText<HTMLInputElement>(calculadora.campo, undefined, {
+        timeout: ESPERA_DE_LA_DESCARGA_MS,
+      });
+      expect(campo.value).toBe('11900');
+      const panel = screen.getByRole('tabpanel', { name: 'IVA' });
+      expect(within(panel).getByText('$ 10.000', { selector: 'dd' })).toBeTruthy();
+      expect(within(panel).getByText('$ 1.900', { selector: 'dd' })).toBeTruthy();
+    },
+    LIMITE_DE_LA_PRUEBA_MS,
+  );
 
-  it('en Caja abre el arqueo con la caja de ejemplo: «Faltan $ 2.000»', async () => {
-    render(<Demo />);
+  it(
+    'en Caja abre el arqueo con la caja de ejemplo: «Faltan $ 2.000»',
+    async () => {
+      render(<Demo />);
 
-    elegir('Caja');
+      elegir('Caja');
 
-    const campo = await screen.findByLabelText<HTMLInputElement>(comoFunciona.arqueo.campo);
-    expect(campo.value).toBe(String(comoFunciona.arqueo.contado));
-    const panel = screen.getByRole('tabpanel', { name: 'Caja' });
-    expect(within(panel).getByText('Faltan $ 2.000')).toBeTruthy();
-    expect(within(panel).getByText('Esperabas $ 170.000 y contaste $ 168.000.')).toBeTruthy();
-  });
+      const campo = await screen.findByLabelText<HTMLInputElement>(
+        comoFunciona.arqueo.campo,
+        undefined,
+        { timeout: ESPERA_DE_LA_DESCARGA_MS },
+      );
+      expect(campo.value).toBe(String(comoFunciona.arqueo.contado));
+      const panel = screen.getByRole('tabpanel', { name: 'Caja' });
+      expect(within(panel).getByText('Faltan $ 2.000')).toBeTruthy();
+      expect(within(panel).getByText('Esperabas $ 170.000 y contaste $ 168.000.')).toBeTruthy();
+    },
+    LIMITE_DE_LA_PRUEBA_MS,
+  );
 
-  it('guarda lo que se escribio en una demo al mirar otra y volver', async () => {
-    hoisted.abrirPuerta();
-    render(<Demo />);
-    elegir('Caja');
-    const campo = await screen.findByLabelText<HTMLInputElement>(comoFunciona.arqueo.campo);
-    fireEvent.change(campo, { target: { value: '170000' } });
+  it(
+    'guarda lo que se escribio en una demo al mirar otra y volver',
+    async () => {
+      hoisted.abrirPuerta();
+      render(<Demo />);
+      elegir('Caja');
+      const campo = await screen.findByLabelText<HTMLInputElement>(
+        comoFunciona.arqueo.campo,
+        undefined,
+        { timeout: ESPERA_DE_LA_DESCARGA_MS },
+      );
+      fireEvent.change(campo, { target: { value: '170000' } });
 
-    elegir('Vender');
-    elegir('Caja');
+      elegir('Vender');
+      elegir('Caja');
 
-    expect(screen.getByLabelText<HTMLInputElement>(comoFunciona.arqueo.campo).value).toBe('170000');
-    expect(screen.getByText('La caja cuadra')).toBeTruthy();
-  });
+      expect(screen.getByLabelText<HTMLInputElement>(comoFunciona.arqueo.campo).value).toBe(
+        '170000',
+      );
+      expect(screen.getByText('La caja cuadra')).toBeTruthy();
+    },
+    LIMITE_DE_LA_PRUEBA_MS,
+  );
 
-  it('no repite ningun id aunque el diagrama tambien este arriba, en la entrada de la pagina', async () => {
-    const { container } = render(<Demo />);
-    elegir('Caja');
-    await screen.findByLabelText(comoFunciona.arqueo.campo);
-    hoisted.abrirPuerta();
-    elegir('IVA');
-    await screen.findByLabelText(calculadora.campo);
+  it(
+    'no repite ningun id aunque el diagrama tambien este arriba, en la entrada de la pagina',
+    async () => {
+      const { container } = render(<Demo />);
+      elegir('Caja');
+      await screen.findByLabelText(comoFunciona.arqueo.campo, undefined, {
+        timeout: ESPERA_DE_LA_DESCARGA_MS,
+      });
+      hoisted.abrirPuerta();
+      elegir('IVA');
+      await screen.findByLabelText(calculadora.campo, undefined, {
+        timeout: ESPERA_DE_LA_DESCARGA_MS,
+      });
 
-    const ids = [...container.querySelectorAll('[id]')].map((e) => e.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
+      const ids = [...container.querySelectorAll('[id]')].map((e) => e.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    },
+    LIMITE_DE_LA_PRUEBA_MS,
+  );
 });
 
 describe('la banda de la demo: la demo de pruebas', () => {
