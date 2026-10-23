@@ -174,6 +174,7 @@ export function SalesPage() {
                   <SaleRow
                     key={sale.id}
                     folio={sale.folio}
+                    {...(sale.voided === null ? {} : { voidFolio: sale.voided.folio })}
                     status={{ tone: STATUS_TONES[status], label: statusLabel(status) }}
                     when={`${formatTime(sale.occurredAt)} · ${nameOf(sale.userId)}`}
                     total={sale.total}

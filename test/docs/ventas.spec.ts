@@ -51,10 +51,10 @@ describe('docs/ventas.md', () => {
     ['Sale de tu caja', 'src/presentation/pages/VoidSalePage.tsx'],
     ['Primero abre un turno', 'src/presentation/pages/VoidSalePage.tsx'],
     ['Abrir turno', 'src/presentation/pages/VoidSalePage.tsx'],
-    [
-      'Esa venta ya estaba anulada: el efectivo no salió otra vez.',
-      'src/presentation/pages/VoidSalePage.tsx',
-    ],
+    ['La venta quedó anulada', 'src/presentation/pages/VoidSalePage.tsx'],
+    ['Esa venta ya estaba anulada', 'src/presentation/pages/VoidSalePage.tsx'],
+    ['el efectivo no salió otra vez.', 'src/presentation/pages/VoidSalePage.tsx'],
+    ['Folio de la anulación', 'src/presentation/pages/SaleDetailPage.tsx'],
   ])('cita «%s» y la pantalla lo dice igual', (frase, pantalla) => {
     expect(documento).toContain(frase);
     expect(leer(pantalla)).toContain(frase);

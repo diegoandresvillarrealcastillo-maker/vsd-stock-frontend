@@ -46,6 +46,8 @@ export interface ServerSale {
   readonly total: number;
   readonly needsAdjustment: boolean;
   readonly attention: boolean;
+  /** `null` mientras no este anulada; con el folio propio de la anulacion cuando lo esta (ADR 0036 del backend). */
+  readonly voided: { readonly folio: string } | null;
 }
 
 export interface ServerStock {
