@@ -224,6 +224,44 @@ describe('what each section shows', () => {
     expect(funciones?.textContent).toContain(contenido.funciones.tarjetas[1]?.nota ?? 'falta');
   });
 
+  it('puts a live VAT calculator under the cards of the functions, open on the example of the VAT card, and nowhere else', () => {
+    const { container } = mount(<Sitio />);
+    const funciones = container.querySelector<HTMLElement>(`#${contenido.anclas.funciones}`);
+    if (funciones === null) throw new Error('falta la seccion de las funciones');
+    const ejemplo = contenido.funciones.tarjetas.find((t) => t.id === 'iva')?.ejemplo;
+    const campo = within(funciones).getByLabelText<HTMLInputElement>(contenido.calculadora.campo);
+
+    expect(
+      within(funciones).getByRole('heading', { name: contenido.calculadora.titulo }),
+    ).toBeTruthy();
+    expect(ejemplo).toBeDefined();
+    expect(campo.value).toBe(String(ejemplo?.total));
+    expect(within(funciones).getByRole('radio', { name: '19 %' })).toHaveProperty('checked', true);
+    expect(funciones.querySelectorAll('article input')).toHaveLength(0);
+    expect(screen.getAllByLabelText(contenido.calculadora.campo)).toHaveLength(1);
+  });
+
+  it('puts the cash count of the example under the three steps, open on a drawer that is short', () => {
+    const { container } = mount(<Sitio />);
+    const pasos = container.querySelector<HTMLElement>(`#${contenido.anclas.comoFunciona}`);
+    const { arqueo } = contenido.comoFunciona;
+
+    expect(within(pasos ?? container).getByRole('heading', { name: arqueo.titulo })).toBeTruthy();
+    expect(within(pasos ?? container).getByLabelText<HTMLInputElement>(arqueo.campo).value).toBe(
+      String(arqueo.contado),
+    );
+    expect(pasos?.textContent).toContain('Faltan $ 2.000');
+    expect(pasos?.textContent).toContain('Esperabas $ 170.000 y contaste $ 168.000.');
+    expect(screen.getAllByLabelText(arqueo.campo)).toHaveLength(1);
+  });
+
+  it('never repeats an id, so every label and every description points at its own field', () => {
+    const { container } = mount(<Sitio />);
+    const ids = [...container.querySelectorAll('[id]')].map((n) => n.id);
+
+    expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
+  });
+
   it('shows the three figures of the demo band and the button that opens the demo', () => {
     const { container } = mount(<Sitio />);
     const demo = container.querySelector(`#${contenido.anclas.demo}`);

@@ -3,6 +3,7 @@ import { MAX_PESOS } from './money';
 import {
   NO_SALES,
   closingBody,
+  describeCount,
   describeDifference,
   formatDifference,
   openingBody,
@@ -119,6 +120,47 @@ describe('describeDifference', () => {
 
   it('says how much is over, in pesos', () => {
     expect(describeDifference(1_250)).toEqual({ kind: 'over', title: 'Sobran $ 1.250' });
+  });
+});
+
+describe('describeCount', () => {
+  it('says how much is missing and what was expected against what was counted', () => {
+    expect(describeCount(170_000, 168_000)).toEqual({
+      kind: 'short',
+      title: 'Faltan $ 2.000',
+      detail: 'Esperabas $ 170.000 y contaste $ 168.000.',
+    });
+  });
+
+  it('says how much is over', () => {
+    expect(describeCount(170_000, 171_500)).toEqual({
+      kind: 'over',
+      title: 'Sobran $ 1.500',
+      detail: 'Esperabas $ 170.000 y contaste $ 171.500.',
+    });
+  });
+
+  it('says the drawer balances', () => {
+    expect(describeCount(170_000, 170_000)).toEqual({
+      kind: 'balanced',
+      title: 'La caja cuadra',
+      detail: 'Esperabas $ 170.000 y contaste $ 170.000.',
+    });
+  });
+
+  it('takes an empty drawer as a count like any other', () => {
+    expect(describeCount(170_000, 0)).toEqual({
+      kind: 'short',
+      title: 'Faltan $ 170.000',
+      detail: 'Esperabas $ 170.000 y contaste $ 0.',
+    });
+  });
+
+  it('gives the same title as the difference it comes from, for any count', () => {
+    for (const counted of [0, 1, 169_999, 170_000, 170_001, 999_999]) {
+      const { kind, title } = describeCount(170_000, counted);
+      expect({ kind, title }).toEqual(describeDifference(counted - 170_000));
+    }
   });
 });
 
