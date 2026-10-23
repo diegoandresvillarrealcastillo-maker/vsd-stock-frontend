@@ -1,22 +1,11 @@
 import type { ReactNode } from 'react';
 import { Route, Routes } from 'react-router';
 import type { Action } from '../../domain/model/permissions';
-import { AdjustStockPage } from '../pages/AdjustStockPage';
-import { CatalogPage } from '../pages/CatalogPage';
-import { CategoriesPage } from '../pages/CategoriesPage';
 import { CloseShiftPage } from '../pages/CloseShiftPage';
 import { CounterPage } from '../pages/CounterPage';
-import { EditProductPage } from '../pages/EditProductPage';
-import { HomePage } from '../pages/HomePage';
-import { InvitePage } from '../pages/InvitePage';
-import { NewProductPage } from '../pages/NewProductPage';
-import { NewPurchasePage } from '../pages/NewPurchasePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { OnboardingPage } from '../pages/OnboardingPage';
 import { PayPage } from '../pages/PayPage';
-import { PeoplePage } from '../pages/PeoplePage';
-import { PersonPage } from '../pages/PersonPage';
-import { PurchasesPage } from '../pages/PurchasesPage';
 import { ReceiptPage } from '../pages/ReceiptPage';
 import { RedeemPage } from '../pages/RedeemPage';
 import { SaleDetailPage } from '../pages/SaleDetailPage';
@@ -25,9 +14,6 @@ import { SellPage } from '../pages/SellPage';
 import { ShiftPage } from '../pages/ShiftPage';
 import { SignInPage } from '../pages/SignInPage';
 import { SignUpPage } from '../pages/SignUpPage';
-import { StockHistoryPage } from '../pages/StockHistoryPage';
-import { StockPage } from '../pages/StockPage';
-import { SuppliersPage } from '../pages/SuppliersPage';
 import { VoidSalePage } from '../pages/VoidSalePage';
 import { AppShell } from '../shell/AppShell';
 import { CounterShell } from '../shell/CounterShell';
@@ -37,7 +23,27 @@ import {
   RequireWorkspace,
   SignedOutOnly,
 } from './AccountGate';
+import { lazyScreen } from './lazy-screen';
 import { RequireAction } from './RequireAction';
+
+// C4-R0: las pantallas del marco de administracion bajan cuando alguien entra a ellas, no con el arranque. Entrar, empezar y el
+// mostrador (lo que se usa todo el dia) siguen viajando con el arranque. `ScreenLoader`, en el marco, es donde esperan. Las 14 salen
+// de un mismo archivo (`pages/administration.ts`): un solo `import()` es un solo trozo, que baja una vez.
+const administration = () => import('../pages/administration');
+const AdjustStockPage = lazyScreen(administration, 'AdjustStockPage');
+const CatalogPage = lazyScreen(administration, 'CatalogPage');
+const CategoriesPage = lazyScreen(administration, 'CategoriesPage');
+const EditProductPage = lazyScreen(administration, 'EditProductPage');
+const HomePage = lazyScreen(administration, 'HomePage');
+const InvitePage = lazyScreen(administration, 'InvitePage');
+const NewProductPage = lazyScreen(administration, 'NewProductPage');
+const NewPurchasePage = lazyScreen(administration, 'NewPurchasePage');
+const PeoplePage = lazyScreen(administration, 'PeoplePage');
+const PersonPage = lazyScreen(administration, 'PersonPage');
+const PurchasesPage = lazyScreen(administration, 'PurchasesPage');
+const StockHistoryPage = lazyScreen(administration, 'StockHistoryPage');
+const StockPage = lazyScreen(administration, 'StockPage');
+const SuppliersPage = lazyScreen(administration, 'SuppliersPage');
 
 /** Una pantalla con su guarda: la misma tabla de permisos que aplica el servidor (ADR 0017), como cortesia. */
 function guarded(action: Action, screen: ReactNode) {

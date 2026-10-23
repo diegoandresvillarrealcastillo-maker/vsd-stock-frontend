@@ -1,5 +1,6 @@
 {
-  "javascriptGzipKB": 180,
+  "javascriptGzipKB": 190,
+  "startupJavascriptGzipKB": 165,
   "cssGzipKB": 12,
   "serviceWorkerGzipKB": 3
 }

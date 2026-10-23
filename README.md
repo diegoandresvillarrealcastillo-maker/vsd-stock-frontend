@@ -30,7 +30,7 @@ el backend en marcha: ver [Conexión con el backend](#conexión-con-el-backend).
 | `npm run dev`               | Servidor de desarrollo de Vite.                                                          |
 | `npm run build`             | Revisa los tipos y genera la versión de producción en `dist/`.                           |
 | `npm run preview`           | Sirve `dist/` para probar la versión de producción.                                      |
-| `npm run budget`            | Falla si lo que baja el navegador pesa más que el presupuesto (después de compilar).     |
+| `npm run budget`            | Falla si lo que baja el navegador pesa más que el presupuesto (el arranque, aparte).     |
 | `npm test`                  | Ejecuta las pruebas (Vitest, jsdom y Testing Library).                                   |
 | `npm run test:coverage`     | Pruebas con cobertura; falla si `domain/` o `application/` bajan del 80 %.               |
 | `npm run lint`              | ESLint, incluidas las **fronteras de la arquitectura**.                                  |
