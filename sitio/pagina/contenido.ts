@@ -211,9 +211,15 @@ export const contenido = {
           'Cuenta el efectivo y escríbelo. VSD Stock te dice si cuadra, cuánto falta o cuánto sobra, mientras escribes.',
       },
     ],
-    /** El arqueo de ejemplo: el efectivo que debe haber, en pesos. El mensaje lo escribe el dominio (`describeDifference`). */
+    /**
+     * El arqueo de ejemplo: el efectivo que debe haber y el que la pagina muestra contado al abrir, en pesos. El mensaje lo escribe
+     * el dominio (`describeCount`); la diferencia entre los dos es la de la tarjeta «Una caja que cuadra» (`miniaturas.caja`).
+     */
     arqueo: {
       esperado: 170000,
+      contado: 168000,
+      titulo: 'Pruébalo con una caja de ejemplo.',
+      texto: 'Cambia el efectivo contado y mira lo que te diría VSD Stock al cerrar el turno.',
       campo: 'Efectivo contado',
       ayuda: 'Escribe solo números, sin puntos ni comas.',
       esperadoEtiqueta: 'Efectivo esperado',
@@ -285,6 +291,17 @@ export const contenido = {
 
   /** Los ejemplos de IVA de la calculadora y de la tarjeta: datos, no frases. */
   ejemplosIva,
+
+  /** La calculadora de IVA (C4-L5). Los nombres de lo que calcula (precio, base, IVA) son los de `funciones.miniaturas.iva`. */
+  calculadora: {
+    titulo: 'Pruébalo con un precio.',
+    texto: 'Escribe un precio con el IVA incluido y mira cómo VSD Stock separa la base y el IVA.',
+    campo: 'Precio con IVA incluido',
+    ayuda: 'Escribe solo números, sin puntos ni comas.',
+    tarifa: 'Tarifa de IVA',
+    ejemplos: 'O prueba con un ejemplo',
+    suma: 'Base más IVA',
+  },
 
   demo: {
     etiqueta: 'LA DEMO',

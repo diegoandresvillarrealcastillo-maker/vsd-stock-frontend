@@ -27,6 +27,10 @@ export const tarjeta = 'rounded-2xl border border-rule bg-surface-raised p-6';
 /** La tarjeta sobre una seccion de fondo levantado: el fondo es el de la pagina, para que se separe. */
 export const tarjetaClara = 'rounded-2xl border border-rule bg-surface p-6';
 
+/** Un campo de texto de las demos: mide lo que un dedo (ADR 0008) y su borde se ve en los dos temas. */
+export const campoTexto =
+  'mt-1 min-h-touch w-full rounded-md border border-border bg-surface-raised px-3 font-mono text-base text-fg shadow-sm';
+
 /** Un boton que es solo un icono, sobre la banda azul de la navegacion. Mide lo que mide un dedo. */
 export const botonIcono =
   'inline-flex size-touch items-center justify-center rounded-lg text-on-band/80 transition-colors duration-(--duration-base) hover:bg-white/10 hover:text-on-band';

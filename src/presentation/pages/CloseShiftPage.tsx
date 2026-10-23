@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { formatPesos } from '../../domain/model/quantity';
-import { describeDifference, parseCash } from '../../domain/model/shift';
+import { describeCount, parseCash } from '../../domain/model/shift';
 import type { ShiftState } from '../../domain/ports/in/shifts';
 import { Callout } from '../components/Callout';
 import { FormAlert } from '../components/FormAlert';
@@ -66,9 +65,7 @@ function CloseForm({
     void onClose(counted.value);
   }
 
-  const outcome = counted.ok
-    ? { counted: counted.value, note: describeDifference(counted.value - expected) }
-    : null;
+  const note = counted.ok ? describeCount(expected, counted.value) : null;
 
   return (
     <>
@@ -92,12 +89,9 @@ function CloseForm({
           disabled={pending}
           {...(missing === undefined ? {} : { error: missing })}
         />
-        {outcome !== null && (
-          <Callout
-            tone={outcome.note.kind === 'balanced' ? 'ok' : 'warn'}
-            title={outcome.note.title}
-          >
-            {`Esperabas ${formatPesos(expected)} y contaste ${formatPesos(outcome.counted)}.${outcome.note.kind === 'balanced' ? '' : ' Si cierras así, queda anotado.'}`}
+        {note !== null && (
+          <Callout tone={note.kind === 'balanced' ? 'ok' : 'warn'} title={note.title}>
+            {`${note.detail}${note.kind === 'balanced' ? '' : ' Si cierras así, queda anotado.'}`}
           </Callout>
         )}
         <SubmitButton pending={pending} pendingLabel="Guardando…">

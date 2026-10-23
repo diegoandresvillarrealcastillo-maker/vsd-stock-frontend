@@ -1,6 +1,7 @@
 import { contenedor, respiro, tarjetaClara } from '../clases';
 import { EncabezadoSeccion, Seccion } from '../componentes/Seccion';
 import { contenido } from '../contenido';
+import { ArqueoDeEjemplo } from './ArqueoDeEjemplo';
 
 /** Los tres pasos de un turno: abrir, vender y cerrar. La lista numerada es una `ol`; el numero grande es solo decoracion. */
 export function ComoFunciona() {
@@ -29,6 +30,9 @@ export function ComoFunciona() {
             </li>
           ))}
         </ol>
+        <div className="mt-4">
+          <ArqueoDeEjemplo id="arqueo" />
+        </div>
       </div>
     </Seccion>
   );
