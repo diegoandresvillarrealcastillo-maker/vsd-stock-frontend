@@ -26,7 +26,8 @@ Tres vistas, con pestañas **«Mi turno»**, **«Todas»** y **«Atención»** (
 - **Todas** y **Atención:** solo para quien puede ver todo el negocio (`sale:view-all`: dueño y administrador). «Atención» es la bandeja
   de **«Requiere atención»**.
 
-Cada fila dice el folio, **dónde está la venta**, a qué hora y de quién, y el total:
+Cada fila dice el folio, **dónde está la venta**, a qué hora y de quién, y el total. Si la venta está anulada, la fila dice también el
+**folio de la anulación** (`Anulación ANU-000001`):
 
 | Etiqueta                 | Qué significa                                                            |
 | ------------------------ | ------------------------------------------------------------------------ |
@@ -62,7 +63,8 @@ se revisa o se anula una venta.
 
 ## El detalle
 
-Dice el folio, dónde está la venta, la hora, quién la hizo (y el turno, si es el de este equipo) y el **comprobante**: cada línea con
+Dice el folio, dónde está la venta, la hora, quién la hizo (y el turno, si es el de este equipo) y, si está anulada, una línea **«Folio de la
+anulación»**; después, el **comprobante**: cada línea con
 su cantidad, su rebaja y lo que costó (y «Exento» o «Excluido» si no lleva IVA), la base sin IVA, el IVA de cada tarifa que lo tiene,
 lo vendido exento y lo vendido excluido por aparte, el total y cómo se pagó (con la referencia
 de la tarjeta o la transferencia). **El nombre y la unidad de cada producto salen de la copia local**: el servidor da solo su
@@ -79,7 +81,8 @@ Según el rol, también ofrece:
 
 ## Anular
 
-Anular **no borra**: la venta queda escrita como anulada, con quién, cuándo y por qué. La pantalla dice antes lo que va a pasar:
+Anular **no borra**: la venta queda escrita como anulada, con quién, cuándo, por qué y con su **folio propio**. La pantalla dice antes lo
+que va a pasar:
 
 - **La existencia vuelve a las bodegas**, con cuántos productos.
 - **Sale de tu caja**, solo si hubo pago en efectivo: el efectivo que se devuelve sale del **turno ABIERTO de quien anula**
@@ -91,8 +94,15 @@ Anular **no borra**: la venta queda escrita como anulada, con quién, cuándo y 
 **Reintentar nunca anula dos veces.** Cada pantalla crea una sola llave de idempotencia
 ([ADR 0019](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0019-convenciones-de-la-api.md))
 y la repite si hay que volver a mandar. Si el servidor ya había anulado la venta con esa llave, la pantalla dice **«Esa venta ya
-estaba anulada: el efectivo no salió otra vez.»**. Lo que el servidor rechaza (turno cerrado, turno que todavía no conoce, venta ya
+estaba anulada (ANU-000001): el efectivo no salió otra vez.»**. Lo que el servidor rechaza (turno cerrado, turno que todavía no conoce, venta ya
 anulada) se dice con sus palabras y el botón sigue disponible.
+
+**La anulación tiene su folio propio.** El servidor se lo da al anotarla: un folio consecutivo del negocio, `ANU-000001`, `ANU-000002`…, en
+el orden en que se anulan las ventas y sin saltos
+([ADR 0036 del backend](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0036-las-anulaciones-tienen-su-propio-folio-consecutivo.md)).
+Es distinto del folio de la venta, que no cambia. Al anular, la pantalla vuelve al detalle y dice **«La venta quedó anulada con el folio
+ANU-000001.»**; si alguien abre la pantalla de anular de una venta que ya lo estaba, dice con qué folio quedó. El folio lo da el servidor, así
+que sin conexión no hay anulación y tampoco folio.
 
 ## Lo que todavía no se mide
 

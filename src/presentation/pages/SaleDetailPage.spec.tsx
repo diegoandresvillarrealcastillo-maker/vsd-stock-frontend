@@ -375,6 +375,7 @@ describe('SaleDetailPage', () => {
         mount({
           sale: {
             voided: {
+              folio: 'ANU-000001',
               voidedAt,
               voidedByUserId: 'u-luis',
               operationId: 'op-void',
@@ -417,6 +418,7 @@ describe('SaleDetailPage', () => {
       mount({
         sale: {
           voided: {
+            folio: 'ANU-000001',
             voidedAt,
             voidedByUserId: 'u-luis',
             operationId: 'op-void',
@@ -450,6 +452,7 @@ describe('SaleDetailPage', () => {
       mount({
         sale: {
           voided: {
+            folio: 'ANU-000001',
             voidedAt,
             voidedByUserId: 'u-luis',
             operationId: 'op-void',
@@ -469,11 +472,46 @@ describe('SaleDetailPage', () => {
       expect(screen.queryByRole('link', { name: 'Anular venta' })).toBeNull();
     });
 
+    it('says the folio of the void, apart from the folio of the sale it voids', async () => {
+      mount({
+        sale: {
+          voided: {
+            folio: 'ANU-000007',
+            voidedAt: new Date(2026, 9, 19, 16, 20),
+            voidedByUserId: 'u-luis',
+            operationId: 'op-void',
+            reason: 'Error',
+          },
+        },
+      });
+
+      expect((await heading()).textContent).toBe('Venta AA-000141');
+
+      expect(screen.getByText('ANU-000007').parentElement?.textContent).toBe(
+        'Folio de la anulación ANU-000007',
+      );
+    });
+
+    it('has no folio of a void when the sale was not voided', async () => {
+      mount();
+
+      await heading();
+
+      expect(screen.queryByText(/Folio de la anulación/)).toBeNull();
+      expect(screen.queryByText(/ANU-/)).toBeNull();
+    });
+
     it('says another person of the business when it does not know who it was', async () => {
       const voidedAt = new Date(2026, 9, 19, 16, 20);
       mount({
         sale: {
-          voided: { voidedAt, voidedByUserId: 'u-nadie', operationId: 'op-void', reason: 'Error' },
+          voided: {
+            folio: 'ANU-000001',
+            voidedAt,
+            voidedByUserId: 'u-nadie',
+            operationId: 'op-void',
+            reason: 'Error',
+          },
         },
       });
 

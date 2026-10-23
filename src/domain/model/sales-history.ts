@@ -30,6 +30,8 @@ export interface SaleReview {
 
 /** Quién la anuló, cuándo y por qué. Una venta anulada no se borra ni se edita. */
 export interface SaleVoid {
+  /** El folio propio de la anulación, como `ANU-000001`: una secuencia del negocio, sin saltos (ADR 0036 del backend). */
+  readonly folio: string;
   readonly voidedAt: Date;
   readonly voidedByUserId: string;
   readonly operationId: string;
@@ -132,12 +134,12 @@ export function parseReview(value: unknown): SaleReview | null {
 
 function parseVoid(value: unknown): SaleVoid | null {
   if (!isRecord(value)) return null;
-  const { voidedByUserId, operationId, reason } = value;
+  const { folio, voidedByUserId, operationId, reason } = value;
   const voidedAt = readDate(value['voidedAt']);
-  if (voidedAt === null) return null;
+  if (voidedAt === null || typeof folio !== 'string') return null;
   if (typeof voidedByUserId !== 'string' || typeof operationId !== 'string') return null;
   if (typeof reason !== 'string') return null;
-  return { voidedAt, voidedByUserId, operationId, reason };
+  return { folio, voidedAt, voidedByUserId, operationId, reason };
 }
 
 export function parseSaleRecord(value: unknown): SaleRecord | null {

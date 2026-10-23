@@ -165,6 +165,12 @@ function SaleView({ sale, onReviewed }: { sale: SaleDetail; onReviewed: () => vo
           <Badge tone={STATUS_TONES[status]}>{statusLabel(status)}</Badge>
         </div>
         <p className="text-base text-fg-muted">{when}</p>
+        {sale.voided !== null && (
+          <p className="text-base text-fg-muted">
+            Folio de la anulación{' '}
+            <span className="whitespace-nowrap font-medium text-fg">{sale.voided.folio}</span>
+          </p>
+        )}
       </div>
 
       <SummaryCard name="Comprobante" rows={rows} />

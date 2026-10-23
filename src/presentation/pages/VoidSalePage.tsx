@@ -51,11 +51,12 @@ function VoidForm({ sale }: { sale: SaleDetail }) {
     void submit(async () => {
       const result = await history.voidSale(sale.id, { operationId, reason: written, shiftId });
       refreshAttention();
+      const folio = result.sale.voided?.folio;
       void navigate(`/mostrador/ventas/${sale.id}`, {
         state: {
           notice: result.replayed
-            ? 'Esa venta ya estaba anulada: el efectivo no salió otra vez.'
-            : 'La venta quedó anulada.',
+            ? `Esa venta ya estaba anulada${folio === undefined ? '' : ` (${folio})`}: el efectivo no salió otra vez.`
+            : `La venta quedó anulada${folio === undefined ? '' : ` con el folio ${folio}`}.`,
         },
       });
     });
@@ -132,7 +133,7 @@ function VoidSaleLoader({ saleId }: { saleId: string }) {
       {state.status === 'ready' && state.data.voided !== null && (
         <>
           <Callout tone="info" title="Esa venta ya estaba anulada">
-            No hay nada más que hacer con ella.
+            {`Quedó anulada con el folio ${state.data.voided.folio}. No hay nada más que hacer con ella.`}
           </Callout>
           <LinkButton to={salePath}>Ver la venta</LinkButton>
         </>
