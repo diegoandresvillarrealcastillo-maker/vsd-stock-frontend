@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { openBusiness, serverSales, serverStock } from './support/api';
+import { openBusiness, serverSaleLines, serverSales, serverStock } from './support/api';
 import { openCounter, openShift, sellCash, signIn, syncStatus, waitForCopy } from './support/app';
 
 test.describe('vender sin conexión', () => {
@@ -72,5 +72,18 @@ test.describe('vender sin conexión', () => {
     expect(sales.map((sale) => sale.folio).sort()).toEqual(folios);
     expect(sales.map((sale) => sale.total).sort()).toEqual([2_800, 3_200, 4_500]);
     expect(sales.every((sale) => !sale.folioConflict && !sale.attention)).toBe(true);
+
+    // Cada linea llego con el tipo tributario del producto que se vendio (ADR 0034): exento el arroz, gravados el pan y la leche.
+    const kinds = new Map<string, string>();
+    for (const sale of sales) {
+      for (const line of await serverSaleLines(business, sale.id)) {
+        kinds.set(line.productId, `${line.taxKind}:${String(line.taxRateBp)}`);
+      }
+    }
+    expect(Object.fromEntries(business.products.map((p) => [p.name, kinds.get(p.id)]))).toEqual({
+      'Arroz 500 g': 'exempt:0',
+      'Pan tajado': 'taxed:1900',
+      'Leche 1 L': 'taxed:500',
+    });
   });
 });
