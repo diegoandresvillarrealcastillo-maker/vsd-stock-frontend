@@ -26,7 +26,16 @@ const wireSale = (id: string, overrides: Record<string, unknown> = {}) => ({
 
 const wireDetail = (id: string, overrides: Record<string, unknown> = {}) => ({
   ...wireSale(id),
-  lines: [{ productId: 'p-1', quantityMilli: 1_000, unitPrice: 14_800, discount: 0, taxRateBp: 0 }],
+  lines: [
+    {
+      productId: 'p-1',
+      quantityMilli: 1_000,
+      unitPrice: 14_800,
+      discount: 0,
+      taxRateBp: 0,
+      taxKind: 'exempt',
+    },
+  ],
   payments: [{ method: 'cash', amount: 14_800, reference: null }],
   summary: { total: 14_800, base: 14_800, tax: 0, byRate: [] },
   ...overrides,

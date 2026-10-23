@@ -32,6 +32,7 @@ describe('ProductForm, used to create', () => {
     fireEvent.change(screen.getByLabelText('Precio de venta (IVA incluido)'), {
       target: { value: '3200' },
     });
+    fireEvent.click(screen.getByRole('radio', { name: 'Gravado 19 %' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Guardar producto' }));
 

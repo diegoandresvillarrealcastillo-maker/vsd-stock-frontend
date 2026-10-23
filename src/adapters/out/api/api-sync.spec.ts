@@ -87,6 +87,98 @@ describe('ApiSync', () => {
 
       expect(JSON.stringify(sent[0]?.body)).not.toContain('shiftId');
     });
+
+    describe('a sale that was queued before the tax kind existed (ADR 0034 of the backend)', () => {
+      const line = (change: Record<string, unknown>) => ({
+        productId: 'p',
+        quantityMilli: 1_000,
+        unitPrice: 1_000,
+        discount: 0,
+        ...change,
+      });
+
+      /** Lo que viaja de la operacion: el cuerpo, ya con lo que el servidor exige. */
+      async function sentBody(operation: QueuedOperation): Promise<Record<string, unknown>> {
+        const { api, sent } = createFakeApi(
+          answer([{ operationId: A, status: 201, replayed: false, body: {}, problem: null }]),
+        );
+        await new ApiSync(api).send([operation]);
+        const { operations } = (sent[0]?.body ?? {}) as { operations: { body: object }[] };
+        return operations[0]?.body as Record<string, unknown>;
+      }
+
+      it('gets its kind from its rate, as the migration of the backend does: taxed above 0 %, exempt at 0 %', async () => {
+        const body = await sentBody(
+          queued(A, 'sale', {
+            operationId: A,
+            lines: [line({ taxRateBp: 1_900 }), line({ taxRateBp: 500 }), line({ taxRateBp: 0 })],
+          }),
+        );
+
+        expect((body['lines'] as { taxKind: string }[]).map((l) => l.taxKind)).toEqual([
+          'taxed',
+          'taxed',
+          'exempt',
+        ]);
+      });
+
+      it('keeps the kind a line already has, even at 0 %', async () => {
+        const body = await sentBody(
+          queued(A, 'sale', {
+            operationId: A,
+            lines: [
+              line({ taxRateBp: 0, taxKind: 'excluded' }),
+              line({ taxRateBp: 0, taxKind: 'exempt' }),
+            ],
+          }),
+        );
+
+        expect((body['lines'] as { taxKind: string }[]).map((l) => l.taxKind)).toEqual([
+          'excluded',
+          'exempt',
+        ]);
+      });
+
+      it('changes nothing else in the body of the sale', async () => {
+        const original = {
+          operationId: A,
+          folio: 'AA-000001',
+          total: 1_000,
+          lines: [line({ taxRateBp: 1_900 })],
+        };
+
+        const body = await sentBody(queued(A, 'sale', original));
+
+        expect(body).toEqual({
+          ...original,
+          lines: [{ ...original.lines[0], taxKind: 'taxed' }],
+        });
+      });
+
+      it('does not change what is queued: only what travels', async () => {
+        const operation = queued(A, 'sale', { operationId: A, lines: [line({ taxRateBp: 0 })] });
+
+        await sentBody(operation);
+
+        expect(JSON.stringify(operation.body)).not.toContain('taxKind');
+      });
+
+      it('does not touch an operation that is not a sale', async () => {
+        const body = await sentBody(
+          queued(B, 'shift-close', { operationId: B, lines: [line({ taxRateBp: 0 })] }, SHIFT),
+        );
+
+        expect(JSON.stringify(body)).not.toContain('taxKind');
+      });
+
+      it('leaves a line it does not understand for the server to refuse, instead of inventing a kind', async () => {
+        const body = await sentBody(
+          queued(A, 'sale', { operationId: A, lines: [null, line({ taxRateBp: 'x' })] }),
+        );
+
+        expect(body['lines']).toEqual([null, line({ taxRateBp: 'x' })]);
+      });
+    });
   });
 
   describe('what it reads', () => {

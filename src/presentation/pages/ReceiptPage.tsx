@@ -4,6 +4,7 @@ import { formatPesos } from '../../domain/model/quantity';
 import { methodLabel } from '../../domain/model/sale-payment';
 import { receiptLineLabel, type SaleReceipt } from '../../domain/model/sale-receipt';
 import { Button } from '../components/Button';
+import { kindRows } from './kind-rows';
 import { useLocal } from '../local/LocalWorkspaceProvider';
 import { useOperationState } from '../selling/use-operation-state';
 import { useSelling } from '../selling/SellingProvider';
@@ -47,6 +48,7 @@ function rowsOf(receipt: SaleReceipt): SummaryRow[] {
         label: `IVA ${String(row.rateBp / 100)} % incluido`,
         value: formatPesos(row.tax),
       })),
+    ...kindRows(summary.byKind),
     { label: 'Total', value: formatPesos(summary.total), strong: true },
     ...payments,
   ];

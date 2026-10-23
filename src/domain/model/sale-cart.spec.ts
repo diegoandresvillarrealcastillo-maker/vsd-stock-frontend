@@ -28,6 +28,7 @@ const product = (change: Partial<Product> = {}): Product => {
     unit: 'unit',
     unitPrice: 3_200,
     taxRateBp: 0,
+    taxKind: 'exempt',
     active: true,
     categoryId: null,
     minStockMilli: null,
@@ -37,9 +38,14 @@ const product = (change: Partial<Product> = {}): Product => {
   };
 };
 
-const arroz = product({ name: 'Arroz 500 g', unitPrice: 3_200, taxRateBp: 0 });
-const aceite = product({ name: 'Aceite 1 L', unitPrice: 12_500, taxRateBp: 1_900 });
-const pan = product({ name: 'Pan tajado', unitPrice: 2_800, taxRateBp: 500 });
+const arroz = product({ name: 'Arroz 500 g', unitPrice: 3_200, taxRateBp: 0, taxKind: 'exempt' });
+const aceite = product({
+  name: 'Aceite 1 L',
+  unitPrice: 12_500,
+  taxRateBp: 1_900,
+  taxKind: 'taxed',
+});
+const pan = product({ name: 'Pan tajado', unitPrice: 2_800, taxRateBp: 500, taxKind: 'taxed' });
 
 describe('the cart of a sale', () => {
   it('starts with nothing, and a total of zero', () => {
@@ -59,10 +65,32 @@ describe('the cart of a sale', () => {
           unit: 'unit',
           unitPrice: 12_500,
           taxRateBp: 1_900,
+          taxKind: 'taxed',
           quantityMilli: 1_000,
           discount: 0,
         },
       ]);
+    });
+
+    it.each([
+      ['taxed', 1_900],
+      ['exempt', 0],
+      ['excluded', 0],
+    ] as const)(
+      'puts the line down as %s, the way the product was classified',
+      (taxKind, taxRateBp) => {
+        const classified = product({ taxKind, taxRateBp });
+
+        expect(addProduct(EMPTY_CART, classified).lines[0]).toMatchObject({ taxKind, taxRateBp });
+      },
+    );
+
+    it('keeps the kind it had when the product was added, whatever the catalogue says later', () => {
+      const cart = addProduct(EMPTY_CART, arroz);
+      const reclassified = { ...arroz, taxKind: 'excluded' } as const;
+
+      // Sumar otra unidad con el producto ya cambiado no cambia lo que se le cobro a la linea que ya estaba.
+      expect(addProduct(cart, reclassified).lines[0]?.taxKind).toBe('exempt');
     });
 
     it('adds another unit to the line it already has, instead of repeating the product', () => {

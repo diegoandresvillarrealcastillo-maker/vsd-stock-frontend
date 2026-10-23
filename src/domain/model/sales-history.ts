@@ -1,6 +1,7 @@
 import { Money } from './money';
 import type { QueuedOperation } from './outbox';
 import { lineTotal } from './sale-totals';
+import { isTaxKind, taxKindFitsRate, type TaxKind } from './tax';
 
 // Las ventas que el servidor ya tiene (C3-13, ADR 0027): lo que la lista y el detalle leen de la red, y lo que se dice de cada una.
 // Los datos de la red no son de fiar: cada lector devuelve `null` si algo no es lo que dice el contrato.
@@ -63,6 +64,8 @@ export interface SaleLineView {
   readonly unitPrice: number;
   readonly discount: number;
   readonly taxRateBp: number;
+  /** Gravado, exento o excluido: como se vendio la linea (ADR 0034 del backend). */
+  readonly taxKind: TaxKind;
 }
 
 export interface SalePaymentView {
@@ -186,11 +189,12 @@ export function parseSaleRecord(value: unknown): SaleRecord | null {
 
 function parseLine(value: unknown): SaleLineView | null {
   if (!isRecord(value)) return null;
-  const { productId, quantityMilli, unitPrice, discount, taxRateBp } = value;
+  const { productId, quantityMilli, unitPrice, discount, taxRateBp, taxKind } = value;
   if (typeof productId !== 'string') return null;
   if (!isPesos(quantityMilli) || !isPesos(unitPrice) || !isPesos(discount)) return null;
   if (!isOneOf(RATES, taxRateBp)) return null;
-  return { productId, quantityMilli, unitPrice, discount, taxRateBp };
+  if (!isTaxKind(taxKind) || !taxKindFitsRate(taxKind, taxRateBp)) return null;
+  return { productId, quantityMilli, unitPrice, discount, taxRateBp, taxKind };
 }
 
 function parsePayment(value: unknown): SalePaymentView | null {

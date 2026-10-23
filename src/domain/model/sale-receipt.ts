@@ -1,6 +1,7 @@
 import { unitShort, type UnitCode } from './catalog';
 import { formatPesos, formatQuantity } from './quantity';
 import { cartSummary, lineTotalOf, type Cart } from './sale-cart';
+import { taxKindLabel, type TaxKind } from './tax';
 import { changeOf, type PaymentMethod } from './sale-payment';
 
 /** Como se cobro la venta: en efectivo, con lo que se recibio; con tarjeta o transferencia, con su referencia. */
@@ -40,6 +41,7 @@ export function saleBody(input: SaleInput): Record<string, unknown> {
       unitPrice: line.unitPrice,
       discount: line.discount,
       taxRateBp: line.taxRateBp,
+      taxKind: line.taxKind,
     })),
     payments: [
       {
@@ -53,12 +55,32 @@ export function saleBody(input: SaleInput): Record<string, unknown> {
   };
 }
 
+/** Lo que suman las lineas exentas y las excluidas. Lo gravado no se suma aqui: ya lo dicen la base y el IVA. */
+export interface KindTotals {
+  readonly exempt: number;
+  readonly excluded: number;
+}
+
+export function totalsByKind(
+  lines: readonly { readonly taxKind: TaxKind; readonly total: number }[],
+): KindTotals {
+  let exempt = 0;
+  let excluded = 0;
+  for (const line of lines) {
+    if (line.taxKind === 'exempt') exempt += line.total;
+    else if (line.taxKind === 'excluded') excluded += line.total;
+  }
+  return { exempt, excluded };
+}
+
 export interface ReceiptLine {
   readonly name: string;
   readonly quantityMilli: number;
   readonly unit: UnitCode;
   readonly unitPrice: number;
   readonly discount: number;
+  /** Gravado, exento o excluido: como se vendio (ADR 0034 del backend). */
+  readonly taxKind: TaxKind;
   /** Lo que costo la linea: lo bruto menos la rebaja. */
   readonly total: number;
 }
@@ -81,6 +103,8 @@ export interface SaleReceipt {
       readonly base: number;
       readonly tax: number;
     }[];
+    /** Lo que se vendio exento y lo que se vendio excluido, con la rebaja: no llevan IVA y se declaran aparte. */
+    readonly byKind: KindTotals;
   };
   readonly payment: {
     readonly method: PaymentMethod;
@@ -106,6 +130,7 @@ export function buildReceipt(input: SaleInput): SaleReceipt {
       unit: line.unit,
       unitPrice: line.unitPrice,
       discount: line.discount,
+      taxKind: line.taxKind,
       total: lineTotalOf(line),
     })),
     summary: {
@@ -117,6 +142,9 @@ export function buildReceipt(input: SaleInput): SaleReceipt {
         base: row.base.amount,
         tax: row.tax.amount,
       })),
+      byKind: totalsByKind(
+        input.cart.lines.map((line) => ({ taxKind: line.taxKind, total: lineTotalOf(line) })),
+      ),
     },
     payment:
       payment.method === 'cash'
@@ -130,9 +158,13 @@ export function buildReceipt(input: SaleInput): SaleReceipt {
   };
 }
 
-/** Una linea del comprobante como se dice: `2 × Arroz 500 g`, y la rebaja si la hay: `1 × Aceite 1 L (− $ 500)`. */
+/**
+ * Una linea del comprobante como se dice: `2 × Arroz 500 g`, y la rebaja si la hay: `1 × Aceite 1 L (− $ 500)`. Lo exento y lo excluido
+ * lo dicen al final (`2 × Leche · Exento`); lo gravado no, porque el IVA ya lo cuenta.
+ */
 export function receiptLineLabel(line: ReceiptLine): string {
   const unit = line.unit === 'unit' ? '' : ` ${unitShort(line.unit)}`;
   const discount = line.discount > 0 ? ` (− ${formatPesos(line.discount)})` : '';
-  return `${formatQuantity(line.quantityMilli)}${unit} × ${line.name}${discount}`;
+  const kind = line.taxKind === 'taxed' ? '' : ` · ${taxKindLabel(line.taxKind)}`;
+  return `${formatQuantity(line.quantityMilli)}${unit} × ${line.name}${discount}${kind}`;
 }

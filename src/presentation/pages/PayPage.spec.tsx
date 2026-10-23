@@ -6,9 +6,19 @@ import { createTestSelling, item, type TestSelling } from '../../../test/support
 import { renderScreen } from '../../../test/support/screens';
 import { PayPage } from './PayPage';
 
-const arroz = item(1, { name: 'Arroz 500 g', unitPrice: 3_200, taxRateBp: 1_900 });
-const aceite = item(2, { name: 'Aceite 1 L', unitPrice: 12_500, taxRateBp: 1_900 });
-const pan = item(3, { name: 'Pan tajado', unitPrice: 2_800, taxRateBp: 1_900 });
+const arroz = item(1, {
+  name: 'Arroz 500 g',
+  unitPrice: 3_200,
+  taxRateBp: 1_900,
+  taxKind: 'taxed',
+});
+const aceite = item(2, {
+  name: 'Aceite 1 L',
+  unitPrice: 12_500,
+  taxRateBp: 1_900,
+  taxKind: 'taxed',
+});
+const pan = item(3, { name: 'Pan tajado', unitPrice: 2_800, taxRateBp: 1_900, taxKind: 'taxed' });
 
 /** La venta del diseno: 2 arroz, 1 aceite con $ 500 de descuento y 3 panes = $ 26.800. */
 function fill(t: TestSelling) {

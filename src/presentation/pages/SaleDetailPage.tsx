@@ -4,7 +4,7 @@ import { formatMoment, formatTime } from '../../domain/model/moment';
 import { can } from '../../domain/model/permissions';
 import { formatPesos } from '../../domain/model/quantity';
 import { methodLabel } from '../../domain/model/sale-payment';
-import { receiptLineLabel } from '../../domain/model/sale-receipt';
+import { receiptLineLabel, totalsByKind } from '../../domain/model/sale-receipt';
 import {
   attentionNotes,
   parseReason,
@@ -31,6 +31,7 @@ import { STATUS_TONES } from '../sales/status-tone';
 import { useSellerNames } from '../sales/use-seller-names';
 import { useShift } from '../shift/ShiftProvider';
 import { SummaryCard, type SummaryRow } from '../shift/SummaryCard';
+import { kindRows } from './kind-rows';
 
 /** Marca la venta como revisada, con una nota si se quiere. La venta no cambia: solo sale de la bandeja. */
 function ReviewForm({ saleId, onReviewed }: { saleId: string; onReviewed: () => void }) {
@@ -123,6 +124,7 @@ function SaleView({ sale, onReviewed }: { sale: SaleDetail; onReviewed: () => vo
           unit: product?.unit ?? 'unit',
           unitPrice: line.unitPrice,
           discount: line.discount,
+          taxKind: line.taxKind,
           total: saleLineAmount(line),
         }),
         value: formatPesos(saleLineAmount(line)),
@@ -135,6 +137,11 @@ function SaleView({ sale, onReviewed }: { sale: SaleDetail; onReviewed: () => vo
         label: `IVA ${String(rate.rateBp / 100)} % incluido`,
         value: formatPesos(rate.tax),
       })),
+    ...kindRows(
+      totalsByKind(
+        sale.lines.map((line) => ({ taxKind: line.taxKind, total: saleLineAmount(line) })),
+      ),
+    ),
     { label: 'Total', value: formatPesos(sale.summary.total), strong: true },
     ...sale.payments.map((payment) => ({
       label: `${methodLabel(payment.method)}${payment.reference === null ? '' : ` · ${payment.reference}`}`,

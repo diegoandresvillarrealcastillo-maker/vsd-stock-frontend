@@ -20,6 +20,7 @@ const product = (n: number, change: Partial<Product> = {}): Product => ({
   unit: 'unit',
   unitPrice: 3_200,
   taxRateBp: 0,
+  taxKind: 'exempt',
   active: true,
   categoryId: null,
   minStockMilli: null,
@@ -145,6 +146,60 @@ describe('the copy of the catalog and the stock of a person', () => {
 
       expect((await store.readProducts()).map((item) => item.id)).toEqual([product(2).id]);
       store.close();
+    });
+
+    describe('a product kept before the tax kind existed (ADR 0034 of the backend)', () => {
+      /** Deja en la base un producto tal como lo guardaba la version anterior: sin `taxKind`. */
+      async function keepLegacy(authUserId: string, n: number, change: Record<string, unknown>) {
+        const db = await raw(authUserId);
+        const key = (await db.get('meta', 'key')) as CryptoKey;
+        const name = `product:${product(n).id}`;
+        const { taxKind: _absent, ...legacy } = product(n);
+        await db.put('records', {
+          name,
+          ...(await new AesGcmCipher(key).seal(name, { ...legacy, ...change })),
+        });
+        db.close();
+      }
+
+      it('is still read, so that the counter has a catalogue before the first sync brings the kinds', async () => {
+        const store = await stores.open(ANA);
+        await store.putProducts([product(3)]);
+        await keepLegacy(ANA, 1, { taxRateBp: 1_900 });
+        await keepLegacy(ANA, 2, { taxRateBp: 0 });
+
+        const read = (await store.readProducts()).sort((a, b) => a.sku.localeCompare(b.sku));
+
+        expect(read.map((item) => [item.sku, item.taxRateBp, item.taxKind])).toEqual([
+          ['ARR-1', 1_900, 'taxed'],
+          ['ARR-2', 0, 'exempt'],
+          ['ARR-3', 0, 'exempt'],
+        ]);
+        store.close();
+      });
+
+      it('is replaced by the one that brings the kind, which is newer because the backend bumps it', async () => {
+        const store = await stores.open(ANA);
+        await store.putProducts([product(3)]);
+        await keepLegacy(ANA, 1, { taxRateBp: 0 });
+
+        await store.putProducts([
+          product(1, { taxKind: 'excluded', updatedAt: new Date('2026-10-23T09:00:00.000Z') }),
+        ]);
+
+        const kept = (await store.readProducts()).find((item) => item.sku === 'ARR-1');
+        expect(kept?.taxKind).toBe('excluded');
+        store.close();
+      });
+
+      it('does not give a product whose kind is there but is not one of the three', async () => {
+        const store = await stores.open(ANA);
+        await store.putProducts([product(2)]);
+        await keepLegacy(ANA, 1, { taxKind: 'unclassified' });
+
+        expect((await store.readProducts()).map((item) => item.id)).toEqual([product(2).id]);
+        store.close();
+      });
     });
 
     it('keeps a version that is newer than what is stored even when what is stored can not be opened', async () => {

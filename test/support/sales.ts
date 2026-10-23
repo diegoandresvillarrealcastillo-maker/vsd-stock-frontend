@@ -38,8 +38,16 @@ export function testSaleDetail(overrides: Partial<SaleDetail> = {}): SaleDetail 
         unitPrice: 3_200,
         discount: 0,
         taxRateBp: 1_900,
+        taxKind: 'taxed',
       },
-      { productId: 'p-pan', quantityMilli: 3_000, unitPrice: 2_800, discount: 0, taxRateBp: 1_900 },
+      {
+        productId: 'p-pan',
+        quantityMilli: 3_000,
+        unitPrice: 2_800,
+        discount: 0,
+        taxRateBp: 1_900,
+        taxKind: 'taxed',
+      },
     ],
     payments: [{ method: 'cash', amount: 14_800, reference: null }],
     summary: {
