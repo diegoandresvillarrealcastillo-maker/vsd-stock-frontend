@@ -5,6 +5,7 @@ import type { AppUpdates } from '../domain/ports/in/app-updates';
 import type { Inventory } from '../domain/ports/in/inventory';
 import type { LoadMe } from '../domain/ports/in/load-me';
 import type { LocalWorkspace } from '../domain/ports/in/local-workspace';
+import type { MascotsPreference } from '../domain/ports/in/mascots-preference';
 import type { Purchasing } from '../domain/ports/in/purchasing';
 import type { ReadCopy } from '../domain/ports/in/read-copy';
 import type { Reports } from '../domain/ports/in/reports';
@@ -21,6 +22,7 @@ import { ConnectionProvider } from './connection/ConnectionProvider';
 import { ReadCopyProvider } from './copy/ReadCopyProvider';
 import { InventoryProvider } from './inventory/InventoryProvider';
 import { LocalWorkspaceProvider } from './local/LocalWorkspaceProvider';
+import { MascotasProvider } from './mascotas/MascotasProvider';
 import { MotionProvider } from './motion/MotionProvider';
 import { PeopleProvider } from './people/PeopleProvider';
 import { PurchasingProvider } from './purchasing/PurchasingProvider';
@@ -35,12 +37,13 @@ import { SyncProvider } from './sync/SyncProvider';
 import { ThemeProvider } from './theme/ThemeProvider';
 
 /**
- * Raiz de la interfaz. La preferencia de tema, la vigilancia de conexion y la sesion llegan ya cableadas desde
+ * Raiz de la interfaz. Las preferencias de tema y de mascotas, la vigilancia de conexion y la sesion llegan ya cableadas desde
  * `infrastructure/`: la interfaz no sabe donde se guarda el tema, como se pregunta al servidor ni como se entra. El
  * enrutador lo pone quien monta la aplicacion (el navegador en `main.tsx`, una memoria en las pruebas).
  */
 export function App({
   theme,
+  mascots,
   connection,
   auth,
   local,
@@ -57,6 +60,7 @@ export function App({
   pwa,
 }: {
   theme: ThemePreference;
+  mascots: MascotsPreference;
   connection: ConnectionMonitor;
   auth: { sessions: SessionManager; loadMe: LoadMe };
   local: LocalWorkspace;
@@ -74,38 +78,40 @@ export function App({
 }) {
   return (
     <ThemeProvider preference={theme}>
-      <ConnectionProvider monitor={connection}>
-        <PwaProvider updates={pwa.updates} storage={pwa.storage}>
-          <MotionProvider>
-            <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
-              <LocalWorkspaceProvider workspace={local}>
-                <SyncProvider engine={sync}>
-                  <ReadCopyProvider copy={copy}>
-                    <ShiftProvider shifts={shifts}>
-                      <SellingProvider selling={selling}>
-                        <SalesProvider history={sales}>
-                          <PeopleProvider people={people}>
-                            <CatalogProvider catalog={catalog}>
-                              <InventoryProvider inventory={inventory}>
-                                <PurchasingProvider purchasing={purchasing}>
-                                  <ReportsProvider reports={reports}>
-                                    <AppRoutes />
-                                    <UpdateNotice />
-                                  </ReportsProvider>
-                                </PurchasingProvider>
-                              </InventoryProvider>
-                            </CatalogProvider>
-                          </PeopleProvider>
-                        </SalesProvider>
-                      </SellingProvider>
-                    </ShiftProvider>
-                  </ReadCopyProvider>
-                </SyncProvider>
-              </LocalWorkspaceProvider>
-            </AuthProvider>
-          </MotionProvider>
-        </PwaProvider>
-      </ConnectionProvider>
+      <MascotasProvider preference={mascots}>
+        <ConnectionProvider monitor={connection}>
+          <PwaProvider updates={pwa.updates} storage={pwa.storage}>
+            <MotionProvider>
+              <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
+                <LocalWorkspaceProvider workspace={local}>
+                  <SyncProvider engine={sync}>
+                    <ReadCopyProvider copy={copy}>
+                      <ShiftProvider shifts={shifts}>
+                        <SellingProvider selling={selling}>
+                          <SalesProvider history={sales}>
+                            <PeopleProvider people={people}>
+                              <CatalogProvider catalog={catalog}>
+                                <InventoryProvider inventory={inventory}>
+                                  <PurchasingProvider purchasing={purchasing}>
+                                    <ReportsProvider reports={reports}>
+                                      <AppRoutes />
+                                      <UpdateNotice />
+                                    </ReportsProvider>
+                                  </PurchasingProvider>
+                                </InventoryProvider>
+                              </CatalogProvider>
+                            </PeopleProvider>
+                          </SalesProvider>
+                        </SellingProvider>
+                      </ShiftProvider>
+                    </ReadCopyProvider>
+                  </SyncProvider>
+                </LocalWorkspaceProvider>
+              </AuthProvider>
+            </MotionProvider>
+          </PwaProvider>
+        </ConnectionProvider>
+      </MascotasProvider>
     </ThemeProvider>
   );
 }

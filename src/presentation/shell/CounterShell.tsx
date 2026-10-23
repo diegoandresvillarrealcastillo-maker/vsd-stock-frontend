@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useOptionalAccount } from '../auth/AuthProvider';
+import { MascotasToggle } from '../components/MascotasToggle';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useLocal } from '../local/LocalWorkspaceProvider';
 import { attentionLabel } from '../sales/attention-label';
@@ -77,7 +78,10 @@ export function CounterShell() {
               <p className="truncate text-lg font-semibold">{profile.businessName}</p>
               <p className="truncate text-sm opacity-90">{profile.fullName}</p>
             </div>
-            <ThemeToggle />
+            <div className="flex shrink-0 items-center gap-2">
+              <ThemeToggle />
+              <MascotasToggle />
+            </div>
           </div>
           {/* Las dos acciones de quien trabaja sin conexion caben en una sola fila a 375 px: en la caja el alto es lo que mas falta. */}
           <div className="flex flex-wrap items-center gap-2">

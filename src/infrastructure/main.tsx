@@ -14,6 +14,7 @@ import { resolveAuthConfig } from './auth-config';
 import { createAuth } from './create-auth';
 import { createConnectionMonitor } from './create-connection-monitor';
 import { createLocalWorkspace } from './create-local-workspace';
+import { createMascotsPreference } from './create-mascots-preference';
 import { createPwa } from './create-pwa';
 import { createReadCopy } from './create-read-copy';
 import { createSelling } from './create-selling';
@@ -33,6 +34,9 @@ const theme = createThemePreference({
   matchMedia: typeof window.matchMedia === 'function' ? window.matchMedia.bind(window) : undefined,
   root: document.documentElement,
 });
+
+// Si las mascotas se ven (C4-M3): se encienden solas y la persona puede apagarlas desde la cabecera.
+const mascots = createMascotsPreference({ getStorage: () => window.localStorage });
 
 const apiBaseUrl = resolveApiBaseUrl(import.meta.env);
 // Se llama a `window.fetch` como metodo de window: suelto lanzaria "Illegal invocation".
@@ -114,6 +118,7 @@ createRoot(container).render(
     <BrowserRouter>
       <App
         theme={theme}
+        mascots={mascots}
         connection={connection}
         auth={auth}
         local={local}

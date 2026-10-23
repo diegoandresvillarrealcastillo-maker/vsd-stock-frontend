@@ -73,14 +73,16 @@ aplicación no puede evitarlo: lo único que se puede hacer es **sincronizar pro
 `npm run budget` (también en el CI, después de compilar) mide `dist/` con gzip al nivel 9 y **falla si se pasa**
 de `scripts/bundle-budget.json`:
 
-| Parte                       | Hoy (C4-R0) | Presupuesto |
+| Parte                       | Hoy (C4-M3) | Presupuesto |
 | --------------------------- | ----------: | ----------: |
-| JavaScript, todo            |    174,2 KB |      190 KB |
-| JavaScript del **arranque** |    159,5 KB |      165 KB |
+| JavaScript, todo            |    177,0 KB |      190 KB |
+| JavaScript del **arranque** |    161,1 KB |      165 KB |
 | CSS                         |      7,5 KB |       12 KB |
-| Service worker              |      1,7 KB |        3 KB |
+| Service worker              |      1,8 KB |        3 KB |
 
 Si un cambio legítimo no cabe, se discute en el PR y se sube el número con su razón; no se quita la comprobación.
+
+**Las imágenes no cuentan en estos números, pero el service worker también las guarda.** Todo lo que `vite build` deja en `dist/` se baja al instalar, y una imagen que algún módulo importa va a `dist/` aunque ninguna pantalla la muestre. Por eso la aplicación no importa las 20 caras de las mascotas (unos 290 KB): solo las seis que usa (unos 75 KB), y una prueba lo vigila. El detalle está en [`mascotas.md`](mascotas.md#lo-que-cuesta-en-peso).
 
 **El arranque se mide aparte (C4-R0).** Es lo que la página pide al abrirse —su script de módulo y lo que precarga, tal como lo
 dice `dist/index.html`—, y es lo que el mostrador paga siempre. Las pantallas del marco de administración (inicio, catálogo,

@@ -136,6 +136,22 @@ una sola vez al instalar, con sitio para las pantallas de administración que si
 que no pesa en el mostrador. La comprobación del arranque lee `dist/index.html` (el script de módulo y lo que precarga), que es
 exactamente lo que el navegador pide al abrir.
 
+### Después de C4-M3 (las mascotas en la aplicación)
+
+Medido con `npm run budget` sobre la misma rama, antes y después de las mascotas, con el reporte mensual (C4-R1) ya dentro:
+
+| Pieza                                 | Antes de las mascotas |   **Ahora** | Presupuesto |
+| ------------------------------------- | --------------------: | ----------: | ----------: |
+| JavaScript, todo                      |              175,9 KB |    177,0 KB |      190 KB |
+| JavaScript del arranque               |              160,2 KB |    161,1 KB |      165 KB |
+| CSS                                   |                7,5 KB |      7,5 KB |       12 KB |
+| Dibujos en `dist/` (WebP, no cuentan) |                     0 | 6 · 75,8 KB |           — |
+
+**Qué cuesta cada cosa:**
+
+- **+1,1 KB de JavaScript, +0,9 KB en el arranque.** Es la preferencia de apagar (caso de uso, almacenamiento, proveedor y botón) y la puerta `MascotaDePantalla`. Los dos marcos llevan el botón y el cierre de turno viaja con el mostrador, por eso el arranque se mueve; el panel de la conexión y el catálogo están en el trozo de administración. El arranque queda con 3,9 KB de margen frente a su techo de 165.
+- **Las imágenes, aparte.** La aplicación ya no importa `Mascota` (que trae los 20 dibujos, 293 KB) sino los seis que usa: `dist/` pasó de 0 a 6 dibujos de la aplicación y el service worker los guarda al instalar. Ori dormida tiene que estar guardada: es la que se ve cuando no hay red. Las imágenes cargan cuando están cerca de la pantalla (`loading="lazy"`), así que ninguna retrasa lo primero que se ve.
+
 ## Lighthouse: lo más cercano a un teléfono de gama baja
 
 > La landing (`sitio/`) se mide aparte, con el mismo perfil y sus propios umbrales y presupuesto: [`rendimiento-de-la-landing.md`](rendimiento-de-la-landing.md).

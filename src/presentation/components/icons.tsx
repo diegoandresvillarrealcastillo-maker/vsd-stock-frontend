@@ -67,3 +67,27 @@ export function CloudOffIcon() {
     </svg>
   );
 }
+
+export function SmileIcon() {
+  return (
+    <svg {...BASE}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+      <line x1="9" y1="9" x2="9.01" y2="9" />
+      <line x1="15" y1="9" x2="15.01" y2="9" />
+    </svg>
+  );
+}
+
+/** La misma cara, tachada: las mascotas estan apagadas. */
+export function SmileOffIcon() {
+  return (
+    <svg {...BASE}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+      <line x1="9" y1="9" x2="9.01" y2="9" />
+      <line x1="15" y1="9" x2="15.01" y2="9" />
+      <line x1="3" y1="3" x2="21" y2="21" />
+    </svg>
+  );
+}

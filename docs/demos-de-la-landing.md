@@ -44,7 +44,7 @@ La landing solo puede importar de la aplicación el dominio (ADR 0033), y de ah�
 
 - **Ninguna cuenta regresiva sobre dinero:** las cifras salen de golpe y no hay temporizadores ni animación en ellas. Una prueba lo vigila en las dos demos.
 - **No guardan ni envían nada.** Lo escrito se pierde al recargar.
-- **No sacan a Ojo de Gato** al cuadrar la caja: en la aplicación eso es C4-M3 y todavía no existe, y la landing no muestra lo que el producto no hace (ver [`mascotas.md`](mascotas.md)).
+- **No sacan a Ojo de Gato** al cuadrar la caja. En la aplicación sí aparece al cerrar el turno (C4-M3, ver [`mascotas.md`](mascotas.md)); que la demo de la landing también la saque no está decidido, y mientras tanto no la saca.
 
 ## Decisiones y lo que cuestan
 

@@ -5,6 +5,7 @@ import type { LocalProfile } from '../../domain/model/local-profile';
 import type { ShiftState } from '../../domain/ports/in/shifts';
 import { deferred } from '../../../test/support/deferred';
 import { createTestLocal, rememberPerson } from '../../../test/support/local';
+import { createTestMascotsPreference } from '../../../test/support/mascots';
 import { renderScreen } from '../../../test/support/screens';
 import { FakeShifts, closedState, openState } from '../../../test/support/shifts';
 import { CloseShiftPage } from './CloseShiftPage';
@@ -24,12 +25,17 @@ const profile: LocalProfile = {
 const waiting = (): ShiftState =>
   openState({ sales: { cashCount: 3, cashAmount: 120_000, otherCount: 2, otherAmount: 48_500 } });
 
-async function mount(state: ShiftState) {
+async function mount(state: ShiftState, { mascots = true }: { mascots?: boolean } = {}) {
   const shifts = new FakeShifts(state);
   const local = createTestLocal();
   rememberPerson(local, profile);
   local.stores.dataOf('ana').device = { id: 'dev-1', code: 'AA' };
-  const view = renderScreen(<CloseShiftPage />, { local, shifts, path: '/mostrador/turno/cerrar' });
+  const view = renderScreen(<CloseShiftPage />, {
+    local,
+    shifts,
+    path: '/mostrador/turno/cerrar',
+    mascots: createTestMascotsPreference({ saved: mascots ? null : false }).preference,
+  });
   await local.workspace.resume();
   return { ...view, shifts, local };
 }
@@ -301,6 +307,110 @@ describe('CloseShiftPage', () => {
       expect(alert.textContent).toContain('No pudimos cerrar el turno');
       expect(alert.textContent).toContain('No hay un turno abierto que cerrar.');
       expect(screen.getByTestId('ruta').textContent).toBe('/mostrador/turno/cerrar');
+    });
+  });
+
+  describe('Ojo de Gato (C4-M3)', () => {
+    const gato = () => screen.queryByRole('img', { name: /^Ojo de Gato/ });
+
+    it('does not show the cat while it reads what is saved: it does not know yet what to say', async () => {
+      await mount({ status: 'loading' });
+      await screen.findByText('Cargando el turno…');
+
+      expect(gato()).toBeNull();
+    });
+
+    it.each<[string, ShiftState]>([
+      ['there is no shift', { status: 'none' }],
+      ['the shift is already closed', closedState()],
+    ])('sleeps over the book when %s: there is nothing to count', async (_name, state) => {
+      await mount(state);
+      await screen.findByText('No tienes un turno abierto que cerrar.');
+
+      expect(gato()?.getAttribute('alt')).toBe('Ojo de Gato, durmiendo');
+      expect(gato()?.getAttribute('src')).toContain('gato-dormida');
+    });
+
+    it('reads its book, serious, while the cash is being counted', async () => {
+      await mount(waiting());
+      await screen.findByLabelText('Efectivo contado');
+
+      expect(gato()?.getAttribute('alt')).toBe('Ojo de Gato, con gesto tranquilo');
+      expect(gato()?.getAttribute('src')).toContain('gato-normal');
+    });
+
+    it('keeps its calm face when the count does not balance: it does not scold, the words say how much is missing', async () => {
+      await mount(waiting());
+      await screen.findByLabelText('Efectivo contado');
+
+      type('168000');
+
+      expect(screen.getByText('Faltan $ 2.000')).toBeDefined();
+      expect(gato()?.getAttribute('alt')).toBe('Ojo de Gato, con gesto tranquilo');
+    });
+
+    it('is happy only when the drawer balances, and calm again when the count changes', async () => {
+      await mount(waiting());
+      await screen.findByLabelText('Efectivo contado');
+
+      type('170000');
+      expect(screen.getByText('La caja cuadra')).toBeDefined();
+      expect(gato()?.getAttribute('alt')).toBe('Ojo de Gato, feliz');
+      expect(gato()?.getAttribute('src')).toContain('gato-feliz');
+
+      type('170100');
+      expect(gato()?.getAttribute('alt')).toBe('Ojo de Gato, con gesto tranquilo');
+    });
+
+    it('stays happy while it saves a balanced count, and does not fall asleep when the shift is closed under it', async () => {
+      const { shifts } = await mount(waiting());
+      const saving = deferred<undefined>();
+      shifts.close = async (amount) => {
+        shifts.closed.push(amount);
+        shifts.set(closedState(amount));
+        await saving.promise;
+      };
+      await screen.findByLabelText('Efectivo contado');
+      type('170000');
+
+      submit();
+
+      await screen.findByRole('button', { name: 'Guardando…' });
+      expect(gato()?.getAttribute('alt')).toBe('Ojo de Gato, feliz');
+      await act(async () => {
+        saving.resolve(undefined);
+        await saving.promise;
+      });
+    });
+
+    it('goes to sleep when the shift is closed from elsewhere', async () => {
+      const { shifts } = await mount(waiting());
+      await screen.findByLabelText('Efectivo contado');
+
+      act(() => {
+        shifts.set(closedState());
+      });
+
+      await screen.findByText('No tienes un turno abierto que cerrar.');
+      expect(gato()?.getAttribute('alt')).toBe('Ojo de Gato, durmiendo');
+    });
+
+    it('leaves the screen exactly as it was when the person turned the mascots off', async () => {
+      await mount(waiting(), { mascots: false });
+      await screen.findByLabelText('Efectivo contado');
+
+      type('170000');
+
+      expect(screen.getByText('La caja cuadra')).toBeDefined();
+      expect(gato()).toBeNull();
+      expect(screen.queryByRole('img')).toBeNull();
+    });
+
+    it('does not sleep over a screen that has nothing to close when the mascots are off', async () => {
+      await mount({ status: 'none' }, { mascots: false });
+      await screen.findByText('No tienes un turno abierto que cerrar.');
+
+      expect(screen.queryByRole('img')).toBeNull();
     });
   });
 

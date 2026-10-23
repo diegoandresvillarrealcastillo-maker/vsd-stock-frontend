@@ -9,6 +9,7 @@ import {
   testCategory,
   testProduct,
 } from '../../../test/support/catalog';
+import { createTestMascotsPreference } from '../../../test/support/mascots';
 import { renderScreen } from '../../../test/support/screens';
 import { CatalogPage } from './CatalogPage';
 
@@ -42,10 +43,16 @@ const CATEGORIES = [
 function setup(
   role: Role = 'owner',
   catalog = createFakeCatalog([ARROZ, ACEITE, PANELA, VIEJO], CATEGORIES),
+  { mascots = true }: { mascots?: boolean } = {},
 ) {
   const auth = createTestAuth({ stored: testSession('ana') });
   auth.answer(testMe('ana', role));
-  const view = renderScreen(<CatalogPage />, { path: '/catalogo', auth, catalog });
+  const view = renderScreen(<CatalogPage />, {
+    path: '/catalogo',
+    auth,
+    catalog,
+    mascots: createTestMascotsPreference({ saved: mascots ? null : false }).preference,
+  });
   return { ...view, catalog };
 }
 
@@ -254,6 +261,62 @@ describe('CatalogPage', () => {
         ),
       ).toBeDefined();
       expect(screen.queryByRole('link', { name: 'Nuevo producto' })).toBeNull();
+    });
+  });
+
+  describe('Fungito (C4-M3)', () => {
+    const fungito = () => screen.queryByRole('img', { name: /^Fungito/ });
+
+    it('sleeps next to the invitation when there are no products to look after', async () => {
+      setup('owner', createFakeCatalog([], CATEGORIES));
+      await screen.findByText('Todavía no tienes productos.');
+
+      expect(fungito()?.getAttribute('alt')).toBe('Fungito, durmiendo');
+      expect(fungito()?.getAttribute('src')).toContain('fungito-dormida');
+    });
+
+    it('sleeps for the cashier too, who is told to ask for the products', async () => {
+      setup('cashier', createFakeCatalog([], CATEGORIES));
+      await screen.findByText('Todavía no hay productos. Pídele a quien administra que los cree.');
+
+      expect(fungito()).not.toBeNull();
+    });
+
+    it('is not there while the products load, nor when there are products', async () => {
+      setup();
+      expect(fungito()).toBeNull();
+
+      await screen.findByText('Arroz 500 g');
+
+      expect(fungito()).toBeNull();
+    });
+
+    it('is not there when a search finds nothing: the catalog is not empty, the search is', async () => {
+      const { catalog } = setup();
+      await screen.findByText('Arroz 500 g');
+      catalog.listProducts.mockResolvedValue(lastPage([]));
+
+      search('zzz');
+
+      await screen.findByText(/No encontramos productos con «zzz»/);
+      expect(fungito()).toBeNull();
+    });
+
+    it('is not there among the archived products: having none archived is not an empty catalog', async () => {
+      setup('owner', createFakeCatalog([], CATEGORIES));
+      await screen.findByText('Todavía no tienes productos.');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Archivados' }));
+
+      await screen.findByText('No hay productos archivados.');
+      expect(fungito()).toBeNull();
+    });
+
+    it('leaves only the sentence when the person turned the mascots off', async () => {
+      setup('owner', createFakeCatalog([], CATEGORIES), { mascots: false });
+
+      expect(await screen.findByText('Todavía no tienes productos.')).toBeDefined();
+      expect(screen.queryByRole('img')).toBeNull();
     });
   });
 
