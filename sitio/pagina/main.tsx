@@ -17,8 +17,10 @@ const page = (
   </StrictMode>
 );
 
-// La pagina llega prerenderizada y React se monta encima de ella. Con `npm run dev:sitio` el documento llega vacio y se crea desde cero.
-if (container.hasChildNodes()) {
+// La pagina llega prerenderizada y React se monta encima de ella. Con `npm run dev:sitio` no hay prerenderizado: `#root` solo trae el
+// comentario `<!--app-->` (el lugar de la pagina) y se crea desde cero. Un comentario cuenta como nodo hijo, asi que se mira si hay un
+// elemento: hidratar sobre un contenedor sin pagina es el error de hidratacion de la consola.
+if (container.firstElementChild !== null) {
   hydrateRoot(container, page);
 } else {
   createRoot(container).render(page);
