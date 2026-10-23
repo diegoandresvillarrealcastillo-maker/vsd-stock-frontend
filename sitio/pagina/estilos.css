@@ -15,3 +15,71 @@
   /* Las lineas finas de la cuadricula y los separadores: el mismo tono del fondo de los esqueletos en cada tema. */
   --color-rule: var(--color-skeleton);
 }
+
+html {
+  /* Los enlaces internos (#funciones) se deslizan en vez de saltar, salvo para quien pidio menos movimiento. */
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* El fondo de cuadricula del hero: lineas finas que se desvanecen hacia los bordes, como una hoja de contabilidad. */
+.cuadricula {
+  background-image:
+    linear-gradient(to right, var(--color-rule) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-rule) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 35%, #000 25%, transparent 75%);
+}
+
+/* Un resplandor naranja, muy tenue, detras del dibujo del hero. */
+.resplandor {
+  background: radial-gradient(
+    ellipse 50% 45% at 80% 25%,
+    color-mix(in srgb, var(--color-accent) 16%, transparent),
+    transparent 70%
+  );
+}
+
+/* La palabra que lleva el peso del titulo: subrayada como con un marcador, sin el amarillo que trae <mark>. */
+.marca {
+  background: linear-gradient(
+    transparent 62%,
+    color-mix(in srgb, var(--color-accent) 40%, transparent) 62%
+  );
+  color: inherit;
+  padding: 0 0.08em;
+  box-decoration-break: clone;
+}
+
+/* El boton de tema muestra el icono de lo que haria: el sol en el tema oscuro, la luna en el claro. Es CSS y no JavaScript
+ * para que el servidor y el navegador pinten lo mismo: ninguno sabe de antemano que tema eligio la persona. */
+.icono-sol {
+  display: none;
+}
+
+:root[data-theme='dark'] .icono-sol {
+  display: block;
+}
+
+:root[data-theme='dark'] .icono-luna {
+  display: none;
+}
+
+/* El foco sobre las bandas oscuras y sobre el naranja: el azul del foco de la pagina no se ve sobre el azul de la banda. */
+.banda :focus-visible {
+  outline-color: var(--color-accent);
+}
+
+.banda-naranja :focus-visible {
+  outline-color: var(--color-on-accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
