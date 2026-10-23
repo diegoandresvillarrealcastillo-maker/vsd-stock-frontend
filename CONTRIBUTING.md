@@ -63,10 +63,11 @@ npm run contract:generate # solo regenera los tipos a partir de la copia
 
 - Con `CONTRACT_REF=otra-rama` apuntas a otra rama del backend (por ejemplo, la de un PR que todavía no se
   fusiona).
-- En el CI, la rama del backend es la base del Pull Request (o, en un push, la rama que lo recibe) **si el backend
-  la tiene**. Un PR apilado tiene por base la rama de otro PR del frontend, que el backend no tiene: ahí el CI usa
-  `desarrollo`. Si un ticket necesita cambios del backend, su rama allá se llama igual que la base y el CI la
-  encuentra.
+- En el CI, la rama del backend es la primera que el backend tenga de estas: la de tu propio Pull Request (o, en un
+  push, la que lo recibe), la base del Pull Request y `desarrollo`. Un PR apilado tiene por base la rama de otro PR
+  del frontend, que el backend quizá no tiene. Si tu ticket necesita cambios del backend, su rama se llama igual en
+  los dos repositorios y el CI la encuentra aunque tu PR vaya apilado sobre otro. Solo pasa a la siguiente cuando el
+  backend dice que la rama no existe; si la red falla, el trabajo se detiene.
 - **No edites `contract/openapi.json`, `contract/calculation-vectors.json` ni `schema.d.ts` a mano.** Una prueba
   compara los tipos con lo que genera la herramienta y dice qué comando ejecutar. El CI compara las copias con el
   backend y lista lo que cambió (en los vectores, qué secciones).
