@@ -1,0 +1,17 @@
+/*
+ * Estilos de la landing (ADR 0033). Los tokens son los del producto, los mismos nombres y los mismos valores: se importan,
+ * no se copian, asi la pagina y la aplicacion no pueden separarse sin que alguien lo decida. Lo que la landing agrega es
+ * suyo: las tipografias (la aplicacion usa las del sistema para abrir sin conexion; una pagina de presentacion si puede
+ * pagar sus fuentes, y son propias, servidas desde el mismo sitio) y el color de las lineas finas.
+ */
+@import '../../src/presentation/styles/index.css';
+
+@theme static {
+  --font-display:
+    'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Las lineas finas de la cuadricula y los separadores: el mismo tono del fondo de los esqueletos en cada tema. */
+  --color-rule: var(--color-skeleton);
+}

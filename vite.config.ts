@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['test/setup.ts'],
-    include: ['src/**/*.spec.{ts,tsx}', 'test/**/*.spec.ts'],
+    include: ['src/**/*.spec.{ts,tsx}', 'sitio/pagina/**/*.spec.{ts,tsx}', 'test/**/*.spec.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],

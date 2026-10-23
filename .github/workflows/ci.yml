@@ -153,6 +153,11 @@ jobs:
       - name: Medir el peso contra el presupuesto
         run: npm run budget
 
+      # La landing (C4-L1, ADR 0033) se compila aparte de la aplicacion y no cuenta en su presupuesto. Compilarla aqui evita que un
+      # cambio rompa el prerenderizado o la politica de contenido sin que nadie se entere hasta publicar.
+      - name: Compilar la landing
+        run: npm run build:sitio
+
   contrato:
     name: Contrato con el backend
     runs-on: ubuntu-24.04

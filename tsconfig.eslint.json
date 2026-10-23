@@ -12,6 +12,7 @@
     "test",
     "scripts",
     "e2e",
+    "sitio",
     "vite.config.ts",
     "vitest.mutation.config.ts",
     "playwright.config.ts"
