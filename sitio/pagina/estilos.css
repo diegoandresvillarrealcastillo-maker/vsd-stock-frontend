@@ -14,6 +14,13 @@
 
   /* Las lineas finas de la cuadricula y los separadores: el mismo tono del fondo de los esqueletos en cada tema. */
   --color-rule: var(--color-skeleton);
+
+  /* El marco del telefono del diagrama: el azul de la banda, que sobre el fondo claro se ve y sobre el oscuro se pierde (abajo). */
+  --color-bisel: var(--color-band);
+}
+
+:root[data-theme='dark'] {
+  --color-bisel: var(--color-border);
 }
 
 html {
@@ -82,4 +89,59 @@ html {
 :focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+/* El viaje de una venta por el diagrama (C4-L4): una bolita que recorre una linea recta. Solo `transform` y `opacity` (ADR 0008).
+ * Cuanto recorre, cuanto tarda y cuanto espera antes de salir lo escribe el componente en --recorrido, --duracion y --retraso
+ * (salen de `diagrama/ritmo.ts`), asi el reloj del dibujo es uno solo. */
+.viaje {
+  animation-duration: var(--duracion);
+  animation-delay: var(--retraso, 0ms);
+  animation-timing-function: var(--ease-standard);
+  animation-fill-mode: both;
+}
+
+.viaje-horizontal {
+  animation-name: viaje-horizontal;
+}
+
+.viaje-vertical {
+  animation-name: viaje-vertical;
+}
+
+@keyframes viaje-horizontal {
+  from {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(var(--recorrido));
+  }
+}
+
+@keyframes viaje-vertical {
+  from {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(var(--recorrido));
+  }
+}
+
+/* Quien pidio menos movimiento no ve viajar la venta: el estado cambia sin animar (el componente ni la dibuja; esto lo asegura). */
+@media (prefers-reduced-motion: reduce) {
+  .viaje {
+    display: none;
+  }
 }

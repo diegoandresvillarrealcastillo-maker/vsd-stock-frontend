@@ -426,7 +426,10 @@ describe('the details that a section can lose without anyone noticing', () => {
 
     const descripcion = document.getElementById(dibujo.getAttribute('aria-describedby') ?? '');
     expect(descripcion?.textContent).toBe(contenido.diagrama.descripcion);
-    expect(dibujo.textContent).toContain(contenido.diagrama.folio);
+    // Desde C4-L4 el dibujo vive: abre con el libro que ya tiene dos ventas y el folio de ejemplo (`diagrama.folio`) es el de la
+    // primera que viaja (se ve en `DiagramaVenta.spec.tsx`), no uno que se queda fijo en el dibujo.
+    expect(dibujo.textContent).toContain('K7-000140');
+    expect(dibujo.textContent).toContain('K7-000141');
     expect(dibujo.textContent).toContain(estados.conectado);
     const puestos = [...dibujo.querySelectorAll('text')].map((t) => t.textContent);
     for (const nombre of [nodos.mostrador, nodos.cola, nodos.servidor, nodos.libro]) {
