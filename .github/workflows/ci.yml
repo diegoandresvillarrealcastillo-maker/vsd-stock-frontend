@@ -1,7 +1,7 @@
 # ============================================================
 #  VSD Stock (frontend) - Integracion continua
 # ============================================================
-#  Barrera automatica del proyecto. Este archivo cubre siete cosas:
+#  Barrera automatica del proyecto. Este archivo cubre nueve cosas:
 #
 #    1. que no entre ningun secreto al repositorio;
 #    2. que todo commit siga Conventional Commits y cite su Issue;
@@ -16,7 +16,13 @@
 #    7. que la web ya compilada funcione en navegadores de verdad contra la API
 #       y la base reales (C3-15): sin red, recargando, con dos pestañas y con
 #       varios dispositivos, y con axe en cada pantalla. Chromium bloquea cuando
-#       se marque; Firefox y WebKit se corren y se informan.
+#       se marque; Firefox y WebKit se corren y se informan;
+#    8. que la landing (sitio/) pase Lighthouse con el mismo perfil de movil
+#       que la aplicacion: accesibilidad perfecta y buen rendimiento (C4-L7);
+#    9. que la landing ya compilada pase axe en tema claro y oscuro, apague
+#       todo lo que se mueve con movimiento reducido, se descargue aparte lo
+#       interactivo y no se pase del presupuesto de peso de la carga inicial
+#       (C4-L7). No necesita la API ni la base: es una pagina sola.
 #
 #  CodeQL (codeql.yml) y las vulnerabilidades de las dependencias
 #  (dependencias.yml) van en archivos aparte para poder programarlos.
@@ -387,5 +393,76 @@ jobs:
         with:
           name: informes-lighthouse
           path: .lighthouseci/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  landing:
+    name: Landing (Lighthouse)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # La landing se compila aparte de la aplicacion (sitio/dist/, ADR 0033 del backend) y es la que se audita.
+      - name: Compilar la landing
+        run: npm run build:sitio
+
+      # El mismo perfil que la aplicacion (Moto G Power, la CPU 4 veces mas lenta y una red 4G lenta simulada, 3 corridas) y los
+      # mismos umbrales: la accesibilidad tiene que ser perfecta; el rendimiento y las buenas practicas solo avisan por debajo de 0,9.
+      - name: Auditar la landing
+        run: npm run lighthouse:sitio
+
+      - name: Guardar los informes
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informes-lighthouse-landing
+          path: .lighthouseci/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  landing-navegador:
+    name: Landing (navegador)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Solo Chromium y sin `--with-deps`, como el trabajo de la aplicacion que bloquea: las librerias del sistema ya las trae el
+      # ejecutor y `apt` es lo lento cuando el espejo anda mal (ver docs/pruebas-en-navegador.md).
+      - name: Instalar Chromium sin los paquetes del sistema
+        run: npx playwright install chromium
+
+      # Playwright compila la landing (`npm run build:sitio`), la sirve con las reglas de `_headers` y corre axe en claro y oscuro,
+      # el movimiento reducido, el peso de la carga inicial y la politica de contenido. No necesita la API, la base ni el backend.
+      - name: Probar la landing en el navegador
+        run: npm run e2e:sitio
+
+      - name: Guardar el informe
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informes-navegador-landing
+          path: |
+            playwright-report/
+            test-results/
           if-no-files-found: ignore
           retention-days: 14

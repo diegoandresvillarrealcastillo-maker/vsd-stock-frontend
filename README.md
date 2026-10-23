@@ -40,7 +40,9 @@ el backend en marcha: ver [Conexión con el backend](#conexión-con-el-backend).
 | `npm run contract:check`    | Comprueba que ambas copias coinciden con las del backend (lo mismo que hace el CI).      |
 | `npm run contract:generate` | Regenera los tipos a partir de la copia del contrato, sin red.                           |
 | `npm run lighthouse`        | Audita `dist/` con Lighthouse (necesita Chrome y `npm run build` antes).                 |
+| `npm run lighthouse:sitio`  | Audita `sitio/dist/` (la landing) con Lighthouse (necesita Chrome y `build:sitio`).      |
 | `npm run e2e`               | Pruebas en navegadores de verdad (Chromium, Firefox y WebKit); `e2e:chromium`, solo uno. |
+| `npm run e2e:sitio`         | Pruebas de la landing en Chromium: axe, movimiento reducido y peso de la carga.          |
 
 ## Arquitectura
 
@@ -462,7 +464,7 @@ naranja del logo (`#f97801`) solo como acento.**
 - **Pruebas primero:** cada pieza nace de una prueba que se vio fallar (ADR 0007).
 - **Hooks de Husky:** antes de cada commit se corren ESLint y Prettier sobre lo que cambia, y se valida el
   mensaje con commitlint.
-- **CI** (GitHub Actions), ocho trabajos:
+- **CI** (GitHub Actions), diez trabajos:
   - escaneo de secretos (gitleaks sobre todo el historial);
   - convención de commits;
   - calidad del código (estilo y fronteras, formato, tipos, pruebas con cobertura —incluidos los tipos
@@ -473,6 +475,9 @@ naranja del logo (`#f97801`) solo como acento.**
     veces más lenta y red 4G lenta, ver [`docs/rendimiento.md`](docs/rendimiento.md));
   - navegador real (Chromium, Firefox y WebKit): la web compilada contra la API y la base reales, sin red, con dos pestañas y con
     varios dispositivos, y axe en cada pantalla ([`docs/pruebas-en-navegador.md`](docs/pruebas-en-navegador.md)); solo Chromium bloquea;
+  - la landing con Lighthouse («Landing (Lighthouse)»): accesibilidad 100, con el mismo perfil de móvil que la aplicación;
+  - la landing en un navegador real («Landing (navegador)»): axe en claro y oscuro, movimiento reducido, peso de la carga inicial y
+    política de contenido ([`docs/rendimiento-de-la-landing.md`](docs/rendimiento-de-la-landing.md));
   - análisis de código con CodeQL;
   - vulnerabilidades de las dependencias de producción.
 
@@ -480,6 +485,7 @@ naranja del logo (`#f97801`) solo como acento.**
 
 - Cómo contribuir (ramas, commits, PR, comprobaciones, contrato y diseño): [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Rendimiento y Lighthouse: [`docs/rendimiento.md`](docs/rendimiento.md).
+- Rendimiento, accesibilidad y movimiento reducido de la landing (qué se midió, el presupuesto de peso y lo que no cubre): [`docs/rendimiento-de-la-landing.md`](docs/rendimiento-de-la-landing.md).
 - La aplicación instalable (qué guarda el service worker y qué nunca, cómo se actualiza, el almacenamiento
   protegido y el presupuesto de peso): [`docs/aplicacion-instalable.md`](docs/aplicacion-instalable.md).
 - Lo que se guarda en el equipo, cómo se protege y cuándo se olvida: [`docs/almacenamiento-local.md`](docs/almacenamiento-local.md).

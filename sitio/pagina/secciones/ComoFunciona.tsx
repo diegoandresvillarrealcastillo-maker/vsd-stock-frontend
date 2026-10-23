@@ -2,7 +2,10 @@ import { contenedor, respiro, tarjetaClara } from '../clases';
 import { EncabezadoSeccion, Seccion } from '../componentes/Seccion';
 import { contenido } from '../contenido';
 
-/** Los tres pasos de un turno: abrir, vender y cerrar. La lista numerada es una `ol`; el numero grande es solo decoracion. */
+/**
+ * Los tres pasos de un turno: abrir, vender y cerrar. La lista numerada es una `ol`; el numero grande es solo decoracion, pero axe y
+ * Lighthouse lo miden igual: va con el color de los bordes (`border`, 3:1 sobre la tarjeta en los dos temas) y no con el de las lineas finas.
+ */
 export function ComoFunciona() {
   const { comoFunciona, anclas } = contenido;
   return (
@@ -18,7 +21,7 @@ export function ComoFunciona() {
             <li key={paso.titulo} className={`${tarjetaClara} relative overflow-hidden`}>
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute -top-3 right-4 font-mono text-7xl font-medium text-rule select-none"
+                className="pointer-events-none absolute -top-3 right-4 font-mono text-7xl font-medium text-border select-none"
               >
                 {String(indice + 1).padStart(2, '0')}
               </span>

@@ -112,6 +112,11 @@ npm run build
 Además, el CI ejecuta `npm run contract:check` y `npm run lighthouse` (necesita Chrome; audita `dist/`, así que
 primero `npm run build`). Con Lighthouse la accesibilidad tiene que dar 100.
 
+Si tocas la landing (`sitio/`), el CI también compila `npm run build:sitio` y ejecuta `npm run lighthouse:sitio` (audita
+`sitio/dist/`, la accesibilidad también tiene que dar 100) y `npm run e2e:sitio` (axe en claro y oscuro, movimiento reducido y el peso
+de la carga inicial contra `scripts/presupuesto-sitio.json`). Qué mide cada uno y cómo correrlo:
+[`docs/rendimiento-de-la-landing.md`](docs/rendimiento-de-la-landing.md).
+
 Husky corre ESLint y Prettier sobre lo que cambia antes de cada commit, y valida el mensaje. **No uses
 `--no-verify`**: el CI repite todo y no se puede saltar.
 
