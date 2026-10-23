@@ -67,7 +67,14 @@ describe('AppRoutes', () => {
 
       expect(await screen.findByText('Tienda La Esquina')).toBeDefined();
       expect(screen.getByText('Ana Gómez', { selector: 'p, span' })).toBeDefined();
-      expect(menu()).toEqual(['Inicio', 'Catálogo', 'Inventario', 'Compras', 'Personas']);
+      expect(menu()).toEqual([
+        'Inicio',
+        'Catálogo',
+        'Inventario',
+        'Compras',
+        'Reportes',
+        'Personas',
+      ]);
     });
 
     it('opens on the home page', async () => {

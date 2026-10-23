@@ -7,6 +7,7 @@ import type { LoadMe } from '../domain/ports/in/load-me';
 import type { LocalWorkspace } from '../domain/ports/in/local-workspace';
 import type { Purchasing } from '../domain/ports/in/purchasing';
 import type { ReadCopy } from '../domain/ports/in/read-copy';
+import type { Reports } from '../domain/ports/in/reports';
 import type { SalesHistory } from '../domain/ports/in/sales-history';
 import type { Selling } from '../domain/ports/in/selling';
 import type { SessionManager } from '../domain/ports/in/session-manager';
@@ -25,6 +26,7 @@ import { PeopleProvider } from './people/PeopleProvider';
 import { PurchasingProvider } from './purchasing/PurchasingProvider';
 import { PwaProvider } from './pwa/PwaProvider';
 import { UpdateNotice } from './pwa/UpdateNotice';
+import { ReportsProvider } from './reports/ReportsProvider';
 import { AppRoutes } from './routes/AppRoutes';
 import { SalesProvider } from './sales/SalesProvider';
 import { SellingProvider } from './selling/SellingProvider';
@@ -51,6 +53,7 @@ export function App({
   catalog,
   inventory,
   purchasing,
+  reports,
   pwa,
 }: {
   theme: ThemePreference;
@@ -66,6 +69,7 @@ export function App({
   catalog: Catalog;
   inventory: Inventory;
   purchasing: Purchasing;
+  reports: Reports;
   pwa: { updates: AppUpdates; storage: StorageProtectionStatus };
 }) {
   return (
@@ -84,8 +88,10 @@ export function App({
                             <CatalogProvider catalog={catalog}>
                               <InventoryProvider inventory={inventory}>
                                 <PurchasingProvider purchasing={purchasing}>
-                                  <AppRoutes />
-                                  <UpdateNotice />
+                                  <ReportsProvider reports={reports}>
+                                    <AppRoutes />
+                                    <UpdateNotice />
+                                  </ReportsProvider>
                                 </PurchasingProvider>
                               </InventoryProvider>
                             </CatalogProvider>

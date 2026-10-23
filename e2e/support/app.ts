@@ -16,7 +16,8 @@ export async function signIn(page: Page, credentials: Credentials): Promise<void
   await expect(page.getByRole('heading', { level: 1, name: 'Inicio' })).toBeVisible();
 }
 
-export type AdminSection = 'Inicio' | 'Catálogo' | 'Inventario' | 'Compras' | 'Personas';
+export type AdminSection =
+  'Inicio' | 'Catálogo' | 'Inventario' | 'Compras' | 'Reportes' | 'Personas';
 
 /** Una de las pantallas del menu de la administracion (no se recarga la pagina: la sesion vive solo en la memoria). */
 export async function goToAdmin(page: Page, section: AdminSection): Promise<void> {

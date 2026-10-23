@@ -9,6 +9,7 @@ import { createFakeCatalog } from '../../test/support/catalog';
 import { createFakeInventory } from '../../test/support/inventory';
 import { createFakePeople } from '../../test/support/people';
 import { createFakePurchasing } from '../../test/support/purchasing';
+import { createFakeReports } from '../../test/support/reports';
 import { createTestPwa } from '../../test/support/pwa';
 import { FakeReadCopy } from '../../test/support/read-copy';
 import { createFakeSalesHistory } from '../../test/support/sales';
@@ -55,6 +56,7 @@ function renderApp({
         catalog={createFakeCatalog()}
         inventory={createFakeInventory()}
         purchasing={createFakePurchasing()}
+        reports={createFakeReports()}
         pwa={createTestPwa().pwa}
       />
     </MemoryRouter>,
@@ -141,6 +143,22 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Personas' })).toBeDefined();
     // El nombre tambien esta en la cabecera: la lista de personas es lo que esta dentro del contenido.
     expect(await within(screen.getByRole('main')).findByText('Ana Gómez')).toBeDefined();
+  });
+
+  it('gives every screen the reports of the business, so none has to build the use case', async () => {
+    renderApp({ auth: signedIn('owner'), path: '/reportes' });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Reporte mensual' })).toBeDefined();
+    expect(await screen.findByRole('list', { name: 'Ventas por tarifa' })).toBeDefined();
+  });
+
+  it('shows the report to the management only: a cashier who types the address is told it is not for them', async () => {
+    renderApp({ auth: signedIn('cashier'), path: '/reportes' });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'No tienes acceso' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Reporte mensual' })).toBeNull();
   });
 
   it('gives the whole interface the motion provider, so no screen has to set it up', async () => {

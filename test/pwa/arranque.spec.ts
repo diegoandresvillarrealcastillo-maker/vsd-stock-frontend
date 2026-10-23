@@ -20,6 +20,7 @@ const ON_DEMAND = [
   'StockHistoryPage',
   'AdjustStockPage',
   'PurchasesPage',
+  'MonthlyReportPage',
   'NewPurchasePage',
   'SuppliersPage',
   'PeoplePage',
