@@ -170,14 +170,29 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      # La rama del backend que corresponde: la base del Pull Request o, en un push, la rama que lo recibe, si el backend la tiene.
+      # Un Pull Request apilado tiene por base la rama de otro PR, que solo existe en este repositorio (el contrato daba 404 y los
+      # navegadores un `git checkout` roto): ahi se usa `desarrollo`. `ls-remote` sale con 2 cuando la rama no existe y con otro
+      # codigo si la red falla; solo el 2 vuelve a `desarrollo`, para que un fallo de red no pase por una rama que falta.
+      # La rama llega por variable de entorno y no interpolada en el script, para no inyectar contenido en la shell.
+      - name: Elegir la rama del backend
+        id: backend
+        env:
+          RAMA: ${{ github.base_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend "refs/heads/$RAMA" > /dev/null; then
+            echo "ref=$RAMA" >> "$GITHUB_OUTPUT"
+          elif [ $? -eq 2 ]; then
+            echo "ref=desarrollo" >> "$GITHUB_OUTPUT"
+          else
+            exit 1
+          fi
+
       # Sin `npm ci`: el script solo usa lo que trae Node 24, que ejecuta
       # TypeScript quitando los tipos. Asi tambien se comprueba que corre asi.
       - name: Comparar la copia del contrato con la del backend
         env:
-          # La rama del backend que corresponde: la base del Pull Request o, en un
-          # push, la rama que lo recibe. Se pasan por variable de entorno y no
-          # interpoladas dentro del script, para no inyectar contenido en la shell.
-          CONTRACT_REF: ${{ github.base_ref || github.ref_name }}
+          CONTRACT_REF: ${{ steps.backend.outputs.ref }}
           # Evita el limite de consultas anonimas de la API de GitHub.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/contract.ts check
@@ -278,12 +293,27 @@ jobs:
       - name: Descargar el codigo
         uses: actions/checkout@v7
 
-      # El backend es publico. La misma rama que usa el trabajo del contrato: la base del Pull Request o, en un push, la que lo recibe.
+      # La misma eleccion de rama que hace el trabajo del contrato (ver alli por que): la base del PR si el backend la tiene, y si no,
+      # `desarrollo`.
+      - name: Elegir la rama del backend
+        id: backend
+        env:
+          RAMA: ${{ github.base_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend "refs/heads/$RAMA" > /dev/null; then
+            echo "ref=$RAMA" >> "$GITHUB_OUTPUT"
+          elif [ $? -eq 2 ]; then
+            echo "ref=desarrollo" >> "$GITHUB_OUTPUT"
+          else
+            exit 1
+          fi
+
+      # El backend es publico.
       - name: Descargar el backend
         uses: actions/checkout@v7
         with:
           repository: diegoandresvillarrealcastillo-maker/vsd-stock-backend
-          ref: ${{ github.base_ref || github.ref_name }}
+          ref: ${{ steps.backend.outputs.ref }}
           path: vsd-stock-backend
 
       - name: Preparar Node
