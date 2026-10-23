@@ -302,39 +302,47 @@ describe('the examples', () => {
   });
 });
 
+// Son unos 210 casos (71 precios por cada tarifa) y cada uno escribe en el campo y busca tres filas en el documento: sola tarda ~1,3 s, pero en
+// la suite completa y con la maquina cargada pasaba de los 5 s por defecto (issue #82). Se alarga el limite; no se quita ningun precio ni tarifa.
+const LIMITE_DE_LA_PRUEBA_DE_PROPIEDADES_MS = 30_000;
+
 describe('base plus VAT is always the price', () => {
-  it('adds up, as the page shows it, for any price and any rate', () => {
-    montar();
-    const precios = [
-      ...Array.from({ length: 60 }, (_, i) => i),
-      99,
-      101,
-      999,
-      1_001,
-      3_333,
-      9_999,
-      12_345,
-      100_001,
-      7_777_777,
-      MAX_PESOS - 1,
-      MAX_PESOS,
-    ];
+  it(
+    'adds up, as the page shows it, for any price and any rate',
+    () => {
+      montar();
+      const precios = [
+        ...Array.from({ length: 60 }, (_, i) => i),
+        99,
+        101,
+        999,
+        1_001,
+        3_333,
+        9_999,
+        12_345,
+        100_001,
+        7_777_777,
+        MAX_PESOS - 1,
+        MAX_PESOS,
+      ];
 
-    for (const bp of TAX_RATES_BP) {
-      fireEvent.click(tarifa(bp));
-      for (const precio of precios) {
-        escribir(String(precio));
-        const base = soloDigitos(fila(rotulos.base));
-        const iva = soloDigitos(fila(new RegExp(`^${rotulos.iva} `)));
+      for (const bp of TAX_RATES_BP) {
+        fireEvent.click(tarifa(bp));
+        for (const precio of precios) {
+          escribir(String(precio));
+          const base = soloDigitos(fila(rotulos.base));
+          const iva = soloDigitos(fila(new RegExp(`^${rotulos.iva} `)));
 
-        expect(base + iva, `${String(precio)} al ${String(bp)}`).toBe(precio);
-        expect(soloDigitos(fila(rotulos.precio))).toBe(precio);
-        expect(
-          screen.getByText(`$ ${puntos(base)} + $ ${puntos(iva)} = $ ${puntos(precio)}`),
-        ).toBeTruthy();
+          expect(base + iva, `${String(precio)} al ${String(bp)}`).toBe(precio);
+          expect(soloDigitos(fila(rotulos.precio))).toBe(precio);
+          expect(
+            screen.getByText(`$ ${puntos(base)} + $ ${puntos(iva)} = $ ${puntos(precio)}`),
+          ).toBeTruthy();
+        }
       }
-    }
-  });
+    },
+    LIMITE_DE_LA_PRUEBA_DE_PROPIEDADES_MS,
+  );
 });
 
 describe('no countdown on money', () => {
