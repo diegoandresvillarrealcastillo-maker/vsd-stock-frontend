@@ -21,11 +21,14 @@ export const botonSobreNaranja = `${boton} bg-band text-on-band shadow-sm hover:
 /** La etiqueta pequeña, en mono, que va sobre el titulo de cada seccion. */
 export const etiqueta = 'font-mono text-xs font-medium uppercase tracking-[0.18em]';
 
-/** La tarjeta sobre una seccion de fondo claro: borde fino, fondo levantado. */
-export const tarjeta = 'rounded-2xl border border-rule bg-surface-raised p-6';
+/**
+ * La tarjeta sobre una seccion de fondo claro: borde fino, fondo levantado. Pinta tambien su texto (`text-fg`): sobre la banda azul
+ * de la demo heredaria el blanco de la banda, y en el tema claro se leeria blanco sobre blanco.
+ */
+export const tarjeta = 'rounded-2xl border border-rule bg-surface-raised p-6 text-fg';
 
 /** La tarjeta sobre una seccion de fondo levantado: el fondo es el de la pagina, para que se separe. */
-export const tarjetaClara = 'rounded-2xl border border-rule bg-surface p-6';
+export const tarjetaClara = 'rounded-2xl border border-rule bg-surface p-6 text-fg';
 
 /** Un campo de texto de las demos: mide lo que un dedo (ADR 0008) y su borde se ve en los dos temas. */
 export const campoTexto =

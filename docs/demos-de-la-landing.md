@@ -10,8 +10,8 @@ Son dibujos que calculan. No llaman a ninguna API, no guardan lo que se escribe 
 | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `sitio/pagina/demos/iva.ts`                                        | La cuenta de la calculadora, sin React: lee el precio y separa base e IVA con las funciones del dominio. Se prueba sola.                  |
 | `sitio/pagina/demos/arqueo.ts`                                     | La cuenta del arqueo, sin React: lee el efectivo contado y devuelve lo que se le dice a quien cuenta. Se prueba sola.                     |
-| `sitio/pagina/secciones/CalculadoraIva.tsx`                        | El panel de la calculadora (debajo de las tarjetas de funciones): el campo, la tarifa, los cinco ejemplos y el resultado.                 |
-| `sitio/pagina/secciones/ArqueoDeEjemplo.tsx`                       | El panel del arqueo (debajo de los tres pasos): lo esperado, el campo del efectivo contado y la nota de si cuadra.                        |
+| `sitio/pagina/secciones/CalculadoraIva.tsx`                        | El panel de la calculadora (pestaña IVA de la banda de la demo): el campo, la tarifa, los cinco ejemplos y el resultado.                  |
+| `sitio/pagina/secciones/ArqueoDeEjemplo.tsx`                       | El panel del arqueo (pestaña Caja de la banda de la demo): lo esperado, el campo del efectivo contado y la nota de si cuadra.             |
 | `sitio/pagina/contenido.ts` (`calculadora`, `comoFunciona.arqueo`) | Todas las palabras, y los números de partida, como en el resto de la página.                                                              |
 | `src/domain/model/shift.ts` (`describeCount`)                      | «Faltan $ 2.000» y «Esperabas $ 170.000 y contaste $ 168.000.»: lo escribe el dominio y lo usan la pantalla de cerrar turno y la landing. |
 
@@ -48,10 +48,10 @@ La landing solo puede importar de la aplicación el dominio (ADR 0033), y de ah�
 
 ## Decisiones y lo que cuestan
 
-- **Cada demo tiene su panel, no vive dentro de una tarjeta.** La primera versión ponía la calculadora dentro de la tarjeta de IVA y la hacía de casi 1.000 px, el triple de sus vecinas, que se quedaban con un hueco enorme. Con un panel a lo ancho, como el del arqueo, las tarjetas vuelven a medir lo mismo. El costo: el IVA se ve dos veces, un ejemplo en la tarjeta y la calculadora debajo.
+- **Cada demo tiene su panel, no vive dentro de una tarjeta.** La primera versión ponía la calculadora dentro de la tarjeta de IVA y la hacía de casi 1.000 px, el triple de sus vecinas, que se quedaban con un hueco enorme. Con un panel a lo ancho, como el del arqueo, las tarjetas vuelven a medir lo mismo. El costo: el IVA se ve dos veces, un ejemplo en la tarjeta de funciones y la calculadora en la banda de la demo.
 - **Los `id` de cada demo llegan por propiedad, no con `useId`.** `useId` da ids distintos al prerenderizar y al montar de cero, y la prueba «es el mismo HTML que monta el navegador» (que protege la hidratación) lo detectó. Cada panel recibe el prefijo de quien lo pone en la página, y una prueba exige que ningún `id` se repita.
 - **`describeCount` está en el dominio, y por eso este cambio toca la aplicación.** Es la forma de no tener la frase «Esperabas… y contaste…» en dos sitios. La pantalla de cerrar turno dice exactamente lo mismo que antes (sus pruebas no cambiaron).
-- **C4-L6 las reutiliza** en las pestañas «Vender, IVA y Caja» de la banda de la demo: por eso son componentes sueltos que reciben su `id`.
+- **Viven en las pestañas «Vender, IVA y Caja» de la banda de la demo (C4-L6)**, no debajo de las tarjetas ni de los pasos, donde estaban al principio: tenerlas dos veces era repetir una calculadora a dos pantallas de distancia. Por eso son componentes sueltos que reciben su `id`, y bajan solo cuando alguien abre su pestaña. Ver [`banda-de-la-demo.md`](banda-de-la-demo.md).
 
 ## Cómo verlas y qué las vigila
 
@@ -69,6 +69,6 @@ Antes de dar por buena una pantalla con campos, ábrela en un navegador real en 
 | `demos/arqueo.spec.ts`                        | Dice exactamente lo que `describeCount` y `parseCash` dicen en la aplicación, y la diferencia de partida es la de la tarjeta de la caja.           |
 | `secciones/CalculadoraIva.spec.tsx`           | El campo solo acepta números, los ejemplos ponen precio y tarifa, la suma escrita da el precio y ninguna cifra corre con un temporizador.          |
 | `secciones/ArqueoDeEjemplo.spec.tsx`          | El titular, el detalle y el tono, el campo, que no sea región viva y que no se agregue el aviso de «queda anotado».                                |
-| `Sitio.spec.tsx`                              | Cada demo está en su sitio, una sola vez, y ningún `id` se repite; el HTML prerenderizado y el montado son el mismo.                               |
+| `Sitio.spec.tsx`                              | Cada demo está en su pestaña, una sola vez, y ningún `id` se repite; el HTML prerenderizado y el montado son el mismo.                             |
 | `src/domain/model/shift.spec.ts`              | `describeCount` dice cuánto falta o sobra y lo esperado contra lo contado.                                                                         |
 | `test/sitio/texto-en-un-solo-archivo.spec.ts` | Ninguna palabra de las demos está escrita fuera de `contenido.ts` o del dominio.                                                                   |

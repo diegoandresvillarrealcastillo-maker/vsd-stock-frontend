@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { tarjeta, tarjetaClara } from '../../sitio/pagina/clases';
 
 // Las pocas reglas de `sitio/pagina/estilos.css` que no se ven en jsdom (no hay CSS en las pruebas de componentes) y cuyo
 // olvido se nota solo en el navegador de alguien. Se leen como texto, igual que `construccion.spec.ts` lee los archivos de
@@ -65,5 +66,14 @@ describe('the rules of the landing that only the browser can show', () => {
 
   it('keeps the highlighter of the title without the yellow of the browser', () => {
     expect(css).toMatch(/\.marca\s*\{[^}]*color:\s*inherit/);
+  });
+});
+
+describe('the cards that C4-L6 puts inside the dark band of the demo', () => {
+  it('paint their own text along with their own background: otherwise they inherit the white of the band and cannot be read in the light theme', () => {
+    for (const clases of [tarjeta, tarjetaClara]) {
+      expect(clases).toMatch(/\bbg-surface/);
+      expect(clases).toMatch(/\btext-fg\b/);
+    }
   });
 });

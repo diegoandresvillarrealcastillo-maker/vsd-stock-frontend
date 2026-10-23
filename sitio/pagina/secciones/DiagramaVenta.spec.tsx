@@ -442,3 +442,67 @@ describe('for who asked for less motion', () => {
     expect(librados().at(-1)).toBe(`K7-${String(141 + VENTAS_AL_CORTAR).padStart(6, '0')}`);
   });
 });
+
+describe('the ids of the drawing, when it is on the page more than once', () => {
+  const ids = (raiz: ParentNode): string[] => [...raiz.querySelectorAll('[id]')].map((e) => e.id);
+  const referencias = (raiz: ParentNode): string[] =>
+    [...raiz.querySelectorAll('svg')].flatMap((svg) => [
+      svg.getAttribute('aria-labelledby') ?? '',
+      svg.getAttribute('aria-describedby') ?? '',
+      ...[...svg.querySelectorAll('[marker-end]')].map(
+        (e) => /url\(#(.+)\)/.exec(e.getAttribute('marker-end') ?? '')?.[1] ?? '',
+      ),
+    ]);
+
+  it('starts the ids of its parts with “diagrama” when nobody says otherwise', () => {
+    const { container } = render(<DiagramaVenta />);
+
+    expect(ids(container).sort()).toEqual([
+      'diagrama-descripcion',
+      'diagrama-flecha',
+      'diagrama-flecha-acento',
+      'diagrama-titulo',
+    ]);
+  });
+
+  it('starts the ids with the one it is given, and points at them from the drawing', () => {
+    const { container } = render(<DiagramaVenta id="demo-diagrama" />);
+
+    expect(ids(container).sort()).toEqual([
+      'demo-diagrama-descripcion',
+      'demo-diagrama-flecha',
+      'demo-diagrama-flecha-acento',
+      'demo-diagrama-titulo',
+    ]);
+    const existentes = new Set(ids(container));
+    for (const referencia of referencias(container)) expect(existentes.has(referencia)).toBe(true);
+    expect(referencias(container)).toContain('demo-diagrama-titulo');
+    expect(referencias(container)).toContain('demo-diagrama-flecha');
+  });
+
+  it('can be twice on the page without repeating an id: each drawing points at its own parts', () => {
+    render(
+      <>
+        <DiagramaVenta />
+        <DiagramaVenta id="demo-diagrama" />
+      </>,
+    );
+
+    const todos = ids(document.body);
+    expect(new Set(todos).size).toBe(todos.length);
+    const [primero, segundo] = [...document.querySelectorAll('svg')];
+    expect(primero?.getAttribute('aria-labelledby')).toBe('diagrama-titulo');
+    expect(segundo?.getAttribute('aria-labelledby')).toBe('demo-diagrama-titulo');
+    expect(screen.getAllByRole('img', { name: diagrama.titulo })).toHaveLength(2);
+  });
+});
+
+describe('the card of the diagram inside the dark band of the demo', () => {
+  it('paints its own text along with its own background: otherwise it inherits the white of the band and cannot be read in the light theme', () => {
+    const { container } = render(<DiagramaVenta />);
+
+    const figura = container.querySelector('figure');
+    expect(figura?.className).toMatch(/\bbg-surface-raised\b/);
+    expect(figura?.className).toMatch(/\btext-fg\b/);
+  });
+});

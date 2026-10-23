@@ -66,6 +66,9 @@ const anclas = {
 const adr = (archivo: string): string =>
   `${REPOSITORIO_BACKEND}/blob/desarrollo/docs/adr/${archivo}`;
 
+/** Con lo que abren la tarjeta de IVA y la calculadora: un solo ejemplo, para que la pagina cuente uno. */
+const ejemploDeApertura = { total: 11900, tarifaBp: 1900 } as const;
+
 /** Los cinco ejemplos que una revision contable externa recalculo (ADR 0032). La prueba los compara con el dominio. */
 const ejemplosIva: readonly EjemploIva[] = [
   { total: 10000, tarifaBp: 1900, base: 8403, iva: 1597 },
@@ -241,7 +244,7 @@ export const contenido = {
         titulo: 'IVA que siempre suma.',
         texto:
           'Los precios llevan el IVA incluido (0 %, 5 % o 19 %). VSD Stock separa base e IVA con una sola regla de redondeo: base más IVA es siempre el total.',
-        ejemplo: { total: 11900, tarifaBp: 1900 },
+        ejemplo: ejemploDeApertura,
         nota: 'El cálculo lo recalculó una revisión contable externa. Antes de vender en vivo lo validamos con quien lleva las declaraciones de tu tienda.',
       },
       {
@@ -294,6 +297,7 @@ export const contenido = {
 
   /** La calculadora de IVA (C4-L5). Los nombres de lo que calcula (precio, base, IVA) son los de `funciones.miniaturas.iva`. */
   calculadora: {
+    ejemplo: ejemploDeApertura,
     titulo: 'Pruébalo con un precio.',
     texto: 'Escribe un precio con el IVA incluido y mira cómo VSD Stock separa la base y el IVA.',
     campo: 'Precio con IVA incluido',
@@ -306,7 +310,15 @@ export const contenido = {
   demo: {
     etiqueta: 'LA DEMO',
     titulo: 'Corta la red. Sigue vendiendo.',
-    pestanas: { precio: 'Un precio', venta: 'Una venta' },
+    // Las pestañas de la banda (C4-L6): una demo por pestaña, las mismas que están más arriba en la página.
+    pestanas: { etiqueta: 'Elige una demostración', vender: 'Vender', iva: 'IVA', caja: 'Caja' },
+    // Lo que se lee, sin verse, mientras baja el código de una pestaña que todavía no se había abierto.
+    cargando: 'Cargando la demostración…',
+    vender: {
+      titulo: 'Mira qué pasa con una venta sin red.',
+      texto:
+        'Corta el internet con el interruptor. La venta se guarda en el equipo y la cola de envío sube; cuando vuelve la red, sale una venta tras otra.',
+    },
     cifras: [
       {
         valor: '5 de 5',
