@@ -911,6 +911,11 @@ export interface components {
             unitPrice: number;
             /** @enum {integer} */
             taxRateBp: 0 | 500 | 1900;
+            /**
+             * @description El tipo tributario (ADR 0034): `taxed` (gravado, lleva 5 % o 19 %), `exempt` (exento) o `excluded` (excluido); los dos últimos llevan 0 %. Una combinación imposible se rechaza con `tax-kind-rate-mismatch`.
+             * @enum {string}
+             */
+            taxKind: "taxed" | "exempt" | "excluded";
             /** @description `false` si está archivado. */
             active: boolean;
             /** Format: uuid */
@@ -956,6 +961,12 @@ export interface components {
              * @enum {integer}
              */
             taxRateBp: 0 | 500 | 1900;
+            /**
+             * @description El tipo tributario (ADR 0034): `taxed` (gravado, lleva 5 % o 19 %), `exempt` (exento) o `excluded` (excluido); los dos últimos llevan 0 %. Una combinación imposible se rechaza con `tax-kind-rate-mismatch`.
+             * @example exempt
+             * @enum {string}
+             */
+            taxKind: "taxed" | "exempt" | "excluded";
             /** Format: uuid */
             categoryId?: string | null;
             /** @description Existencia mínima en milésimas de la unidad, para la alerta de stock mínimo. */
@@ -975,6 +986,11 @@ export interface components {
             unitPrice?: number;
             /** @enum {integer} */
             taxRateBp?: 0 | 500 | 1900;
+            /**
+             * @description El tipo tributario (ADR 0034): `taxed` (gravado, lleva 5 % o 19 %), `exempt` (exento) o `excluded` (excluido); los dos últimos llevan 0 %. Una combinación imposible se rechaza con `tax-kind-rate-mismatch`. Se compara con la tarifa que el producto ya tiene si solo mandas uno de los dos.
+             * @enum {string}
+             */
+            taxKind?: "taxed" | "exempt" | "excluded";
             /**
              * Format: uuid
              * @description `null` quita la categoría.
@@ -1405,6 +1421,12 @@ export interface components {
              * @enum {integer}
              */
             taxRateBp: 0 | 500 | 1900;
+            /**
+             * @description El tipo tributario con que se vendió (ADR 0034): `taxed` lleva 5 % o 19 %; `exempt` y `excluded` llevan 0 %. Es obligatorio: una venta sin él no se podría clasificar después. Si no es el del catálogo de hoy, la venta se acepta con el que trae y se marca `price-differs`.
+             * @example taxed
+             * @enum {string}
+             */
+            taxKind: "taxed" | "exempt" | "excluded";
         };
         PaymentRequestDto: {
             /** @enum {string} */
@@ -1496,6 +1518,8 @@ export interface components {
             discount: number;
             /** @enum {integer} */
             taxRateBp: 0 | 500 | 1900;
+            /** @enum {string} */
+            taxKind: "taxed" | "exempt" | "excluded";
         };
         PaymentDto: {
             /** @enum {string} */

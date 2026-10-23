@@ -23,6 +23,7 @@ const wireProduct = (id: string, sku = `SKU-${id}`) => ({
   unit: 'unit',
   unitPrice: 3200,
   taxRateBp: 0,
+  taxKind: 'exempt',
   active: true,
   categoryId: null,
   minStockMilli: null,

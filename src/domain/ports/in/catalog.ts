@@ -1,5 +1,6 @@
 import type { Category, Product, UnitCode } from '../../model/catalog';
 import type { Page } from '../../model/page';
+import type { TaxKind } from '../../model/tax';
 
 export interface ProductFilter {
   /** Nombre, SKU o codigo de barras. */
@@ -18,6 +19,8 @@ export interface NewProduct {
   unitPrice: number;
   /** 0, 500 o 1900. */
   taxRateBp: number;
+  /** Gravado, exento o excluido; tiene que caber con la tarifa (ADR 0034 del backend). */
+  taxKind: TaxKind;
   categoryId?: string | null;
   minStockMilli?: number | null;
 }
@@ -30,6 +33,8 @@ export interface ProductChange {
   unit?: UnitCode;
   unitPrice?: number;
   taxRateBp?: number;
+  /** Se manda junto con la tarifa: el servidor revisa que quepan. */
+  taxKind?: TaxKind;
   categoryId?: string | null;
   minStockMilli?: number | null;
   /** `false` archiva el producto; `true` lo reactiva. */

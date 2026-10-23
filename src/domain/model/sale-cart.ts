@@ -9,6 +9,7 @@ import {
   type SaleSummary,
 } from './sale-totals';
 import { unitIsWhole } from './catalog';
+import type { TaxKind } from './tax';
 
 /** Cuantas lineas caben en una venta: lo mismo que acepta el servidor. */
 export const MAX_CART_LINES = 200;
@@ -29,6 +30,8 @@ export interface CartLine {
   /** Pesos enteros por unidad, con el IVA incluido. */
   readonly unitPrice: number;
   readonly taxRateBp: number;
+  /** Gravado, exento o excluido, congelado como el precio y la tarifa (ADR 0034 del backend). */
+  readonly taxKind: TaxKind;
   /** Milesimas de la unidad: 1,5 kg = 1500. */
   readonly quantityMilli: number;
   /** Rebaja de la linea en pesos, con el IVA incluido. */
@@ -97,6 +100,7 @@ export function addProduct(cart: Cart, product: Product): Cart {
         unit: product.unit,
         unitPrice: product.unitPrice,
         taxRateBp: product.taxRateBp,
+        taxKind: product.taxKind,
         quantityMilli: ONE_UNIT_MILLI,
         discount: 0,
       },

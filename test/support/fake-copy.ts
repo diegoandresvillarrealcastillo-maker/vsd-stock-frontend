@@ -65,6 +65,7 @@ export function copiedProduct(n: number, change: Partial<Product> = {}): Product
     unit: 'unit',
     unitPrice: 1_000,
     taxRateBp: 0,
+    taxKind: 'exempt',
     active: true,
     categoryId: null,
     minStockMilli: null,

@@ -28,6 +28,7 @@ const PRODUCT = {
   unit: 'unit',
   unitPrice: 3200,
   taxRateBp: 0,
+  taxKind: 'exempt',
   active: true,
   categoryId: null,
   minStockMilli: null,

@@ -144,6 +144,7 @@ describe('SaleDetailPage', () => {
             unitPrice: 5_000,
             discount: 0,
             taxRateBp: 0,
+            taxKind: 'exempt',
           },
         ],
         payments: [{ method: 'cash', amount: 5_000, reference: null }],
@@ -152,7 +153,7 @@ describe('SaleDetailPage', () => {
       },
     });
 
-    expect(row(await card(), '1 × Producto')).toBe('$ 5.000');
+    expect(row(await card(), '1 × Producto · Exento')).toBe('$ 5.000');
   });
 
   it('says the discount of a line in its sentence, and the unit of what is weighed', async () => {
@@ -166,6 +167,7 @@ describe('SaleDetailPage', () => {
             unitPrice: 8_000,
             discount: 500,
             taxRateBp: 0,
+            taxKind: 'exempt',
           },
         ],
         payments: [{ method: 'cash', amount: 11_500, reference: null }],
@@ -175,7 +177,78 @@ describe('SaleDetailPage', () => {
     });
     copy.hold([queso]);
 
-    expect(row(await card(), '1,5 kg × Queso (− $ 500)')).toBe('$ 11.500');
+    expect(row(await card(), '1,5 kg × Queso (− $ 500) · Exento')).toBe('$ 11.500');
+  });
+
+  describe('the tax kind (ADR 0034 of the backend)', () => {
+    const mixedSale: Partial<SaleDetail> = {
+      lines: [
+        {
+          productId: 'p-arroz',
+          quantityMilli: 2_000,
+          unitPrice: 3_200,
+          discount: 0,
+          taxRateBp: 1_900,
+          taxKind: 'taxed',
+        },
+        {
+          productId: 'p-pan',
+          quantityMilli: 3_000,
+          unitPrice: 2_800,
+          discount: 0,
+          taxRateBp: 0,
+          taxKind: 'exempt',
+        },
+        {
+          productId: 'p-sal',
+          quantityMilli: 1_000,
+          unitPrice: 1_500,
+          discount: 0,
+          taxRateBp: 0,
+          taxKind: 'excluded',
+        },
+      ],
+      payments: [{ method: 'cash', amount: 16_300, reference: null }],
+      total: 16_300,
+      summary: {
+        total: 16_300,
+        base: 15_278,
+        tax: 1_022,
+        byRate: [
+          { rateBp: 1_900, total: 6_400, base: 5_378, tax: 1_022 },
+          { rateBp: 0, total: 9_900, base: 9_900, tax: 0 },
+        ],
+      },
+    };
+
+    it('says «exento» or «excluido» in the sentence of the lines that carry no IVA, and nothing in a taxed one', async () => {
+      mount({ sale: mixedSale });
+
+      const receipt = await card();
+
+      expect(row(receipt, '2 × Arroz 500 g')).toBe('$ 6.400');
+      expect(row(receipt, '3 × Pan tajado · Exento')).toBe('$ 8.400');
+      expect(row(receipt, '1 × Producto · Excluido')).toBe('$ 1.500');
+    });
+
+    it('adds up what was exempt and what was excluded, apart from the IVA', async () => {
+      mount({ sale: mixedSale });
+
+      const receipt = await card();
+
+      expect(row(receipt, 'Productos exentos')).toBe('$ 8.400');
+      expect(row(receipt, 'Productos excluidos')).toBe('$ 1.500');
+      expect(row(receipt, 'IVA 19 % incluido')).toBe('$ 1.022');
+    });
+
+    it('says nothing of exempt or excluded when the sale has none', async () => {
+      mount();
+
+      const receipt = await card();
+
+      expect(within(receipt).queryByText('Productos exentos')).toBeNull();
+      expect(within(receipt).queryByText('Productos excluidos')).toBeNull();
+    });
   });
 
   it('splits the tax of each rate that has tax, and says the total', async () => {
@@ -518,6 +591,7 @@ describe('SaleDetailPage', () => {
               unitPrice: 2_800,
               discount: 0,
               taxRateBp: 0,
+              taxKind: 'exempt',
             },
             {
               productId: 'p-pan',
@@ -525,6 +599,7 @@ describe('SaleDetailPage', () => {
               unitPrice: 2_800,
               discount: 0,
               taxRateBp: 0,
+              taxKind: 'exempt',
             },
           ],
           payments: [{ method: 'cash', amount: 8_400, reference: null }],

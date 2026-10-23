@@ -3,6 +3,7 @@ import { ApiError } from '../../domain/model/api-error';
 import {
   UNITS,
   isUnit,
+  taxChoiceLabel,
   taxLabel,
   unitIsWhole,
   unitLabel,
@@ -19,7 +20,7 @@ import {
   parseQuantityMilli,
   quantityToInput,
 } from '../../domain/model/quantity';
-import { splitTaxIncluded, TAX_RATES_BP } from '../../domain/model/tax';
+import { splitTaxIncluded, taxKindLabel, TAX_CHOICES, type TaxKind } from '../../domain/model/tax';
 import type { ProductChange } from '../../domain/ports/in/catalog';
 import { Button } from '../components/Button';
 import { FormAlert } from '../components/FormAlert';
@@ -43,8 +44,17 @@ interface Missing {
   name?: string;
   sku?: string;
   price?: string;
+  tax?: string;
   minStock?: string;
 }
+
+/** Lo que se eligio de IVA: un tipo con la tarifa que le cabe. Un producto nuevo no trae ninguno: cada uno lo elige la persona. */
+interface TaxChoice {
+  readonly kind: TaxKind;
+  readonly rateBp: number;
+}
+
+const choiceValue = (choice: TaxChoice): string => `${choice.kind}:${String(choice.rateBp)}`;
 
 const SAVED_TEXT: Record<Exclude<Saved, 'no'>, string> = {
   saved: 'Cambios guardados.',
@@ -52,6 +62,17 @@ const SAVED_TEXT: Record<Exclude<Saved, 'no'>, string> = {
   archived: 'Producto archivado. Ya no se vende, pero conserva su historia.',
   reactivated: 'Producto reactivado. Ya se puede vender.',
 };
+
+/** Lo que se dice bajo el tipo de IVA: cuanto IVA lleva el precio, o que lo exento y lo excluido no lo cobran. */
+function taxHintOf(tax: TaxChoice | null, price: number | null): string {
+  if (tax === null) return 'Elige el tipo de IVA para ver cuánto lleva.';
+  if (tax.kind !== 'taxed') {
+    return `${taxKindLabel(tax.kind)} no cobra IVA y se declara aparte. Si dudas de cuál es, pregúntale a tu contador.`;
+  }
+  if (price === null) return 'Escribe el precio para ver cuánto IVA lleva.';
+  const iva = splitTaxIncluded(Money.of(price), tax.rateBp).tax.amount;
+  return `De ${formatPesos(price)} con IVA ${taxLabel(tax.rateBp)}, el IVA es ${formatPesos(iva)}.`;
+}
 
 /** Lo que dice el aviso de arriba cuando el servidor dice que el SKU o el codigo de barras ya es de otro producto. */
 function ConflictAlert({ conflict }: { conflict: Conflict & { holder: Product } }) {
@@ -100,7 +121,9 @@ export function ProductForm({
   const [barcode, setBarcode] = useState(product?.barcode ?? '');
   const [unit, setUnit] = useState<UnitCode>(product?.unit ?? 'unit');
   const [price, setPrice] = useState(product === undefined ? '' : String(product.unitPrice));
-  const [taxRateBp, setTaxRateBp] = useState(product?.taxRateBp ?? 0);
+  const [tax, setTax] = useState<TaxChoice | null>(
+    product === undefined ? null : { kind: product.taxKind, rateBp: product.taxRateBp },
+  );
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? '');
   const [minStock, setMinStock] = useState(
     product?.minStockMilli == null ? '' : quantityToInput(product.minStockMilli),
@@ -127,7 +150,7 @@ export function ProductForm({
     setBarcode(updated.barcode ?? '');
     setUnit(updated.unit);
     setPrice(String(updated.unitPrice));
-    setTaxRateBp(updated.taxRateBp);
+    setTax({ kind: updated.taxKind, rateBp: updated.taxRateBp });
     setCategoryId(updated.categoryId ?? '');
     setMinStock(updated.minStockMilli === null ? '' : quantityToInput(updated.minStockMilli));
   }
@@ -144,13 +167,15 @@ export function ProductForm({
     if (name.trim() === '') lacking.name = 'Escribe el nombre del producto.';
     if (sku.trim() === '') lacking.sku = 'Escribe el SKU.';
     if (!parsedPrice.ok) lacking.price = parsedPrice.message;
+    if (tax === null) lacking.tax = 'Elige si el producto es gravado, exento o excluido.';
     if (parsedMin !== null && !parsedMin.ok) lacking.minStock = parsedMin.message;
     setMissing(lacking);
     if (lacking.name !== undefined) return focusField('nombre');
     if (lacking.sku !== undefined) return focusField('sku');
     if (lacking.price !== undefined) return focusField('precio');
+    if (lacking.tax !== undefined) return focusField('tipo-iva');
     if (lacking.minStock !== undefined) return focusField('minimo');
-    if (!parsedPrice.ok) return;
+    if (!parsedPrice.ok || tax === null) return;
     const unitPrice = parsedPrice.value;
     const minStockMilli = parsedMin === null || !parsedMin.ok ? null : parsedMin.value;
     const barcodeValue = barcode.trim() === '' ? null : barcode.trim();
@@ -165,7 +190,8 @@ export function ProductForm({
             barcode: barcodeValue,
             unit,
             unitPrice,
-            taxRateBp,
+            taxRateBp: tax.rateBp,
+            taxKind: tax.kind,
             categoryId: category,
             minStockMilli,
           });
@@ -178,7 +204,11 @@ export function ProductForm({
         if (barcodeValue !== base.barcode) changes.barcode = barcodeValue;
         if (unit !== base.unit) changes.unit = unit;
         if (unitPrice !== base.unitPrice) changes.unitPrice = unitPrice;
-        if (taxRateBp !== base.taxRateBp) changes.taxRateBp = taxRateBp;
+        // El tipo y la tarifa van juntos: el servidor revisa que quepan, y mandar uno solo dejaria que el otro lo decidiera el producto de antes.
+        if (tax.kind !== base.taxKind || tax.rateBp !== base.taxRateBp) {
+          changes.taxRateBp = tax.rateBp;
+          changes.taxKind = tax.kind;
+        }
         if (category !== base.categoryId) changes.categoryId = category;
         if (minStockMilli !== base.minStockMilli) changes.minStockMilli = minStockMilli;
         if (Object.keys(changes).length === 0) {
@@ -235,11 +265,8 @@ export function ProductForm({
   const priceHint = parsedPrice.ok
     ? `Se verá como ${formatPesos(parsedPrice.value)}.`
     : 'Solo números, sin puntos ni comas. Por ejemplo: 3200.';
-  const taxHint = parsedPrice.ok
-    ? `De ${formatPesos(parsedPrice.value)} con IVA ${taxLabel(taxRateBp)}, el IVA es ${formatPesos(
-        splitTaxIncluded(Money.of(parsedPrice.value), taxRateBp).tax.amount,
-      )}.`
-    : undefined;
+  const taxHint = taxHintOf(tax, parsedPrice.ok ? parsedPrice.value : null);
+  const taxError = missing.tax ?? fields['/taxKind'] ?? fields['/taxRateBp'];
   const minHint =
     parsedMin !== null && parsedMin.ok
       ? `Te avisamos cuando haya menos de ${formatQuantity(parsedMin.value)} ${unitShort(unit)}.`
@@ -327,25 +354,33 @@ export function ProductForm({
         />
         <fieldset aria-describedby="iva-mensaje" disabled={pending} className="flex flex-col gap-1">
           <legend className="text-base font-medium text-fg">IVA</legend>
-          <div className="grid grid-cols-3 overflow-hidden rounded-md border border-border">
-            {TAX_RATES_BP.map((rate) => (
-              <label key={rate} className="relative flex">
+          <div
+            className={`grid grid-cols-2 gap-px overflow-hidden rounded-md border bg-border ${taxError === undefined ? 'border-border' : 'border-2 border-accent-text'}`}
+          >
+            {TAX_CHOICES.map((choice, index) => (
+              <label key={choiceValue(choice)} className="relative flex">
                 <input
                   type="radio"
                   name="iva"
-                  value={rate}
-                  checked={taxRateBp === rate}
-                  onChange={() => change(setTaxRateBp)(rate)}
+                  id={index === 0 ? 'tipo-iva' : undefined}
+                  value={choiceValue(choice)}
+                  checked={tax !== null && tax.kind === choice.kind && tax.rateBp === choice.rateBp}
+                  onChange={() => {
+                    change(setTax)({ kind: choice.kind, rateBp: choice.rateBp });
+                  }}
                   className="peer sr-only"
                 />
-                <span className="inline-flex min-h-touch w-full items-center justify-center border-r border-border bg-surface-raised text-base text-fg last:border-r-0 peer-checked:bg-primary peer-checked:text-on-primary peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-focus">
-                  {taxLabel(rate)}
+                <span className="inline-flex min-h-touch w-full items-center justify-center bg-surface-raised text-base text-fg peer-checked:bg-primary peer-checked:text-on-primary peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-focus">
+                  {taxChoiceLabel(choice.kind, choice.rateBp)}
                 </span>
               </label>
             ))}
           </div>
-          <p id="iva-mensaje" className="text-sm text-fg-muted">
-            {taxHint ?? 'Escribe el precio para ver cuánto IVA lleva.'}
+          <p
+            id="iva-mensaje"
+            className={`text-sm ${taxError === undefined ? 'text-fg-muted' : 'text-accent-text'}`}
+          >
+            {taxError ?? taxHint}
           </p>
         </fieldset>
         <FormField

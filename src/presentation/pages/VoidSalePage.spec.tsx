@@ -135,6 +135,7 @@ describe('VoidSalePage', () => {
               unitPrice: 2_800,
               discount: 0,
               taxRateBp: 0,
+              taxKind: 'exempt',
             },
           ],
         },

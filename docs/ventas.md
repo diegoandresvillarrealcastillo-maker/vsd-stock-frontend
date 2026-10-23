@@ -63,7 +63,8 @@ se revisa o se anula una venta.
 ## El detalle
 
 Dice el folio, dónde está la venta, la hora, quién la hizo (y el turno, si es el de este equipo) y el **comprobante**: cada línea con
-su cantidad, su rebaja y lo que costó, la base sin IVA, el IVA de cada tarifa que lo tiene, el total y cómo se pagó (con la referencia
+su cantidad, su rebaja y lo que costó (y «Exento» o «Excluido» si no lleva IVA), la base sin IVA, el IVA de cada tarifa que lo tiene,
+lo vendido exento y lo vendido excluido por aparte, el total y cómo se pagó (con la referencia
 de la tarjeta o la transferencia). **El nombre y la unidad de cada producto salen de la copia local**: el servidor da solo su
 identificador, y un producto que el equipo no conoce se dice «Producto», sin inventar su nombre.
 

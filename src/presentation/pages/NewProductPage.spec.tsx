@@ -42,11 +42,16 @@ const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 const save = () => fireEvent.click(screen.getByRole('button', { name: 'Guardar producto' }));
 
+/** El tipo de IVA no tiene valor de partida: cada producto lo elige la persona (ADR 0034 del backend). */
+const chooseTax = (label: 'Gravado 19 %' | 'Gravado 5 %' | 'Exento' | 'Excluido') =>
+  fireEvent.click(screen.getByRole('radio', { name: label }));
+
 async function fillBasics() {
   await screen.findByLabelText('Nombre');
   type('Nombre', '  Arroz 500 g ');
   type('SKU (código interno)', 'ARR-500');
   type('Precio de venta (IVA incluido)', '3200');
+  chooseTax('Exento');
 }
 
 describe('NewProductPage', () => {
@@ -60,16 +65,18 @@ describe('NewProductPage', () => {
     );
   });
 
-  it('starts with a unit, 0 % of IVA and no category', async () => {
+  it('starts with a unit, no kind of IVA chosen and no category', async () => {
     setup();
     await screen.findByLabelText('Nombre');
 
     expect(screen.getByLabelText<HTMLSelectElement>('Unidad').value).toBe('unit');
-    expect(screen.getByRole<HTMLInputElement>('radio', { name: '0 %' }).checked).toBe(true);
+    for (const radio of screen.getAllByRole<HTMLInputElement>('radio')) {
+      expect(radio.checked).toBe(false);
+    }
     expect(screen.getByLabelText<HTMLSelectElement>('Categoría').value).toBe('');
   });
 
-  it('offers the six units, the three rates and the categories of the business', async () => {
+  it('offers the six units, the four kinds of IVA and the categories of the business', async () => {
     setup();
     await screen.findByLabelText('Nombre');
 
@@ -83,10 +90,14 @@ describe('NewProductPage', () => {
       'Mililitro (mL)',
     ]);
     expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('value'))).toEqual([
-      '0',
-      '500',
-      '1900',
+      'taxed:1900',
+      'taxed:500',
+      'exempt:0',
+      'excluded:0',
     ]);
+    expect(
+      screen.getAllByRole('radio').map((radio) => radio.closest('label')?.textContent),
+    ).toEqual(['Gravado 19 %', 'Gravado 5 %', 'Exento', 'Excluido']);
     const categories = Array.from(screen.getByLabelText<HTMLSelectElement>('Categoría').options);
     expect(categories.map((option) => option.text)).toEqual([
       'Sin categoría',
@@ -101,20 +112,58 @@ describe('NewProductPage', () => {
       await screen.findByLabelText('Nombre');
 
       type('Precio de venta (IVA incluido)', '3200');
-      fireEvent.click(screen.getByRole('radio', { name: '19 %' }));
+      chooseTax('Gravado 19 %');
 
       expect(screen.getByText('Se verá como $ 3.200.')).toBeDefined();
       expect(screen.getByText('De $ 3.200 con IVA 19 %, el IVA es $ 511.')).toBeDefined();
     });
 
-    it('says there is no IVA inside when the rate is 0 %', async () => {
+    it('asks to choose a kind while none is chosen, instead of saying 0 %', async () => {
       setup();
       await screen.findByLabelText('Nombre');
 
       type('Precio de venta (IVA incluido)', '3200');
 
-      expect(screen.getByText('De $ 3.200 con IVA 0 %, el IVA es $ 0.')).toBeDefined();
+      expect(screen.getByText('Elige el tipo de IVA para ver cuánto lleva.')).toBeDefined();
+      expect(screen.queryByText(/el IVA es/)).toBeNull();
     });
+
+    it('says how much IVA the price carries at the rate that was chosen, not at another', async () => {
+      setup();
+      await screen.findByLabelText('Nombre');
+      type('Precio de venta (IVA incluido)', '3200');
+
+      chooseTax('Gravado 5 %');
+
+      expect(screen.getByText('De $ 3.200 con IVA 5 %, el IVA es $ 152.')).toBeDefined();
+    });
+
+    it('asks for the price to say how much IVA a taxed product carries, while there is none', async () => {
+      setup();
+      await screen.findByLabelText('Nombre');
+
+      chooseTax('Gravado 19 %');
+
+      expect(screen.getByText('Escribe el precio para ver cuánto IVA lleva.')).toBeDefined();
+    });
+
+    it.each(['Exento', 'Excluido'] as const)(
+      'says that «%s» charges no IVA and is declared apart, and to ask the accountant when in doubt',
+      async (label) => {
+        setup();
+        await screen.findByLabelText('Nombre');
+        type('Precio de venta (IVA incluido)', '3200');
+
+        chooseTax(label);
+
+        expect(
+          screen.getByText(
+            `${label} no cobra IVA y se declara aparte. Si dudas de cuál es, pregúntale a tu contador.`,
+          ),
+        ).toBeDefined();
+        expect(screen.queryByText(/el IVA es/)).toBeNull();
+      },
+    );
 
     it('asks for numbers only while the price is not valid', async () => {
       setup();
@@ -151,7 +200,7 @@ describe('NewProductPage', () => {
       const { catalog } = setup();
       await fillBasics();
       type('Código de barras (opcional)', ' 7701234567897 ');
-      fireEvent.click(screen.getByRole('radio', { name: '5 %' }));
+      chooseTax('Gravado 5 %');
       fireEvent.change(screen.getByLabelText('Categoría'), { target: { value: 'granos' } });
       type('Existencia mínima (opcional)', '10');
 
@@ -166,6 +215,7 @@ describe('NewProductPage', () => {
         unit: 'unit',
         unitPrice: 3200,
         taxRateBp: 500,
+        taxKind: 'taxed',
         categoryId: 'granos',
         minStockMilli: 10_000,
       });
@@ -185,9 +235,28 @@ describe('NewProductPage', () => {
         unit: 'unit',
         unitPrice: 3200,
         taxRateBp: 0,
+        taxKind: 'exempt',
         categoryId: null,
         minStockMilli: null,
       });
+    });
+
+    it.each([
+      ['Gravado 19 %', 'taxed', 1900],
+      ['Gravado 5 %', 'taxed', 500],
+      ['Exento', 'exempt', 0],
+      ['Excluido', 'excluded', 0],
+    ] as const)('sends «%s» as the kind %s with %i basis points', async (label, kind, rate) => {
+      const { catalog } = setup();
+      await fillBasics();
+      chooseTax(label);
+
+      save();
+
+      await screen.findByText('/catalogo');
+      expect(catalog.createProduct).toHaveBeenCalledWith(
+        expect.objectContaining({ taxKind: kind, taxRateBp: rate }),
+      );
     });
 
     it('sends a fractional minimum in thousandths for what is weighed', async () => {
@@ -260,6 +329,38 @@ describe('NewProductPage', () => {
         ).length,
       ).toBeGreaterThan(0);
       expect(catalog.createProduct).not.toHaveBeenCalled();
+    });
+
+    it('asks for the kind of IVA when everything else is written, and puts the cursor on it', async () => {
+      const { catalog } = setup();
+      await screen.findByLabelText('Nombre');
+      type('Nombre', 'Arroz');
+      type('SKU (código interno)', 'ARR');
+      type('Precio de venta (IVA incluido)', '3200');
+
+      save();
+
+      expect(
+        screen.getAllByText('Elige si el producto es gravado, exento o excluido.').length,
+      ).toBeGreaterThan(0);
+      expect(document.activeElement?.id).toBe('tipo-iva');
+      expect(catalog.createProduct).not.toHaveBeenCalled();
+    });
+
+    it('takes the message away when the person chooses a kind', async () => {
+      setup();
+      await screen.findByLabelText('Nombre');
+      type('Nombre', 'Arroz');
+      type('SKU (código interno)', 'ARR');
+      type('Precio de venta (IVA incluido)', '3200');
+      save();
+      expect(
+        screen.getAllByText('Elige si el producto es gravado, exento o excluido.').length,
+      ).toBeGreaterThan(0);
+
+      chooseTax('Excluido');
+
+      expect(screen.queryByText('Elige si el producto es gravado, exento o excluido.')).toBeNull();
     });
 
     it('rejects a fractional minimum for what is counted in whole units', async () => {
@@ -409,6 +510,42 @@ describe('NewProductPage', () => {
       expect(screen.getByText('El código no es válido.')).toBeDefined();
       expect(screen.getByText('El mínimo es muy alto.')).toBeDefined();
       expect(screen.getByLabelText('Nombre').getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('puts what the server says about the kind and the rate on the kind of IVA', async () => {
+      const catalog = createFakeCatalog([], CATEGORIES);
+      catalog.createProduct.mockRejectedValue(
+        refused('validation-failed', [
+          {
+            pointer: '/taxKind',
+            code: 'tax-kind-rate-mismatch',
+            detail: 'El tipo gravado lleva una tarifa de 5 % o 19 %.',
+          },
+        ]),
+      );
+      setup(catalog);
+      await fillBasics();
+
+      save();
+
+      expect(
+        await screen.findByText('El tipo gravado lleva una tarifa de 5 % o 19 %.'),
+      ).toBeDefined();
+    });
+
+    it('puts what the server says about the rate alone on the kind of IVA too', async () => {
+      const catalog = createFakeCatalog([], CATEGORIES);
+      catalog.createProduct.mockRejectedValue(
+        refused('validation-failed', [
+          { pointer: '/taxRateBp', code: 'tax-kind-rate-mismatch', detail: 'La tarifa no cabe.' },
+        ]),
+      );
+      setup(catalog);
+      await fillBasics();
+
+      save();
+
+      expect(await screen.findByText('La tarifa no cabe.')).toBeDefined();
     });
 
     it('says there is no connection, and keeps what was written', async () => {

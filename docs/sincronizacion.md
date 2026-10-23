@@ -102,6 +102,10 @@ buscar sin esperar a nadie.
   `updatedAt` mayor**. La existencia se **reemplaza** por la de ahora.
 - **De a 200 por página** (el máximo del servidor). La hora de la descarga **solo se mueve cuando termina completa**: si falla a la
   mitad, lo que llegó se guarda igual y la próxima vez se pide desde el mismo punto.
+- **Un producto guardado antes del tipo tributario** (ADR 0034 del backend) no trae `taxKind`: al leerlo de la base cifrada se le da
+  el valor de arranque de su tarifa (gravado si lleva IVA, exento si no), para que el mostrador siga vendiendo sin conexión. La
+  migración del backend movió el `updatedAt` de todos los productos, así que la siguiente descarga trae cada uno con su tipo de verdad
+  y reemplaza al guardado. Un tipo que está y no es uno de los tres no se corrige: ese producto no se ofrece.
 - **Los archivados viajan** (con `active: false`): el dispositivo se entera de que ya no se venden. La búsqueda no los ofrece.
 - **Un fallo no borra lo que ya había:** se dice por qué (`sin conexión`, `sesión caducada` u otro) y se sigue con esa copia. Nada de
   esto lanza: la copia de lectura nunca rompe una pantalla.

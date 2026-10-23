@@ -4,6 +4,8 @@ import {
   isUnit,
   parseCategory,
   parseProduct,
+  parseStoredProduct,
+  taxChoiceLabel,
   taxLabel,
   unitIsWhole,
   unitLabel,
@@ -18,6 +20,7 @@ const PRODUCT = {
   unit: 'unit',
   unitPrice: 3200,
   taxRateBp: 0,
+  taxKind: 'exempt',
   active: true,
   categoryId: 'c-1',
   minStockMilli: 10_000,
@@ -66,6 +69,9 @@ describe('parseProduct', () => {
     ['unitPrice', -1],
     ['taxRateBp', 800],
     ['taxRateBp', '0'],
+    ['taxKind', 'unclassified'],
+    ['taxKind', 1],
+    ['taxKind', null],
     ['active', 'true'],
     ['categoryId', 3],
     ['minStockMilli', '10'],
@@ -77,13 +83,80 @@ describe('parseProduct', () => {
     expect(parseProduct({ ...PRODUCT, [field]: value })).toBeNull();
   });
 
-  it.each(['id', 'name', 'sku', 'unit', 'unitPrice', 'taxRateBp', 'active', 'createdAt'])(
-    'does not believe a product without %s',
-    (field) => {
-      const { [field]: _omitted, ...rest } = PRODUCT as Record<string, unknown>;
-      expect(parseProduct(rest)).toBeNull();
+  it.each([
+    'id',
+    'name',
+    'sku',
+    'unit',
+    'unitPrice',
+    'taxRateBp',
+    'taxKind',
+    'active',
+    'createdAt',
+  ])('does not believe a product without %s', (field) => {
+    const { [field]: _omitted, ...rest } = PRODUCT as Record<string, unknown>;
+    expect(parseProduct(rest)).toBeNull();
+  });
+
+  it.each([
+    ['taxed', 1900],
+    ['taxed', 500],
+    ['exempt', 0],
+    ['excluded', 0],
+  ])('reads the kind %s with %i basis points', (taxKind, taxRateBp) => {
+    const product = parseProduct({ ...PRODUCT, taxKind, taxRateBp });
+
+    expect(product?.taxKind).toBe(taxKind);
+    expect(product?.taxRateBp).toBe(taxRateBp);
+  });
+
+  it.each([
+    ['taxed', 0],
+    ['exempt', 1900],
+    ['exempt', 500],
+    ['excluded', 500],
+  ])('does not believe a product whose kind %s and rate %i do not fit', (taxKind, taxRateBp) => {
+    expect(parseProduct({ ...PRODUCT, taxKind, taxRateBp })).toBeNull();
+  });
+});
+
+describe('parseStoredProduct', () => {
+  const { taxKind: _gone, ...LEGACY } = PRODUCT;
+
+  it('reads what parseProduct reads, the same way', () => {
+    expect(parseStoredProduct(PRODUCT)).toEqual(parseProduct(PRODUCT));
+  });
+
+  it.each([
+    [0, 'exempt'],
+    [500, 'taxed'],
+    [1900, 'taxed'],
+  ])(
+    'starts the kind of a product kept without one, at %i basis points, as «%s»',
+    (taxRateBp, kind) => {
+      expect(parseStoredProduct({ ...LEGACY, taxRateBp })?.taxKind).toBe(kind);
     },
   );
+
+  it('does not correct a kind that is there and is not one of the three', () => {
+    expect(parseStoredProduct({ ...PRODUCT, taxKind: 'unclassified' })).toBeNull();
+    expect(parseStoredProduct({ ...PRODUCT, taxKind: null })).toBeNull();
+  });
+
+  it('does not correct a kind that does not fit the rate', () => {
+    expect(parseStoredProduct({ ...PRODUCT, taxKind: 'taxed', taxRateBp: 0 })).toBeNull();
+  });
+
+  it('still refuses a product without a rate, which is not something to start a kind from', () => {
+    const { taxRateBp: _rate, ...withoutRate } = LEGACY;
+
+    expect(parseStoredProduct(withoutRate)).toBeNull();
+    expect(parseStoredProduct({ ...LEGACY, taxRateBp: '0' })).toBeNull();
+  });
+
+  it.each([null, 'x', 3, []])('does not believe %j', (body) => {
+    expect(parseStoredProduct(body)).toBeNull();
+  });
 });
 
 describe('parseCategory', () => {
@@ -146,6 +219,17 @@ describe('units', () => {
     expect(isUnit('box')).toBe(false);
     expect(isUnit('toString')).toBe(false);
     expect(isUnit(3)).toBe(false);
+  });
+});
+
+describe('taxChoiceLabel', () => {
+  it.each([
+    ['taxed', 1900, 'Gravado 19 %'],
+    ['taxed', 500, 'Gravado 5 %'],
+    ['exempt', 0, 'Exento'],
+    ['excluded', 0, 'Excluido'],
+  ] as const)('says the kind %s with %i basis points «%s»', (kind, rateBp, label) => {
+    expect(taxChoiceLabel(kind, rateBp)).toBe(label);
   });
 });
 
