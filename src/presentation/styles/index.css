@@ -129,3 +129,42 @@
     font-family: var(--font-sans);
   }
 }
+
+/* ---------- Mascotas (C4-M1) ----------
+ * El arte es pixel art: el navegador no debe suavizarlo. Se mueven un instante al aparecer y se quedan quietas, y solo para
+ * quien no pidio menos movimiento: la animacion dura menos de 5 segundos (WCAG 2.2.2), asi que nadie necesita un boton para
+ * detenerla, y solo toca `transform` (ADR 0008). La dormida no se mueve: duerme. */
+.mascota {
+  image-rendering: pixelated;
+}
+
+@keyframes mascota-flotar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes mascota-saltar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mascota[data-estado='normal'],
+  .mascota[data-estado='feliz'] {
+    animation: mascota-flotar 1.6s ease-in-out 3;
+  }
+
+  .mascota[data-estado='celebrando'] {
+    animation: mascota-saltar 0.9s ease-in-out 3;
+  }
+}

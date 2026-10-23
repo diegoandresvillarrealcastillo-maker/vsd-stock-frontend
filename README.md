@@ -492,6 +492,8 @@ naranja del logo (`#f97801`) solo como acento.**
   [`docs/recorrido-del-ciclo-2.md`](docs/recorrido-del-ciclo-2.md).
 - El del Ciclo 3, hecho en un teléfono contra PRE: vender, cobrar y cerrar caja con y sin conexión, y qué se mide (toque, cuadros, contraseña,
   almacenamiento): [`docs/recorrido-del-ciclo-3.md`](docs/recorrido-del-ciclo-3.md).
+- Las cinco mascotas (Fungito, Sparky, Ojo de Gato, Obsidian y Ori): el componente, qué estado ya es cierto en el producto y qué
+  prometen sus historias que todavía no existe: [`docs/mascotas.md`](docs/mascotas.md).
 - Todos los ADR del proyecto, también los de este repositorio, viven en el backend:
   [`vsd-stock-backend/docs/adr`](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/tree/desarrollo/docs/adr).
 - El flujo de trabajo (ramas, Issues, commits y PR) está en el
