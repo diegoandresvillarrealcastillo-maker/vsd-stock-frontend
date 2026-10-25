@@ -5,6 +5,7 @@ import {
   installIntersectionObserver,
 } from '../../test/support/intersection-observer';
 import { contenido } from './contenido';
+import { APP_INGRESAR, APP_REGISTRARSE, DEMO_DE_PRE, WHATSAPP_URL } from './destinos';
 import type { SondaDePre } from './demos/estadoDePre';
 import { render } from './entry-server';
 import { Sitio } from './Sitio';
@@ -174,22 +175,28 @@ describe('the links of the page', () => {
     }
   });
 
-  it('send everyone who wants to be a pilot store to WhatsApp, from the hero, the bar, the navigation and the end', () => {
+  it('send everyone who wants to be a pilot store to WhatsApp, from the hero, the notice, the end and the footer', () => {
     mount(<Sitio />);
     const piloto = screen
       .getAllByRole('link')
-      .filter((a) => a.getAttribute('href') === contenido.hero.ctaPrincipal.href);
+      .filter((a) => a.getAttribute('href') === WHATSAPP_URL);
 
     expect(piloto.length).toBeGreaterThanOrEqual(4);
   });
 
-  it('send the demo to the public web of PRE, from the hero, the demo band and the end', () => {
+  it('send whoever wants to create an account or sign in to the app of PRE, from the navigation and the hero', () => {
     mount(<Sitio />);
-    const demo = screen
-      .getAllByRole('link')
-      .filter((a) => a.getAttribute('href') === contenido.hero.ctaSecundario.href);
+    const enlaces = screen.getAllByRole('link');
 
-    expect(demo.length).toBeGreaterThanOrEqual(3);
+    expect(enlaces.filter((a) => a.getAttribute('href') === APP_REGISTRARSE).length).toBe(2);
+    expect(enlaces.filter((a) => a.getAttribute('href') === APP_INGRESAR).length).toBe(1);
+  });
+
+  it('send the demo to the public web of PRE, from the demo band and the end', () => {
+    mount(<Sitio />);
+    const demo = screen.getAllByRole('link').filter((a) => a.getAttribute('href') === DEMO_DE_PRE);
+
+    expect(demo.length).toBe(2);
   });
 });
 
@@ -398,14 +405,11 @@ describe('the details that a section can lose without anyone noticing', () => {
     expect(anuncio?.textContent).toContain(contenido.anuncio.texto);
   });
 
-  it('has in the hero the button to WhatsApp first and the one to the demo second, and nothing else that leads away', () => {
+  it('has in the hero the button to create the account first and the one to WhatsApp second, and nothing else that leads away', () => {
     const { container } = mount(<Sitio />);
     const enlaces = [...seccion(container, contenido.anclas.inicio).querySelectorAll('a')];
 
-    expect(enlaces.map((a) => a.getAttribute('href'))).toEqual([
-      contenido.hero.ctaPrincipal.href,
-      contenido.hero.ctaSecundario.href,
-    ]);
+    expect(enlaces.map((a) => a.getAttribute('href'))).toEqual([APP_REGISTRARSE, WHATSAPP_URL]);
     expect(enlaces[0]?.textContent).toContain(contenido.hero.ctaPrincipal.texto);
     expect(enlaces[1]?.textContent).toContain(contenido.hero.ctaSecundario.texto);
   });

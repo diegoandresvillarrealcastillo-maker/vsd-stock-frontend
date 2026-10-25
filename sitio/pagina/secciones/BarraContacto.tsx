@@ -4,7 +4,7 @@ import { IconoEquis } from '../componentes/Iconos';
 import { contenido } from '../contenido';
 
 /**
- * La barra de abajo del telefono: aparece cuando el hero ya paso, lleva a WhatsApp y se puede cerrar. No existe hasta que el
+ * La barra de abajo del telefono: aparece cuando el hero ya paso, lleva a WhatsApp (no a la cuenta: el contacto de las tiendas piloto) y se puede cerrar. No existe hasta que el
  * navegador dice que el hero salio de la pantalla (el servidor no lo sabe), y si el navegador no sabe decirlo, no aparece nunca:
  * es mejor no mostrarla que taparle la pantalla a alguien sin poder saber cuando quitarla.
  */
@@ -35,7 +35,7 @@ export function BarraContacto() {
     >
       <p className="min-w-0 flex-1 text-sm font-medium">{barraContacto.texto}</p>
       <EnlaceExterno
-        href={contenido.hero.ctaPrincipal.href}
+        href={barraContacto.href}
         className="inline-flex min-h-touch shrink-0 items-center justify-center rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent hover:bg-accent-hover"
       >
         {barraContacto.boton}
