@@ -6,6 +6,7 @@ import {
 } from '../../../test/support/intersection-observer';
 import { contenido } from '../contenido';
 import { BarraContacto } from './BarraContacto';
+import { WHATSAPP_URL } from '../destinos';
 
 // La barra de abajo (solo en telefono): aparece cuando el hero ya paso, lleva a WhatsApp y se puede cerrar. Si el navegador no
 // sabe decir que se ve, no aparece: es mejor no mostrarla que taparle la pantalla a alguien sin poder saber cuando quitarla.
@@ -41,7 +42,8 @@ describe('the contact bar', () => {
     const barra = screen.getByRole('complementary', { name: contenido.barraContacto.etiqueta });
     expect(barra.textContent).toContain(contenido.barraContacto.texto);
     const boton = screen.getByRole('link', { name: new RegExp(contenido.barraContacto.boton) });
-    expect(boton.getAttribute('href')).toBe(contenido.hero.ctaPrincipal.href);
+    expect(boton.getAttribute('href')).toBe(WHATSAPP_URL);
+    expect(boton.getAttribute('href')).toBe(contenido.barraContacto.href);
     expect(boton.getAttribute('target')).toBe('_blank');
     expect(boton.getAttribute('rel')).toBe('noopener noreferrer');
     expect(screen.getByRole('button', { name: contenido.barraContacto.cerrar })).toBeDefined();

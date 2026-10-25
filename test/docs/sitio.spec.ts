@@ -8,6 +8,7 @@ import {
   RAMA_DE_PRODUCCION,
 } from '../../scripts/publicar-sitio';
 import { NOMBRES_DE_COMPROBACIONES } from '../../scripts/verificar-sitio';
+import { APP_INGRESAR, APP_REGISTRARSE } from '../../sitio/pagina/destinos';
 
 // La landing la publica una persona con un comando (C4-L8). Esta guia es lo que esa persona lee: aqui se vigila que no se quede atras del
 // codigo, que diga los comandos que existen, el nombre del proyecto y de la rama como los tiene el script, y cada cosa que se comprueba al verificar.
@@ -87,6 +88,19 @@ describe('docs/sitio.md', () => {
     expect(guia).toMatch(/no se ha le[ií]do en voz alta con nadie/i);
     expect(guia).not.toMatch(/sigue siendo un pendiente de publicaci/);
     expect(guia).not.toMatch(/mientras falte, por ejemplo, haber le[ií]do el texto en voz alta/);
+  });
+
+  it('says where each button goes: sign-in and sign-up to the web of PRE, the contact to WhatsApp, and that the account is a test one until PROD exists', () => {
+    expect(guia).toContain('## A dónde lleva cada botón');
+    expect(guia).toContain(APP_INGRESAR);
+    expect(guia).toContain(APP_REGISTRARSE);
+    expect(guia).toContain('25 de octubre de 2026');
+    expect(guia).toMatch(/Iniciar sesi[óo]n/);
+    expect(guia).toMatch(/Crear cuenta/);
+    expect(guia).toMatch(/WhatsApp/);
+    expect(guia).toMatch(/cuando exista PROD/i);
+    expect(guia).toMatch(/ambiente de pruebas/i);
+    expect(guia).toContain('sitio/pagina/destinos.ts');
   });
 
   it.each([...NOMBRES_DE_COMPROBACIONES])(

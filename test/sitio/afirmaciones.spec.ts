@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { Money } from '../../src/domain/model/money';
 import { TAX_RATES_BP, splitTaxIncluded } from '../../src/domain/model/tax';
 import {
+  APP_INGRESAR,
+  APP_REGISTRARSE,
   DEMO_DE_PRE,
   REPOSITORIO_BACKEND,
   REPOSITORIO_FRONTEND,
@@ -358,17 +360,41 @@ describe('what does not exist yet only appears under "what is coming" and in the
   });
 });
 
-describe('there is no account, no form and no way to leave data in the page: contact is a WhatsApp chat', () => {
-  it('does not offer accounts, registration, forms or e-mail', () => {
+describe('the page collects nothing: sign-in and sign-up are links to the app of PRE, and contact is a WhatsApp chat', () => {
+  it('does not offer forms, e-mail or a way to leave data in the page', () => {
     expect(
       rutas(
         todas.filter((e) =>
-          /formulario|correo|e-?mail|mailto|crea tu cuenta|reg[ií]strate|inicia(r)? sesi[oó]n|deja(nos)? tus datos|@\w+\.\w+/i.test(
-            e.texto,
-          ),
+          /formulario|correo|e-?mail|mailto|deja(nos)? tus datos|@\w+\.\w+/i.test(e.texto),
         ),
       ),
     ).toEqual([]);
+  });
+
+  it('talks about creating an account or signing in only in the three buttons that go to the app', () => {
+    expect(
+      rutas(
+        todas.filter((e) =>
+          /crea(r)? (tu |mi )?cuenta|reg[ií]strate|inicia(r)? sesi[oó]n/i.test(e.texto),
+        ),
+      ).sort(),
+    ).toEqual(['hero.ctaPrincipal.texto', 'navegacion.cta.texto', 'navegacion.ingresar.texto']);
+  });
+
+  it('sends sign-in and sign-up to the web of PRE (/ingresar and /registrarse) and nowhere else', () => {
+    expect(APP_INGRESAR).toBe(`${DEMO_DE_PRE}/ingresar`);
+    expect(APP_REGISTRARSE).toBe(`${DEMO_DE_PRE}/registrarse`);
+    expect(contenido.navegacion.ingresar.href).toBe(APP_INGRESAR);
+    expect(contenido.navegacion.cta.href).toBe(APP_REGISTRARSE);
+    expect(contenido.hero.ctaPrincipal.href).toBe(APP_REGISTRARSE);
+    expect(
+      enlaces(contenido).filter((href) => href === APP_INGRESAR || href === APP_REGISTRARSE),
+    ).toHaveLength(3);
+  });
+
+  it('warns next to the sign-up button that the account is created in the test environment', () => {
+    expect(contenido.hero.nota).toMatch(/ambiente de pruebas/i);
+    expect(contenido.hero.nota).toMatch(/todav[ií]a no cargues los datos reales de tu tienda/i);
   });
 
   it('opens a WhatsApp chat with the number of Diego and the message already written', () => {
@@ -381,9 +407,9 @@ describe('there is no account, no form and no way to leave data in the page: con
 
   it('uses that link in every call to action to be a pilot store, and says it opens WhatsApp', () => {
     const botones = [
-      contenido.hero.ctaPrincipal,
+      contenido.hero.ctaSecundario,
       contenido.cta.boton,
-      contenido.navegacion.cta,
+      { texto: contenido.barraContacto.boton, href: contenido.barraContacto.href },
       contenido.anuncio.enlace,
     ];
 
@@ -391,9 +417,9 @@ describe('there is no account, no form and no way to leave data in the page: con
     expect(contenido.cta.avisoBoton).toMatch(/WhatsApp/);
   });
 
-  it('links the demo of PRE publicly, from the hero and from the demo band', () => {
-    expect(contenido.hero.ctaSecundario.href).toBe(DEMO_DE_PRE);
+  it('links the demo of PRE publicly, from the demo band and from the end of the page', () => {
     expect(contenido.demo.boton.href).toBe(DEMO_DE_PRE);
+    expect(contenido.cta.enlaceDemo.href).toBe(DEMO_DE_PRE);
   });
 });
 
@@ -401,13 +427,15 @@ describe('the links', () => {
   const anclas = new Set<string>(Object.values(contenido.anclas));
   const todos = enlaces(contenido);
 
-  it('are only these: WhatsApp, the demo of PRE, our two repositories and their documents, and the sections of the page', () => {
+  it('are only these: WhatsApp, the web of PRE (its demo, sign-in and sign-up), our two repositories and their documents, and the sections of the page', () => {
     expect(todos.length).toBeGreaterThan(10);
     for (const href of todos) {
       const permitido =
         href.startsWith('#') ||
         href === WHATSAPP_URL ||
         href === DEMO_DE_PRE ||
+        href === APP_INGRESAR ||
+        href === APP_REGISTRARSE ||
         href.startsWith(`${REPOSITORIO_BACKEND}/`) ||
         href.startsWith(`${REPOSITORIO_FRONTEND}/`) ||
         href === REPOSITORIO_BACKEND ||
@@ -659,10 +687,14 @@ describe('the page speaks the language of a shopkeeper (the audit of QA)', () =>
     expect(contenido.pie.columnas.map((c) => c.titulo)).toContain('Información técnica');
   });
 
-  it('offers the first button as "probarlo en mi tienda" and the second as "probar con ventas de ejemplo"', () => {
-    expect(contenido.hero.ctaPrincipal.texto).toBe('Quiero probarlo en mi tienda');
+  it('offers the buttons as "crear mi cuenta" and "iniciar sesión" for the app, "probarlo en mi tienda" for the pilot and "probar con ventas de ejemplo" for the demo', () => {
+    expect(contenido.hero.ctaPrincipal.texto).toBe('Crear mi cuenta');
+    expect(contenido.navegacion.cta.texto).toBe('Crear cuenta');
+    expect(contenido.navegacion.ingresar.texto).toBe('Iniciar sesión');
+    expect(contenido.hero.ctaSecundario.texto).toBe('Escríbenos por WhatsApp');
     expect(contenido.cta.boton.texto).toBe('Quiero probarlo en mi tienda');
-    expect(contenido.hero.ctaSecundario.texto).toBe('Probar con ventas de ejemplo');
+    expect(contenido.cta.enlaceDemo.texto).toBe('O prueba con ventas de ejemplo');
+    expect(contenido.demo.boton.texto).toBe('Abrir la prueba con ventas de ejemplo');
   });
 
   it('separates the VAT that is already inside the price, and says "valor sin IVA" instead of "base"', () => {

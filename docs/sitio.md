@@ -114,6 +114,24 @@ El subdominio es el nombre del proyecto: `vsd-stock-sitio` es `vsd-stock-sitio.p
 
 Si la dirección cambia, avisa a quien tenga el enlace: el de WhatsApp, el de las redes y el de la demo de PRE se escriben en `sitio/pagina/destinos.ts`.
 
+## A dónde lleva cada botón
+
+Todos los destinos se escriben en un solo archivo, `sitio/pagina/destinos.ts`, y nada más en la página los repite. Desde el 25 de octubre de 2026 (decisión de
+Diego: la landing se ve y, cuando alguien quiere registrarse o iniciar sesión, se le manda a la aplicación de PRE), los botones llevan a cuatro lugares:
+
+| Botón                                                                                      | Lleva a                                                |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| **Iniciar sesión** (arriba, también dentro del menú del teléfono)                          | `https://vsd-stock-pre.pages.dev/ingresar`             |
+| **Crear cuenta** (arriba) y **Crear mi cuenta** (el primero de la portada)                 | `https://vsd-stock-pre.pages.dev/registrarse`          |
+| **Escríbenos por WhatsApp**, el aviso de arriba, la barra del teléfono, el cierre y el pie | el chat de WhatsApp con el mensaje ya escrito          |
+| **Probar con ventas de ejemplo** (la prueba y el cierre)                                   | `https://vsd-stock-pre.pages.dev`, con datos ficticios |
+
+- **Mientras no exista PROD, la cuenta se crea en el ambiente de pruebas.** La portada lo dice junto al botón («todavía no cargues los datos reales de tu tienda»)
+  y una prueba lo exige. Cuando exista PROD, la dirección de la aplicación se cambia en `destinos.ts` (`APP_INGRESAR`, `APP_REGISTRARSE`) y ese aviso se revisa.
+- **La página sigue sin recoger nada.** «Iniciar sesión» y «Crear cuenta» son enlaces a otra dirección: no hay formularios, correo, cookies ni analítica aquí
+  (ADR 0033, punto 5). Una prueba (`test/sitio/afirmaciones.spec.ts`) exige que esas frases solo existan en esos tres botones y que lleven a la aplicación de PRE.
+- **WhatsApp sigue siendo el contacto de las tiendas piloto:** el segundo botón de la portada, el aviso de arriba, la barra del teléfono y el cierre.
+
 ## Cómo se escribe el texto
 
 Todo el texto de la página vive en `sitio/pagina/contenido.ts` y se escribe en **lenguaje de tendero**: las palabras que se dicen en el mostrador, no las del

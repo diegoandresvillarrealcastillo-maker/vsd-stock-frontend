@@ -64,6 +64,14 @@ export function Navegacion() {
                 </a>
               </li>
             ))}
+            <li>
+              <EnlaceExterno
+                href={navegacion.ingresar.href}
+                className="flex min-h-touch items-center rounded-md px-3 text-sm font-medium text-on-band/80 underline-offset-8 transition-colors duration-(--duration-base) hover:text-on-band"
+              >
+                {navegacion.ingresar.texto}
+              </EnlaceExterno>
+            </li>
           </ul>
 
           <EnlaceExterno
