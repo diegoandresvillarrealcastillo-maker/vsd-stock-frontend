@@ -156,6 +156,7 @@ describe('SalesPage', () => {
           sale(3, {
             total: 4_200,
             voided: {
+              folio: 'ANU-000005',
               voidedAt: new Date(2026, 9, 19, 16, 20),
               voidedByUserId: 'u-ana',
               operationId: 'op-void',
@@ -182,6 +183,30 @@ describe('SalesPage', () => {
       expect(within(second).getByText('3:10 p. m. · Luis Pérez')).toBeDefined();
       expect(within(await rowOf('AA-000143')).getByText('Anulada')).toBeDefined();
       expect(within(await rowOf('AA-000144')).getByText('Revisada')).toBeDefined();
+    });
+
+    it('shows the folio of the void in the row of a voided sale, and only there', async () => {
+      mount({
+        sales: createFakeSalesHistory([
+          sale(1, { total: 12_400 }),
+          sale(2, {
+            total: 4_200,
+            voided: {
+              folio: 'ANU-000005',
+              voidedAt: new Date(2026, 9, 19, 16, 20),
+              voidedByUserId: 'u-ana',
+              operationId: 'op-void',
+              reason: 'Error',
+            },
+          }),
+        ]),
+      });
+
+      const voided = await rowOf('AA-000142');
+      expect(within(voided).getByText('ANU-000005').parentElement?.textContent).toBe(
+        'Anulación ANU-000005',
+      );
+      expect(within(await rowOf('AA-000141')).queryByText(/Anulación/)).toBeNull();
     });
 
     it('leads each one to its detail', async () => {

@@ -99,6 +99,7 @@ describe('reading a sale of the list', () => {
     });
     const voided = record({
       voided: {
+        folio: 'ANU-000007',
         voidedAt: '2026-10-19T21:20:00.000Z',
         voidedByUserId: 'u-3',
         operationId: 'op-9',
@@ -112,6 +113,7 @@ describe('reading a sale of the list', () => {
       note: 'Ajustado',
     });
     expect(voided.voided).toEqual({
+      folio: 'ANU-000007',
       voidedAt: new Date('2026-10-19T21:20:00.000Z'),
       voidedByUserId: 'u-3',
       operationId: 'op-9',
@@ -151,10 +153,17 @@ describe('reading a sale of the list', () => {
       }),
       wireRecord({ voided: 'si' }),
       wireRecord({
-        voided: { voidedAt: 'ayer', voidedByUserId: 'u', operationId: 'o', reason: 'r' },
+        voided: {
+          folio: 'ANU-000001',
+          voidedAt: 'ayer',
+          voidedByUserId: 'u',
+          operationId: 'o',
+          reason: 'r',
+        },
       }),
       wireRecord({
         voided: {
+          folio: 'ANU-000001',
           voidedAt: '2026-10-19T21:20:00.000Z',
           voidedByUserId: 'u',
           operationId: 3,
@@ -163,10 +172,47 @@ describe('reading a sale of the list', () => {
       }),
       wireRecord({
         voided: {
+          folio: 'ANU-000001',
           voidedAt: '2026-10-19T21:20:00.000Z',
           voidedByUserId: 'u',
           operationId: 'o',
           reason: null,
+        },
+      }),
+      wireRecord({
+        voided: {
+          folio: 'ANU-000001',
+          voidedAt: '2026-10-19T21:20:00.000Z',
+          voidedByUserId: 7,
+          operationId: 'o',
+          reason: 'r',
+        },
+      }),
+      // Una anulación sin folio, o con uno que no es texto, no es la que el contrato promete (ADR 0036 del backend).
+      wireRecord({
+        voided: {
+          voidedAt: '2026-10-19T21:20:00.000Z',
+          voidedByUserId: 'u',
+          operationId: 'o',
+          reason: 'r',
+        },
+      }),
+      wireRecord({
+        voided: {
+          folio: 7,
+          voidedAt: '2026-10-19T21:20:00.000Z',
+          voidedByUserId: 'u',
+          operationId: 'o',
+          reason: 'r',
+        },
+      }),
+      wireRecord({
+        voided: {
+          folio: null,
+          voidedAt: '2026-10-19T21:20:00.000Z',
+          voidedByUserId: 'u',
+          operationId: 'o',
+          reason: 'r',
         },
       }),
       wireRecord({ attention: 1 }),
@@ -304,6 +350,7 @@ describe('where a sale is', () => {
     const voided = record({
       attention: true,
       voided: {
+        folio: 'ANU-000002',
         voidedAt: '2026-10-19T21:20:00.000Z',
         voidedByUserId: 'u-3',
         operationId: 'op-9',

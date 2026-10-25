@@ -268,11 +268,26 @@ describe('VoidSalePage', () => {
       await screen.findByText('el detalle');
       expect(screen.getByTestId('ruta').textContent).toBe('/mostrador/ventas/sale-1');
       expect(screen.getByTestId('estado').textContent).toBe(
-        JSON.stringify({ notice: 'La venta quedó anulada.' }),
+        JSON.stringify({ notice: 'La venta quedó anulada con el folio ANU-000001.' }),
       );
       await waitFor(() => {
         expect(sales.attentionCount).toHaveBeenCalledTimes(2);
       });
+    });
+
+    it('does not make up a folio when the answer of the server does not bring the void', async () => {
+      const { sales } = mount();
+      sales.voidSale.mockImplementationOnce((saleId) =>
+        Promise.resolve({ sale: testSaleDetail({ id: saleId, voided: null }), replayed: false }),
+      );
+      fireEvent.change(await reasonField(), { target: { value: 'Error' } });
+
+      fireEvent.click(submit());
+
+      await screen.findByText('el detalle');
+      expect(screen.getByTestId('estado').textContent).toBe(
+        JSON.stringify({ notice: 'La venta quedó anulada.' }),
+      );
     });
 
     it('says that the cash did not leave again when the server had already voided it', async () => {
@@ -282,6 +297,7 @@ describe('VoidSalePage', () => {
           sale: testSaleDetail({
             id: saleId,
             voided: {
+              folio: 'ANU-000004',
               voidedAt: new Date(2026, 9, 19, 16, 20),
               voidedByUserId: 'u-ana',
               operationId: input.operationId,
@@ -297,7 +313,9 @@ describe('VoidSalePage', () => {
 
       await screen.findByText('el detalle');
       expect(screen.getByTestId('estado').textContent).toBe(
-        JSON.stringify({ notice: 'Esa venta ya estaba anulada: el efectivo no salió otra vez.' }),
+        JSON.stringify({
+          notice: 'Esa venta ya estaba anulada (ANU-000004): el efectivo no salió otra vez.',
+        }),
       );
     });
 
@@ -370,6 +388,7 @@ describe('VoidSalePage', () => {
       mount({
         sale: {
           voided: {
+            folio: 'ANU-000004',
             voidedAt: new Date(2026, 9, 19, 16, 20),
             voidedByUserId: 'u-ana',
             operationId: 'op-void',
@@ -379,6 +398,11 @@ describe('VoidSalePage', () => {
       });
 
       expect(await screen.findByText('Esa venta ya estaba anulada')).toBeDefined();
+      expect(
+        screen.getByText(
+          'Quedó anulada con el folio ANU-000004. No hay nada más que hacer con ella.',
+        ),
+      ).toBeDefined();
       expect(screen.queryByLabelText('Motivo (obligatorio)')).toBeNull();
       expect(screen.queryByRole('button', { name: 'Anular venta' })).toBeNull();
       expect(screen.getByRole('link', { name: 'Ver la venta' }).getAttribute('href')).toBe(

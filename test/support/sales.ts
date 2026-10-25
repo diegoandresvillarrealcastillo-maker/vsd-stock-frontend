@@ -81,6 +81,7 @@ export function createFakeSalesHistory(
           id: saleId,
           attention: false,
           voided: {
+            folio: 'ANU-000001',
             voidedAt: new Date(2026, 9, 19, 16, 20),
             voidedByUserId: 'u-ana',
             operationId: input.operationId,

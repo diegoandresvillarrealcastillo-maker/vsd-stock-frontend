@@ -1513,6 +1513,11 @@ export interface components {
         };
         SaleVoidDto: {
             /**
+             * @description El folio propio de la anulación (ADR 0036): `ANU-` y el número de anulación del negocio, con seis cifras como mínimo. Es la secuencia del negocio, sin saltos y en el orden en que se anotaron, y no se parece al folio de ninguna venta.
+             * @example ANU-000001
+             */
+            folio: string;
+            /**
              * Format: date-time
              * @description Cuándo se anuló.
              */
