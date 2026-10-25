@@ -17,7 +17,7 @@ Las tres demos no son nuevas: son el diagrama de [`diagrama-de-la-venta.md`](dia
 
 ## Las pestañas
 
-- **Vender** abre primero y trae el diagrama «Cortar internet» con una frase que lo explica. **IVA** abre la calculadora con el mismo ejemplo de la tarjeta de IVA (11.900 al 19 %). **Caja** abre el arqueo con la caja de ejemplo («Faltan $ 2.000»).
+- **Vender** abre primero y trae el diagrama «Cómo viaja una venta», con el interruptor «Simular una caída de internet» y una frase que lo explica. **IVA** abre la calculadora con el mismo ejemplo de la tarjeta de IVA (11.900 al 19 %). **Caja** abre el arqueo con la caja de ejemplo («Faltan $ 2.000»).
 - **La calculadora y el arqueo viven aquí, ya no debajo de las tarjetas ni de los pasos.** Tenerlos dos veces en la página era una calculadora repetida a dos pantallas de distancia. Bajan solo cuando alguien abre su pestaña (dos archivos de 2 y 3,5 KB: son pocos porque el cálculo del dominio ya viaja con la entrada). Mientras bajan se ve un esqueleto del alto de una demo, y un lector de pantalla oye «Cargando la demostración…».
 - **Cada panel se arma la primera vez que se elige y se queda.** Lo que se escribió en la calculadora sigue ahí al mirar la caja y volver. Los paneles (`role="tabpanel"`) existen desde el principio, vacíos, para que `aria-controls` siempre apunte a algo.
 - **El teclado elige a mano.** Las flechas, Inicio y Fin mueven el foco entre las pestañas y Enter o la barra eligen. Es el patrón que WAI-ARIA recomienda cuando elegir puede descargar algo: no se baja una demo con cada flecha. Solo la pestaña elegida entra en el orden de Tab, y el siguiente Tab entra al primer campo del panel.
@@ -28,11 +28,11 @@ Las tres demos no son nuevas: son el diagrama de [`diagrama-de-la-venta.md`](dia
 
 Dice siempre que los datos son ficticios, y cambia según lo que contesta la API de PRE:
 
-| Estado        | Qué dice                                                            | Cuándo                                                 |
-| ------------- | ------------------------------------------------------------------- | ------------------------------------------------------ |
-| `verificando` | «Verificando la demo… Usa datos ficticios.»                         | Desde que carga la página hasta los 3 s o la respuesta |
-| `despierta`   | «Demo de pruebas disponible · datos ficticios»                      | La API contestó, a la hora que sea                     |
-| `dormida`     | «Demo en reposo; puede tardar ~25 s en despertar · datos ficticios» | No contestó en 3 s, o la conexión falló                |
+| Estado        | Qué dice                                                                  | Cuándo                                                 |
+| ------------- | ------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `verificando` | «Revisando si la prueba está lista… Usa datos ficticios.»                 | Desde que carga la página hasta los 3 s o la respuesta |
+| `despierta`   | «Prueba con ventas de ejemplo disponible · datos ficticios»               | La API contestó, a la hora que sea                     |
+| `dormida`     | «Prueba en reposo; la primera carga puede tardar ~25 s · datos ficticios» | No contestó en 3 s, o la conexión falló                |
 
 Ningún estado dice «caída», «falla» ni «error»: la API de PRE vive en un plan gratuito que se duerme a los 15 minutos, y un servidor dormido no está roto. Una prueba lo vigila en el texto y otra en lo que se pinta.
 

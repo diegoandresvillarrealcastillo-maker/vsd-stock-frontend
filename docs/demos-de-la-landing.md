@@ -35,7 +35,7 @@ La landing solo puede importar de la aplicación el dominio (ADR 0033), y de ah�
 
 ## El arqueo
 
-- Abre con 170.000 esperados y 168.000 contados: **«Faltan $ 2.000 · Esperabas $ 170.000 y contaste $ 168.000.»**. Es la diferencia de la tarjeta «Una caja que cuadra», y una prueba vigila que sigan siendo la misma.
+- Abre con 170.000 esperados y 168.000 contados: **«Faltan $ 2.000 · Esperabas $ 170.000 y contaste $ 168.000.»**. Es la diferencia de la tarjeta «Sabes cuánto falta o sobra al cerrar», y una prueba vigila que sigan siendo la misma.
 - Cambia mientras se escribe: «La caja cuadra» (tono tranquilo), «Sobran $ 1.500» o «Faltan $ 50». Cero vale: una caja vacía es un monto, no un olvido.
 - **No es una región viva**, como en la aplicación: cambia con cada tecla y no debe leerse en cada una. La nota se lee con el campo (`aria-describedby`).
 - El tono lleva su icono y su titular: el color nunca es lo único que dice si cuadra.

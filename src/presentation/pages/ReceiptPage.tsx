@@ -10,9 +10,12 @@ import { useOperationState } from '../selling/use-operation-state';
 import { useSelling } from '../selling/SellingProvider';
 import { SummaryCard, type SummaryRow } from '../shift/SummaryCard';
 
-/** Lo que se dice de donde esta la venta: en este equipo esperando, ya en el servidor, o rechazada por el. */
+/**
+ * Lo que se dice de donde esta la venta: en este equipo esperando, ya en la cuenta del negocio, o rechazada por el servidor.
+ * La landing copia las notas de «esperando» y «ya guardada» en su diagrama (`sitio/pagina/contenido.ts`): una prueba las vigila.
+ */
 function savedNote(state: ReturnType<typeof useOperationState>): string {
-  if (state === null) return 'Guardada y enviada al servidor.';
+  if (state === null) return 'Venta guardada en tu cuenta.';
   if (state === 'attention') {
     return 'Guardada en este equipo. El servidor no la aceptó: la gerencia puede revisarla.';
   }

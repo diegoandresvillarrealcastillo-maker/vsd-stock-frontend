@@ -61,14 +61,14 @@ describe('ChipDePre: lo que dice en cada estado', () => {
     expect(chip().getAttribute('data-estado-de-pre')).toBe('despierta');
   });
 
-  it('dice que la demo esta en reposo y puede tardar ~25 s si la API no contesto a tiempo', () => {
+  it('dice que la prueba esta en reposo y la primera carga puede tardar ~25 s si la API no contesto a tiempo', () => {
     const sonda = sondaFalsa();
     render(<ChipDePre sonda={sonda} />);
 
     sonda.cambiarA('dormida');
 
     expect(chip().textContent).toBe(estadoDemo.dormida);
-    expect(chip().textContent).toMatch(/Demo en reposo; puede tardar ~25 s en despertar/);
+    expect(chip().textContent).toMatch(/Prueba en reposo; la primera carga puede tardar ~25 s/);
     expect(chip().getAttribute('data-estado-de-pre')).toBe('dormida');
   });
 

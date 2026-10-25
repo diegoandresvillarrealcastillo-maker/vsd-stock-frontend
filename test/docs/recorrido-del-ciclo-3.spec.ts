@@ -79,7 +79,7 @@ describe('docs/recorrido-del-ciclo-3.md', () => {
     ['Referencia (opcional)', `${pantallas}/PayPage.tsx`],
     ['Confirmar venta', `${pantallas}/PayPage.tsx`],
     ['Guardada en este equipo. Se envía cuando haya conexión.', `${pantallas}/ReceiptPage.tsx`],
-    ['Guardada y enviada al servidor.', `${pantallas}/ReceiptPage.tsx`],
+    ['Venta guardada en tu cuenta.', `${pantallas}/ReceiptPage.tsx`],
     ['Nueva venta', `${pantallas}/ReceiptPage.tsx`],
     ['Enviando…', 'src/domain/model/sync-summary.ts'],
     ['Sin conexión', 'src/domain/model/sync-summary.ts'],
