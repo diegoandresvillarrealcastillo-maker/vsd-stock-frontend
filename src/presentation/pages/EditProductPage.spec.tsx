@@ -102,6 +102,19 @@ describe('EditProductPage', () => {
     },
   );
 
+  it.each([
+    ['exempt', 'Exento: está dentro del IVA, pero a tarifa 0 %'],
+    ['excluded', 'Excluido: está fuera del IVA'],
+  ] as const)(
+    'explains a product of the kind %s when it opens, so that one that kept its starting kind can be checked',
+    async (taxKind, explanation) => {
+      setup(createFakeCatalog([testProduct({ id: 'arroz', taxKind, taxRateBp: 0 })], CATEGORIES));
+      await screen.findByRole('heading', { level: 1 });
+
+      expect(document.getElementById('iva-mensaje')?.textContent).toContain(explanation);
+    },
+  );
+
   it('shows a product without barcode, category or minimum as empty fields', async () => {
     setup(
       createFakeCatalog(

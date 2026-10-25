@@ -490,6 +490,7 @@ naranja del logo (`#f97801`) solo como acento.**
   protegido y el presupuesto de peso): [`docs/aplicacion-instalable.md`](docs/aplicacion-instalable.md).
 - Lo que se guarda en el equipo, cómo se protege y cuándo se olvida: [`docs/almacenamiento-local.md`](docs/almacenamiento-local.md).
 - Cómo se envía la cola sin conexión y qué dice la pantalla mientras tanto: [`docs/sincronizacion.md`](docs/sincronizacion.md).
+- Cómo se elige entre exento y excluido al crear un producto (nada queda exento por defecto) y de dónde viene el único exento que nadie eligió: [`docs/exento-y-excluido.md`](docs/exento-y-excluido.md).
 - Cómo se abre, se cierra y se ve el turno de caja sin conexión: [`docs/turno.md`](docs/turno.md).
 - Cómo se vende, se cobra y se da el comprobante sin conexión: [`docs/punto-de-venta.md`](docs/punto-de-venta.md).
 - Cómo se ven, se revisan y se anulan las ventas hechas: [`docs/ventas.md`](docs/ventas.md).

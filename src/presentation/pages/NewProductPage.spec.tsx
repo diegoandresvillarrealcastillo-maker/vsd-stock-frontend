@@ -147,23 +147,71 @@ describe('NewProductPage', () => {
       expect(screen.getByText('Escribe el precio para ver cuánto IVA lleva.')).toBeDefined();
     });
 
-    it.each(['Exento', 'Excluido'] as const)(
-      'says that «%s» charges no IVA and is declared apart, and to ask the accountant when in doubt',
-      async (label) => {
+    describe('what it says about a product with no IVA, so that the person can tell «exento» from «excluido»', () => {
+      const hint = () => document.getElementById('iva-mensaje')?.textContent ?? '';
+
+      it('says that «Exento» is inside the IVA at a rate of zero, with the examples of the audit', async () => {
         setup();
         await screen.findByLabelText('Nombre');
         type('Precio de venta (IVA incluido)', '3200');
 
-        chooseTax(label);
+        chooseTax('Exento');
 
-        expect(
-          screen.getByText(
-            `${label} no cobra IVA y se declara aparte. Si dudas de cuál es, pregúntale a tu contador.`,
-          ),
-        ).toBeDefined();
-        expect(screen.queryByText(/el IVA es/)).toBeNull();
-      },
-    );
+        expect(hint()).toContain(
+          'Exento: está dentro del IVA, pero a tarifa 0 %, así que no se cobra.',
+        );
+        expect(hint()).toContain('huevos frescos');
+        expect(hint()).toContain('leche de vaca sin azúcar añadida');
+        expect(hint()).toContain('queso fresco sin madurar');
+        expect(hint()).not.toContain('papa');
+      });
+
+      it('says that «Excluido» is outside the IVA, with the examples of the audit', async () => {
+        setup();
+        await screen.findByLabelText('Nombre');
+        type('Precio de venta (IVA incluido)', '3200');
+
+        chooseTax('Excluido');
+
+        expect(hint()).toContain('Excluido: está fuera del IVA, así que no se cobra.');
+        expect(hint()).toContain('papa');
+        expect(hint()).toContain('tomate');
+        expect(hint()).toContain('cebolla');
+        expect(hint()).not.toContain('huevos');
+      });
+
+      it.each(['Exento', 'Excluido'] as const)(
+        'says of «%s» that it is declared apart, that it depends on how it is sold, and to ask the accountant when in doubt',
+        async (label) => {
+          setup();
+          await screen.findByLabelText('Nombre');
+          type('Precio de venta (IVA incluido)', '3200');
+
+          chooseTax(label);
+
+          expect(hint()).toContain('Se declara aparte.');
+          expect(hint()).toContain(
+            'Depende de cómo se vende: fresco no es lo mismo que procesado.',
+          );
+          expect(hint()).toContain('Si dudas de cuál es, pregúntale a tu contador.');
+          expect(hint()).not.toMatch(/el IVA es/);
+        },
+      );
+
+      it('changes the explanation when the person changes from one to the other', async () => {
+        setup();
+        await screen.findByLabelText('Nombre');
+
+        chooseTax('Exento');
+        const exempt = hint();
+        chooseTax('Excluido');
+        const excluded = hint();
+
+        expect(exempt).not.toBe(excluded);
+        chooseTax('Exento');
+        expect(hint()).toBe(exempt);
+      });
+    });
 
     it('asks for numbers only while the price is not valid', async () => {
       setup();
