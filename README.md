@@ -493,6 +493,7 @@ naranja del logo (`#f97801`) solo como acento.**
 - Cómo se abre, se cierra y se ve el turno de caja sin conexión: [`docs/turno.md`](docs/turno.md).
 - Cómo se vende, se cobra y se da el comprobante sin conexión: [`docs/punto-de-venta.md`](docs/punto-de-venta.md).
 - Cómo se ven, se revisan y se anulan las ventas hechas: [`docs/ventas.md`](docs/ventas.md).
+- El reporte mensual y lo que dice que NO es (control interno, no la declaración de IVA): [`docs/reporte-mensual.md`](docs/reporte-mensual.md).
 - Cómo se prueba todo en navegadores de verdad (qué se prueba, cómo correrlo, la pila y lo que encontró): [`docs/pruebas-en-navegador.md`](docs/pruebas-en-navegador.md).
 - El recorrido de la aplicación completa con el que se cierra cada ciclo, paso a paso y con lo que debe pasar:
   [`docs/recorrido-del-ciclo-2.md`](docs/recorrido-del-ciclo-2.md).
