@@ -139,11 +139,50 @@ describe('docs/recorrido-del-ciclo-3.md', () => {
     expect(medidas).toContain('BarcodeDetector');
   });
 
-  it('keeps a table of runs, with the columns to fill in, and starts without any', () => {
+  it('keeps a table of runs, with the columns to fill in', () => {
     const historial = seccion('Historial de corridas');
 
     expect(historial).toMatch(/\| Fecha +\| Teléfono +\| Quién +\| Resultado +\|/);
-    expect(historial).toMatch(/\| (—|pendiente)/);
+  });
+
+  it('records the run on a real Android, who did it and what did not match, and no longer says none was done', () => {
+    const historial = seccion('Historial de corridas');
+
+    expect(historial).toContain('25 de octubre de 2026');
+    expect(historial).toContain('Samuel');
+    // Lo que no coincidio, con el Issue donde se sigue: sin esto la corrida parece limpia.
+    for (const issue of ['#108', '#109', '#110', 'vsd-stock-backend#96']) {
+      expect(historial, issue).toContain(issue);
+    }
+    // El telefono no se anoto: se dice, no se inventa un modelo.
+    expect(historial).toContain('no informado');
+    expect(historial).not.toContain('todavía no se hizo en un teléfono');
+  });
+
+  it('answers every measure of the table with what the run found, or says it was not reported', () => {
+    const medidas = seccion('Qué se mide');
+    const [tabla = '', resultados] = medidas.split(
+      /^### Resultado de la corrida del 25 de octubre de 2026\n/m,
+    );
+    expect(resultados, 'falta la tabla de resultados de la corrida').toBeDefined();
+
+    const nombres = [...tabla.matchAll(/^\| ([^|\n]+?) +\|/gm)]
+      .map((fila) => fila[1] ?? '')
+      .filter((nombre) => nombre !== 'Medida' && !/^-+$/.test(nombre));
+    expect(nombres.length).toBeGreaterThanOrEqual(9);
+
+    for (const nombre of nombres) {
+      expect(resultados, `sin resultado para «${nombre}»`).toMatch(
+        new RegExp(`^\\| ${nombre.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')} +\\|`, 'm'),
+      );
+    }
+    // Lo que nadie midio se dice asi y no con una cifra puesta a ojo.
+    expect(resultados).toContain('No se anotó');
+    expect(resultados).toContain('Sin cifra');
+  });
+
+  it('says in the steps to repeat where the results of a run go', () => {
+    expect(seccion('Cómo se repite')).toContain('Resultado de la corrida');
   });
 
   it('says what it does not cover', () => {

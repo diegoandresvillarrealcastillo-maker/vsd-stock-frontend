@@ -112,6 +112,27 @@ Todo lo de la columna «Qué se espera» sale de un ADR o de un ticket: si no se
 | Cola sin duplicados          | Filas 19, 20 y 24.                                                                                                                                    | Cada venta aparece una sola vez, en el teléfono y en el computador del dueño.                                                                                                    |
 | Lector de códigos por cámara | `__ficha()` dice si el navegador tiene `BarcodeDetector`.                                                                                             | Solo se anota (la pantalla de venta todavía no lo usa): decide si vale un ticket para el Ciclo 4.                                                                                |
 
+### Resultado de la corrida del 25 de octubre de 2026
+
+Lo que informó Samuel con la lista de 15 puntos que armó él (no coincide fila por fila con la del recorrido). Lo que no dijo no se
+completa: dice «No se anotó». No hay cifras de toque ni de fluidez porque no se usó el apéndice.
+
+| Medida                       | Resultado                                                                                                                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Despertar de la API          | Sin cifra. Samuel no tiene acceso a Render y no lo midió; comprobó a mano que funciona sin demoras. La medición con cifras queda para Diego.                                               |
+| Toque                        | Sin fallos a ojo (fila 27). Sin cifra: no se usó el apéndice.                                                                                                                              |
+| Fluidez                      | Sin fallos a ojo (fila 28). Sin cifra: no se usó el apéndice.                                                                                                                              |
+| Contraseña                   | No se anotó el número. Se pidió con la aplicación instalada (2 s en escribirla y entrar) y al recargar después de reconectar; el primer ingreso no consta. Sin red no la pidió, como debe. |
+| Almacenamiento               | «Lo guardado en este dispositivo está protegido», en el ingreso y con la aplicación instalada.                                                                                             |
+| Sin conexión, 72 horas       | Abrió sin red con «Continuar sin conexión». No se anotó la fecha que dice «Equipo». Se ofrece también con conexión (#109).                                                                 |
+| Reloj del teléfono           | No se anotó la diferencia contra una hora de referencia. La venta con vuelto quedó con «La hora del equipo estaba en el futuro» (vsd-stock-backend#96).                                    |
+| Cola sin duplicados          | No se anotó (filas 19, 20 y 24). La fila 19 no se cumplió después de «Continuar sin conexión» (#108); recargando y entrando con contraseña se guardó todo en menos de 1 s.                 |
+| Lector de códigos por cámara | No se anotó.                                                                                                                                                                               |
+
+Otros tiempos que Samuel contó: ver el formulario de ingreso y entrar al mostrador, menos de 1 s cada uno; cobro, venta con vuelto y
+venta con tarjeta, 1,5 s cada una; cerrar el turno con una diferencia de −2 000, sin fallos; sesión y almacenamiento (filas 25 y 26),
+sin problemas. La fila 30 (una persona de mostrador) no se informó; la primera venta de Samuel tomó unos 3 minutos y hubo que rehacerla (#110).
+
 ## Apéndice: medir con precisión desde un computador (opcional, 10 minutos)
 
 Sin esto las filas 27 y 28 se miran a ojo. Con un cable y Chrome en un computador, el teléfono deja leer lo que el navegador midió.
@@ -217,11 +238,12 @@ En iPhone todos los navegadores usan WebKit. Se repiten las filas 1 a 3 y 14 a 2
 1. Prepara el teléfono y los productos (arriba) y espera 15 minutos sin abrir la web.
 2. Recorre las tablas en orden. Si algo no dice lo de la columna de la derecha, **eso es un defecto**: abre un Issue con el número de
    fila. Anota en el bloc las medidas de cada fila que dice **Mide**.
-3. Llena la tabla de [Qué se mide](#qué-se-mide) y agrega una fila al historial de abajo: la fecha, el teléfono (modelo, Android y
-   Chrome), quién lo hizo y lo que no coincidió. Las cifras de toque y fluidez también van a [`rendimiento.md`](rendimiento.md).
+3. Agrega una tabla «Resultado de la corrida» con la fecha (la de [Qué se mide](#qué-se-mide), una fila por medida) y una fila al
+   historial de abajo: la fecha, el teléfono (modelo, Android y Chrome), quién lo hizo y lo que no coincidió. Lo que no se midió se
+   escribe «No se anotó», no una cifra a ojo. Las cifras de toque y fluidez también van a [`rendimiento.md`](rendimiento.md).
 
 ## Historial de corridas
 
-| Fecha | Teléfono | Quién | Resultado                                    |
-| ----- | -------- | ----- | -------------------------------------------- |
-| —     | —        | —     | Pendiente: todavía no se hizo en un teléfono |
+| Fecha                                                                          | Teléfono                                                                         | Quién  | Resultado                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 25 de octubre de 2026 (el día en que se informó; el de la corrida no se anotó) | Un Android real contra PRE; modelo, versión de Android y de Chrome: no informado | Samuel | Todo lo informado salió bien **menos la fila 19 después de la 16**: tras «Continuar sin conexión», al volver la red no se envió nada y «Reintentar» y «Entrar de nuevo» no hicieron nada (#108). Además: «Continuar sin conexión» se ofrece con conexión (#109), la venta con vuelto quedó en «Requiere atención» por «la hora del equipo estaba en el futuro» (vsd-stock-backend#96) y la primera venta tomó unos 3 minutos (#110). Lo que no se informó no se probó o no se anotó: ver [los resultados](#resultado-de-la-corrida-del-25-de-octubre-de-2026). Detalle en #39. |
