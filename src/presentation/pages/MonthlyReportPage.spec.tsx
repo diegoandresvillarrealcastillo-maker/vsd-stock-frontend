@@ -371,22 +371,99 @@ describe('MonthlyReportPage', () => {
     });
   });
 
+  // La auditoría contable (25 de octubre de 2026): los cuatro renglones son un resumen de ventas para el control interno, no
+  // alcanzan para preparar la declaración de IVA. El aviso va arriba, antes de cualquier cifra, y dice lo que le importa al tendero.
   describe('what the report is not', () => {
-    it('says it is for the internal control and for the accountant, and that it is not the declaration or the e-invoice', async () => {
+    const notice = () => screen.getByRole('note', { name: 'Para qué sirve este reporte' });
+
+    it('says at the top, before any figure, that it is for the internal control and is not the tax declaration', async () => {
+      setup();
+      const month = await screen.findByRole('heading', { name: 'octubre de 2026' });
+
+      expect(
+        within(notice()).getByText(
+          'Este reporte es de control interno, no es tu declaración de IVA',
+        ),
+      ).toBeDefined();
+      expect(
+        notice().compareDocumentPosition(month) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('says it does not replace the e-invoice or the tax declaration', async () => {
       setup();
       await screen.findByRole('list', { name: 'Ventas por tarifa' });
 
-      expect(screen.getByText('Para el control interno y para tu contador')).toBeDefined();
-      expect(
-        screen.getByText(/No es la declaración de impuestos ni reemplaza la factura electrónica/),
-      ).toBeDefined();
+      expect(notice().textContent).toContain(
+        'No reemplaza la factura electrónica ni la declaración de impuestos.',
+      );
+    });
+
+    it('says what the declaration needs and the report does not have: purchases, deductible VAT, withholdings and its own periods', async () => {
+      setup();
+      await screen.findByRole('list', { name: 'Ventas por tarifa' });
+
+      const text = notice().textContent ?? '';
+      expect(text).toContain('tus compras y gastos');
+      expect(text).toContain('el IVA que puedes descontar');
+      expect(text).toContain('las retenciones');
+      expect(text).toContain('los períodos de tu declaración');
+      expect(text).toContain('Tu contador lo concilia');
+    });
+
+    it('tells not to copy the total sold as income, because it carries the VAT inside', async () => {
+      setup();
+      await screen.findByRole('list', { name: 'Ventas por tarifa' });
+
+      expect(notice().textContent).toContain(
+        'No copies el «Total vendido» como tus ingresos: lleva el IVA adentro. Para los ingresos usa el valor sin IVA.',
+      );
+    });
+
+    it('says that a sale that arrives late changes its month, and to send everything before handing the report over', async () => {
+      setup();
+      await screen.findByRole('list', { name: 'Ventas por tarifa' });
+
+      const text = notice().textContent ?? '';
+      expect(text).toContain(
+        'Si una venta hecha sin conexión llega después de cerrar el mes, ese mes cambia.',
+      );
+      expect(text).toContain('conecta todos los equipos y espera a que digan «Todo enviado»');
+    });
+
+    it('says that exempt and excluded are what the shop marked, and that exempt does not give the right to get the VAT of the purchases back', async () => {
+      setup();
+      await screen.findByRole('list', { name: 'Ventas por tarifa' });
+
+      const text = notice().textContent ?? '';
+      expect(text).toContain('Exento y excluido salen como los marcaste en cada producto');
+      expect(text).toContain(
+        'Que un producto sea exento no significa que puedas descontar o pedir de vuelta el IVA de tus compras',
+      );
     });
 
     it('says it even when the month has no sales', async () => {
       setup(createFakeReports({ sales: emptySection(), voids: emptySection() }));
       await screen.findByText(/no hubo ventas/);
 
-      expect(screen.getByText('Para el control interno y para tu contador')).toBeDefined();
+      expect(
+        within(notice()).getByText(
+          'Este reporte es de control interno, no es tu declaración de IVA',
+        ),
+      ).toBeDefined();
+    });
+
+    it('says it even when the report cannot load', async () => {
+      const reports = createFakeReports();
+      reports.monthly.mockRejectedValueOnce(failure);
+      setup(reports);
+      await screen.findByText('No pudimos cargar el reporte');
+
+      expect(
+        within(notice()).getByText(
+          'Este reporte es de control interno, no es tu declaración de IVA',
+        ),
+      ).toBeDefined();
     });
   });
 });
