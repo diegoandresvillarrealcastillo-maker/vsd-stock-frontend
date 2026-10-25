@@ -2,7 +2,7 @@ import { can, type Action, type Role } from './permissions';
 
 /** Una entrada del menu. */
 export interface NavItem {
-  readonly id: 'home' | 'catalog' | 'inventory' | 'purchases' | 'people';
+  readonly id: 'home' | 'catalog' | 'inventory' | 'purchases' | 'reports' | 'people';
   readonly path: string;
   readonly label: string;
   /** La accion de la tabla de permisos (ADR 0017) que da derecho a ver esta pantalla. */
@@ -39,6 +39,13 @@ export const NAVIGATION: readonly NavItem[] = [
     path: '/compras',
     label: 'Compras',
     action: 'purchase:create',
+    requiresConnection: true,
+  },
+  {
+    id: 'reports',
+    path: '/reportes',
+    label: 'Reportes',
+    action: 'report:sales',
     requiresConnection: true,
   },
   {

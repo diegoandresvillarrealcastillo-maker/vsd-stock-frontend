@@ -11,6 +11,7 @@ const wireProduct = (id: string, overrides: Record<string, unknown> = {}) => ({
   unit: 'unit',
   unitPrice: 3200,
   taxRateBp: 0,
+  taxKind: 'exempt',
   active: true,
   categoryId: null,
   minStockMilli: null,
@@ -118,6 +119,7 @@ describe('CatalogUseCase', () => {
         unit: 'unit',
         unitPrice: 3200,
         taxRateBp: 0,
+        taxKind: 'exempt',
       });
 
       expect(sent).toEqual([
@@ -130,11 +132,35 @@ describe('CatalogUseCase', () => {
             unit: 'unit',
             unitPrice: 3200,
             taxRateBp: 0,
+            taxKind: 'exempt',
           },
         },
       ]);
       expect(product.id).toBe('a');
     });
+
+    it.each([
+      ['taxed', 1900],
+      ['taxed', 500],
+      ['exempt', 0],
+      ['excluded', 0],
+    ] as const)(
+      'sends the kind %s together with its rate of %i basis points',
+      async (taxKind, taxRateBp) => {
+        const { sent, useCase } = setup(reply(wireProduct('a', { taxKind, taxRateBp }), 201));
+
+        await useCase.createProduct({
+          name: 'Arroz',
+          sku: 'ARR',
+          unit: 'unit',
+          unitPrice: 3200,
+          taxRateBp,
+          taxKind,
+        });
+
+        expect(sent[0]?.body).toMatchObject({ taxKind, taxRateBp });
+      },
+    );
 
     it('sends the barcode, the category and the minimum when they are given', async () => {
       const { sent, useCase } = setup(reply(wireProduct('a'), 201));
@@ -146,6 +172,7 @@ describe('CatalogUseCase', () => {
         unit: 'kilogram',
         unitPrice: 5000,
         taxRateBp: 500,
+        taxKind: 'taxed',
         categoryId: 'c1',
         minStockMilli: 2500,
       });
@@ -157,6 +184,7 @@ describe('CatalogUseCase', () => {
         unit: 'kilogram',
         unitPrice: 5000,
         taxRateBp: 500,
+        taxKind: 'taxed',
         categoryId: 'c1',
         minStockMilli: 2500,
       });
@@ -172,6 +200,7 @@ describe('CatalogUseCase', () => {
         unit: 'unit',
         unitPrice: 1,
         taxRateBp: 0,
+        taxKind: 'excluded',
         categoryId: null,
         minStockMilli: null,
       });
@@ -182,6 +211,7 @@ describe('CatalogUseCase', () => {
         unit: 'unit',
         unitPrice: 1,
         taxRateBp: 0,
+        taxKind: 'excluded',
       });
     });
 
@@ -190,7 +220,14 @@ describe('CatalogUseCase', () => {
 
       expect(
         await failedWith(
-          useCase.createProduct({ name: 'a', sku: 'b', unit: 'unit', unitPrice: 1, taxRateBp: 0 }),
+          useCase.createProduct({
+            name: 'a',
+            sku: 'b',
+            unit: 'unit',
+            unitPrice: 1,
+            taxRateBp: 0,
+            taxKind: 'exempt',
+          }),
         ),
       ).toBeInstanceOf(ApiError);
     });
@@ -229,6 +266,7 @@ describe('CatalogUseCase', () => {
         unit: 'liter',
         unitPrice: 10,
         taxRateBp: 1900,
+        taxKind: 'taxed',
         categoryId: 'c2',
         minStockMilli: 5,
         active: false,
@@ -241,10 +279,19 @@ describe('CatalogUseCase', () => {
         unit: 'liter',
         unitPrice: 10,
         taxRateBp: 1900,
+        taxKind: 'taxed',
         categoryId: 'c2',
         minStockMilli: 5,
         active: false,
       });
+    });
+
+    it('sends the kind alone when only the kind changes', async () => {
+      const { sent, useCase } = setup(wireProduct('a', { taxKind: 'excluded' }));
+
+      await useCase.updateProduct('a', { taxKind: 'excluded' });
+
+      expect(sent[0]?.body).toStrictEqual({ taxKind: 'excluded' });
     });
 
     it('archives and reactivates with the same call', async () => {

@@ -1,0 +1,6 @@
+{
+  // TypeScript de la landing (ADR 0033): las mismas reglas estrictas que la aplicacion. Lo que importa del dominio y de las
+  // mascotas se comprueba solo, porque tsc sigue los imports; las fronteras las impone ESLint (eslint/boundaries.mjs).
+  "extends": "../tsconfig.json",
+  "include": ["pagina"]
+}

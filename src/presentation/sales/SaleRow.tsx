@@ -5,12 +5,15 @@ import { Badge } from '../components/Badge';
 /** Una fila de la lista de ventas: el folio con dónde está, cuándo y de quién, y el total. Si lleva a un detalle, toda la fila es el enlace. */
 export function SaleRow({
   folio,
+  voidFolio,
   status,
   when,
   total,
   to,
 }: {
   folio: string;
+  /** El folio de la anulación, si la venta está anulada (ADR 0036 del backend). */
+  voidFolio?: string;
   status: { readonly tone: 'success' | 'neutral' | 'warning' | 'muted'; readonly label: string };
   /** «3:10 p. m. · Ana Gómez». */
   when: string;
@@ -26,6 +29,11 @@ export function SaleRow({
           <Badge tone={status.tone}>{status.label}</Badge>
         </span>
         <span className="text-sm text-fg-muted">{when}</span>
+        {voidFolio !== undefined && (
+          <span className="text-sm text-fg-muted">
+            Anulación <span className="whitespace-nowrap font-medium text-fg">{voidFolio}</span>
+          </span>
+        )}
       </span>
       <span className="shrink-0 text-base font-semibold tabular-nums text-fg">
         {formatPesos(total)}

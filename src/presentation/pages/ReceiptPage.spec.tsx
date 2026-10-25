@@ -11,11 +11,27 @@ import {
 import { renderScreen } from '../../../test/support/screens';
 import { ReceiptPage } from './ReceiptPage';
 
-const arroz = item(1, { name: 'Arroz 500 g', unitPrice: 3_200, taxRateBp: 1_900 });
-const aceite = item(2, { name: 'Aceite 1 L', unitPrice: 12_500, taxRateBp: 1_900 });
-const pan = item(3, { name: 'Pan tajado', unitPrice: 2_800, taxRateBp: 1_900 });
-const queso = item(4, { name: 'Queso', unit: 'kilogram', unitPrice: 20_000, taxRateBp: 5_00 });
-const harina = item(5, { name: 'Harina', unitPrice: 2_000, taxRateBp: 0 });
+const arroz = item(1, {
+  name: 'Arroz 500 g',
+  unitPrice: 3_200,
+  taxRateBp: 1_900,
+  taxKind: 'taxed',
+});
+const aceite = item(2, {
+  name: 'Aceite 1 L',
+  unitPrice: 12_500,
+  taxRateBp: 1_900,
+  taxKind: 'taxed',
+});
+const pan = item(3, { name: 'Pan tajado', unitPrice: 2_800, taxRateBp: 1_900, taxKind: 'taxed' });
+const queso = item(4, {
+  name: 'Queso',
+  unit: 'kilogram',
+  unitPrice: 20_000,
+  taxRateBp: 5_00,
+  taxKind: 'taxed',
+});
+const harina = item(5, { name: 'Harina', unitPrice: 2_000, taxRateBp: 0, taxKind: 'exempt' });
 
 /** La venta del diseno ya cobrada: 2 arroz, 1 aceite con $ 500 de descuento y 3 panes = $ 26.800. */
 async function sold(payment: SalePayment = { method: 'cash', received: 30_000 }) {
@@ -212,6 +228,60 @@ describe('ReceiptPage', () => {
 
       expect(within(receipt).getByText('IVA 19 % incluido')).toBeDefined();
       expect(within(receipt).queryByText(/IVA 0 %/)).toBeNull();
+    });
+
+    describe('the tax kind (ADR 0034 of the backend)', () => {
+      const sal = item(6, { name: 'Sal', unitPrice: 1_500, taxRateBp: 0, taxKind: 'excluded' });
+
+      async function mixed() {
+        const t = await createTestSelling();
+        t.selling.add(aceite);
+        t.selling.add(harina);
+        t.selling.add(harina);
+        t.selling.add(sal);
+        await t.selling.confirm({ method: 'cash', received: 20_000 });
+        return t;
+      }
+
+      it('says «exento» or «excluido» in the sentence of a line that carries no IVA, and nothing in a taxed one', async () => {
+        mount(await mixed());
+
+        const receipt = await screen.findByRole('group', { name: 'Comprobante' });
+        const row = (label: string) => within(receipt).getByText(label).nextSibling?.textContent;
+        expect(row('1 × Aceite 1 L')).toBe('$ 12.500');
+        expect(row('2 × Harina · Exento')).toBe('$ 4.000');
+        expect(row('1 × Sal · Excluido')).toBe('$ 1.500');
+      });
+
+      it('adds up what was exempt and what was excluded, apart from the IVA', async () => {
+        mount(await mixed());
+
+        const receipt = await screen.findByRole('group', { name: 'Comprobante' });
+        const row = (label: string) => within(receipt).getByText(label).nextSibling?.textContent;
+        expect(row('Productos exentos')).toBe('$ 4.000');
+        expect(row('Productos excluidos')).toBe('$ 1.500');
+        expect(row('IVA 19 % incluido')).toBe('$ 1.996');
+        expect(row('Total')).toBe('$ 18.000');
+      });
+
+      it('says nothing of exempt or excluded when the sale has none', async () => {
+        mount(await sold());
+
+        const receipt = await screen.findByRole('group', { name: 'Comprobante' });
+        expect(within(receipt).queryByText('Productos exentos')).toBeNull();
+        expect(within(receipt).queryByText('Productos excluidos')).toBeNull();
+      });
+
+      it('leaves out the row of the kind that has nothing', async () => {
+        const t = await createTestSelling();
+        t.selling.add(sal);
+        await t.selling.confirm({ method: 'cash', received: 1_500 });
+        mount(t);
+
+        const receipt = await screen.findByRole('group', { name: 'Comprobante' });
+        expect(within(receipt).getByText('Productos excluidos')).toBeDefined();
+        expect(within(receipt).queryByText('Productos exentos')).toBeNull();
+      });
     });
 
     it('says the unit of what is weighed', async () => {

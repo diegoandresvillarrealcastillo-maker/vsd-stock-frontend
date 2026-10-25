@@ -1,7 +1,7 @@
 # ============================================================
 #  VSD Stock (frontend) - Integracion continua
 # ============================================================
-#  Barrera automatica del proyecto. Este archivo cubre siete cosas:
+#  Barrera automatica del proyecto. Este archivo cubre nueve cosas:
 #
 #    1. que no entre ningun secreto al repositorio;
 #    2. que todo commit siga Conventional Commits y cite su Issue;
@@ -16,7 +16,13 @@
 #    7. que la web ya compilada funcione en navegadores de verdad contra la API
 #       y la base reales (C3-15): sin red, recargando, con dos pestañas y con
 #       varios dispositivos, y con axe en cada pantalla. Chromium bloquea cuando
-#       se marque; Firefox y WebKit se corren y se informan.
+#       se marque; Firefox y WebKit se corren y se informan;
+#    8. que la landing (sitio/) pase Lighthouse con el mismo perfil de movil
+#       que la aplicacion: accesibilidad perfecta y buen rendimiento (C4-L7);
+#    9. que la landing ya compilada pase axe en tema claro y oscuro, apague
+#       todo lo que se mueve con movimiento reducido, se descargue aparte lo
+#       interactivo y no se pase del presupuesto de peso de la carga inicial
+#       (C4-L7). No necesita la API ni la base: es una pagina sola.
 #
 #  CodeQL (codeql.yml) y las vulnerabilidades de las dependencias
 #  (dependencias.yml) van en archivos aparte para poder programarlos.
@@ -153,6 +159,11 @@ jobs:
       - name: Medir el peso contra el presupuesto
         run: npm run budget
 
+      # La landing (C4-L1, ADR 0033) se compila aparte de la aplicacion y no cuenta en su presupuesto. Compilarla aqui evita que un
+      # cambio rompa el prerenderizado o la politica de contenido sin que nadie se entere hasta publicar.
+      - name: Compilar la landing
+        run: npm run build:sitio
+
   contrato:
     name: Contrato con el backend
     runs-on: ubuntu-24.04
@@ -165,14 +176,38 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      # La rama del backend que corresponde, la primera que el backend tenga de estas: la del propio Pull Request (en un push, la que lo
+      # recibe), la base del Pull Request y `desarrollo`. Los tickets que tocan los dos repositorios usan el mismo nombre de rama en
+      # los dos, asi que la propia trae el cambio del backend que este PR necesita aunque su base sea la rama de otro ticket que solo
+      # toco el frontend. La base sola no alcanza: un Pull Request apilado tiene por base una rama que quiza solo existe en este
+      # repositorio (el contrato daba 404 y los navegadores un `git checkout` roto). `ls-remote` sale con 2 cuando la rama no existe y
+      # con otro codigo si la red falla; solo el 2 pasa a la siguiente, para que un fallo de red no pase por una rama que falta.
+      # Las ramas llegan por variable de entorno y no interpoladas en el script, para no inyectar contenido en la shell.
+      - name: Elegir la rama del backend
+        id: backend
+        env:
+          PROPIA: ${{ github.head_ref || github.ref_name }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          for RAMA in "$PROPIA" "$BASE"; do
+            [ -n "$RAMA" ] || continue
+            if git ls-remote --exit-code --heads https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend "refs/heads/$RAMA" > /dev/null; then
+              echo "ref=$RAMA" >> "$GITHUB_OUTPUT"
+              exit 0
+            else
+              CODIGO=$?
+              if [ "$CODIGO" -ne 2 ]; then
+                exit 1
+              fi
+            fi
+          done
+          echo "ref=desarrollo" >> "$GITHUB_OUTPUT"
+
       # Sin `npm ci`: el script solo usa lo que trae Node 24, que ejecuta
       # TypeScript quitando los tipos. Asi tambien se comprueba que corre asi.
       - name: Comparar la copia del contrato con la del backend
         env:
-          # La rama del backend que corresponde: la base del Pull Request o, en un
-          # push, la rama que lo recibe. Se pasan por variable de entorno y no
-          # interpoladas dentro del script, para no inyectar contenido en la shell.
-          CONTRACT_REF: ${{ github.base_ref || github.ref_name }}
+          CONTRACT_REF: ${{ steps.backend.outputs.ref }}
           # Evita el limite de consultas anonimas de la API de GitHub.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/contract.ts check
@@ -273,12 +308,34 @@ jobs:
       - name: Descargar el codigo
         uses: actions/checkout@v7
 
-      # El backend es publico. La misma rama que usa el trabajo del contrato: la base del Pull Request o, en un push, la que lo recibe.
+      # La misma eleccion de rama que hace el trabajo del contrato (ver alli por que): la del propio PR si el backend la tiene, y si
+      # no, la base del PR y, al final, `desarrollo`.
+      - name: Elegir la rama del backend
+        id: backend
+        env:
+          PROPIA: ${{ github.head_ref || github.ref_name }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          for RAMA in "$PROPIA" "$BASE"; do
+            [ -n "$RAMA" ] || continue
+            if git ls-remote --exit-code --heads https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend "refs/heads/$RAMA" > /dev/null; then
+              echo "ref=$RAMA" >> "$GITHUB_OUTPUT"
+              exit 0
+            else
+              CODIGO=$?
+              if [ "$CODIGO" -ne 2 ]; then
+                exit 1
+              fi
+            fi
+          done
+          echo "ref=desarrollo" >> "$GITHUB_OUTPUT"
+
+      # El backend es publico.
       - name: Descargar el backend
         uses: actions/checkout@v7
         with:
           repository: diegoandresvillarrealcastillo-maker/vsd-stock-backend
-          ref: ${{ github.base_ref || github.ref_name }}
+          ref: ${{ steps.backend.outputs.ref }}
           path: vsd-stock-backend
 
       - name: Preparar Node
@@ -352,5 +409,76 @@ jobs:
         with:
           name: informes-lighthouse
           path: .lighthouseci/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  landing:
+    name: Landing (Lighthouse)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # La landing se compila aparte de la aplicacion (sitio/dist/, ADR 0033 del backend) y es la que se audita.
+      - name: Compilar la landing
+        run: npm run build:sitio
+
+      # El mismo perfil que la aplicacion (Moto G Power, la CPU 4 veces mas lenta y una red 4G lenta simulada, 3 corridas) y los
+      # mismos umbrales: la accesibilidad tiene que ser perfecta; el rendimiento y las buenas practicas solo avisan por debajo de 0,9.
+      - name: Auditar la landing
+        run: npm run lighthouse:sitio
+
+      - name: Guardar los informes
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informes-lighthouse-landing
+          path: .lighthouseci/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  landing-navegador:
+    name: Landing (navegador)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Solo Chromium y sin `--with-deps`, como el trabajo de la aplicacion que bloquea: las librerias del sistema ya las trae el
+      # ejecutor y `apt` es lo lento cuando el espejo anda mal (ver docs/pruebas-en-navegador.md).
+      - name: Instalar Chromium sin los paquetes del sistema
+        run: npx playwright install chromium
+
+      # Playwright compila la landing (`npm run build:sitio`), la sirve con las reglas de `_headers` y corre axe en claro y oscuro,
+      # el movimiento reducido, el peso de la carga inicial y la politica de contenido. No necesita la API, la base ni el backend.
+      - name: Probar la landing en el navegador
+        run: npm run e2e:sitio
+
+      - name: Guardar el informe
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: informes-navegador-landing
+          path: |
+            playwright-report/
+            test-results/
           if-no-files-found: ignore
           retention-days: 14

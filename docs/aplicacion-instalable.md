@@ -73,15 +73,29 @@ aplicación no puede evitarlo: lo único que se puede hacer es **sincronizar pro
 `npm run budget` (también en el CI, después de compilar) mide `dist/` con gzip al nivel 9 y **falla si se pasa**
 de `scripts/bundle-budget.json`:
 
-| Parte          |      Hoy | Presupuesto |
-| -------------- | -------: | ----------: |
-| JavaScript     | 141,7 KB |      180 KB |
-| CSS            |   4,7 KB |       12 KB |
-| Service worker |   1,7 KB |        3 KB |
+| Parte                       | Hoy (C4-M3) | Presupuesto |
+| --------------------------- | ----------: | ----------: |
+| JavaScript, todo            |    177,0 KB |      190 KB |
+| JavaScript del **arranque** |    161,1 KB |      165 KB |
+| CSS                         |      7,5 KB |       12 KB |
+| Service worker              |      1,8 KB |        3 KB |
 
 Si un cambio legítimo no cabe, se discute en el PR y se sube el número con su razón; no se quita la comprobación.
-El JavaScript es hoy una sola pieza: si el punto de venta se acerca al tope, la salida es separar por rutas las
-pantallas de administración (catálogo, compras, personas) para que no pesen en el mostrador.
+
+**Las imágenes no cuentan en estos números, pero el service worker también las guarda.** Todo lo que `vite build` deja en `dist/` se baja al instalar, y una imagen que algún módulo importa va a `dist/` aunque ninguna pantalla la muestre. Por eso la aplicación no importa las 20 caras de las mascotas (unos 290 KB): solo las seis que usa (unos 75 KB), y una prueba lo vigila. El detalle está en [`mascotas.md`](mascotas.md#lo-que-cuesta-en-peso).
+
+**El arranque se mide aparte (C4-R0).** Es lo que la página pide al abrirse —su script de módulo y lo que precarga, tal como lo
+dice `dist/index.html`—, y es lo que el mostrador paga siempre. Las pantallas del marco de administración (inicio, catálogo,
+inventario, compras y personas) **bajan en un solo archivo, la primera vez que alguien entra a una**: `src/presentation/pages/administration.ts`
+es lo único que las rutas importan con `import()`. Por eso el total y el arranque tienen cada uno su techo: el arranque protege
+al mostrador, y el total es lo que se baja una vez al instalar. Las pantallas que vengan (el reporte mensual, la anulación con
+folio) entran en ese archivo y no mueven el arranque. De dónde salen los números y por qué el techo del total subió de 180 a 190 KB:
+[`rendimiento.md`](rendimiento.md#después-de-c4-r0-la-administración-baja-aparte).
+
+**El service worker guarda también ese archivo** (guarda todo `dist/`): lo que bajó una vez abre sin red, y la caché de la
+versión incluye la administración aunque nadie haya entrado a ella. Si el archivo no llega (una versión nueva borró el viejo antes
+de que el service worker la instalara), la pantalla dice «No se pudo abrir esta pantalla» y ofrece recargar la aplicación en vez de
+quedarse en blanco: lo hace `ScreenLoader`, en el marco.
 
 ## Cómo comprobarlo a mano
 

@@ -95,6 +95,23 @@ export function describeDifference(difference: number): DifferenceNote {
   return { kind: 'over', title: `Sobran ${formatPesos(difference)}` };
 }
 
+/** Lo que se le dice a quien cuenta la caja: la diferencia (cuadra, falta o sobra) y lo que esperaba contra lo que contó. */
+export interface CountNote extends DifferenceNote {
+  readonly detail: string;
+}
+
+/**
+ * Lo que dice el producto al contar el efectivo de la caja, mientras la persona escribe: «Faltan $ 2.000» y «Esperabas $ 170.000
+ * y contaste $ 168.000.». Está aquí, y no en la pantalla, para que quien lo muestre (el cierre del turno, la landing) diga lo
+ * mismo.
+ */
+export function describeCount(expected: number, counted: number): CountNote {
+  return {
+    ...describeDifference(counted - expected),
+    detail: `Esperabas ${formatPesos(expected)} y contaste ${formatPesos(counted)}.`,
+  };
+}
+
 /** Una diferencia de caja con su signo: `− $ 2.000` si falta, `+ $ 1.500` si sobra y `$ 0` si cuadra (con el signo menos de verdad). */
 export function formatDifference(difference: number): string {
   if (difference === 0) return formatPesos(0);

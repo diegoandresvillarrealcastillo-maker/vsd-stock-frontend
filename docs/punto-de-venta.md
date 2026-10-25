@@ -39,8 +39,10 @@ El total, la base y el IVA salen del **mismo cálculo del servidor** (ADR 0014 d
 IVA incluido, cada línea se redondea al peso, las líneas de una misma tarifa se suman **antes** de sacar el IVA y el desglose es
 una fila por tarifa. Lo que dice la pantalla es lo que el servidor va a calcular, peso por peso.
 
-- **El precio y la tarifa se congelan al agregar** el producto: lo que se le cobra al cliente es lo que ve en la línea, aunque el
-  catálogo cambie mientras tanto.
+- **El precio, la tarifa y el tipo tributario se congelan al agregar** el producto: lo que se le cobra al cliente es lo que ve en la
+  línea, aunque el catálogo cambie mientras tanto. El tipo (`taxKind`: gravado, exento o excluido, ADR 0034 del backend) no cambia
+  el cálculo —solo cuenta la tarifa—, pero para declarar lo exento y lo excluido van aparte: el comprobante lo dice en cada línea
+  que no lleva IVA («2 × Leche 1 L · Exento») y suma «Productos exentos» y «Productos excluidos» junto al IVA.
 - **La rebaja** es en pesos, solo con números (un punto o una coma es ambiguo), y no puede pasar de lo que vale la línea.
 - **Hasta 200 líneas** por venta, que es lo que acepta el servidor.
 - **La existencia solo avisa.** Si la cantidad pasa de lo que queda, o el producto está agotado, la línea lo dice, pero **no
@@ -61,10 +63,14 @@ una fila por tarifa. Lo que dice la pantalla es lo que el servidor va a calcular
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `operationId`, `shiftId`, `folio` | Los crea el dispositivo (la venta es idempotente por `operationId`)                                                                    |
 | `total`                           | El que calculó el dispositivo; el servidor calcula el suyo, lo compara y, si difieren, guarda el suyo y marca la venta `total-differs` |
-| `lines[]`                         | `productId`, `quantityMilli`, `unitPrice`, `discount`, `taxRateBp`                                                                     |
+| `lines[]`                         | `productId`, `quantityMilli`, `unitPrice`, `discount`, `taxRateBp`, `taxKind`                                                          |
 | `payments[]`                      | `method` (`cash`, `card`, `transfer`), `amount` (**sin** el vuelto), `reference`                                                       |
 | `deviceTime`, `clockOffsetMs`     | Como en el turno                                                                                                                       |
 
+- **Una venta encolada antes del tipo tributario** no trae `taxKind` en sus líneas y el servidor lo exige. Al enviarla, el adaptador
+  de la sincronización le da el mismo valor de arranque que la migración del backend le dio a lo que ya existía (gravado si lleva
+  IVA, exento si no) y deja la cola como estaba: solo cambia lo que viaja. Una línea que no se entiende se manda tal cual, para que
+  el servidor la rechace en vez de que se invente un tipo.
 - **El turno suma la venta:** en efectivo si se cobró en efectivo (lo que quedó en la caja, sin el vuelto) y, aparte, si se cobró
   con otro medio. Con eso la pantalla de cierre cuadra la caja.
 - **La copia de lectura descuenta lo vendido** de la existencia que muestra y guarda, para no ofrecer lo que ya no está. La próxima

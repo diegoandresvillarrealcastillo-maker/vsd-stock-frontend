@@ -16,6 +16,8 @@ export default tseslint.config(
     // tipos: no forman parte del codigo del proyecto y no estan en tsconfig.
     ignores: [
       'dist/**',
+      'sitio/dist/**',
+      'sitio/dist-ssr/**',
       'coverage/**',
       'reports/**',
       '.stryker-tmp/**',

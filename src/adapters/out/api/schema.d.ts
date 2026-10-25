@@ -664,6 +664,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reports/monthly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * El reporte mensual
+         * @description Lo que el contador pidió (ADR 0032): las ventas del mes por tarifa y tipo tributario (gravado al 19 %, gravado al 5 %, exento y excluido, siempre los cuatro renglones), las ventas anuladas en el mes en renglón aparte —no se restan— y lo cobrado por medio de pago. El IVA se saca venta por venta, como en cada recibo (ADR 0014), y no del total del mes. Una venta es del mes en que ocurrió (su hora efectiva, ADR 0016); una anulación es del mes en que se hizo. Los meses empiezan y terminan a medianoche de Bogotá. Es de la gerencia (`report:sales`) y necesita conexión: un cajero recibe 403. No es la declaración de impuestos ni reemplaza la factura electrónica.
+         */
+        get: operations["ReportsController_monthly"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sync": {
         parameters: {
             query?: never;
@@ -911,6 +931,11 @@ export interface components {
             unitPrice: number;
             /** @enum {integer} */
             taxRateBp: 0 | 500 | 1900;
+            /**
+             * @description El tipo tributario (ADR 0034): `taxed` (gravado, lleva 5 % o 19 %), `exempt` (exento) o `excluded` (excluido); los dos últimos llevan 0 %. Una combinación imposible se rechaza con `tax-kind-rate-mismatch`.
+             * @enum {string}
+             */
+            taxKind: "taxed" | "exempt" | "excluded";
             /** @description `false` si está archivado. */
             active: boolean;
             /** Format: uuid */
@@ -956,6 +981,12 @@ export interface components {
              * @enum {integer}
              */
             taxRateBp: 0 | 500 | 1900;
+            /**
+             * @description El tipo tributario (ADR 0034): `taxed` (gravado, lleva 5 % o 19 %), `exempt` (exento) o `excluded` (excluido); los dos últimos llevan 0 %. Una combinación imposible se rechaza con `tax-kind-rate-mismatch`.
+             * @example exempt
+             * @enum {string}
+             */
+            taxKind: "taxed" | "exempt" | "excluded";
             /** Format: uuid */
             categoryId?: string | null;
             /** @description Existencia mínima en milésimas de la unidad, para la alerta de stock mínimo. */
@@ -975,6 +1006,11 @@ export interface components {
             unitPrice?: number;
             /** @enum {integer} */
             taxRateBp?: 0 | 500 | 1900;
+            /**
+             * @description El tipo tributario (ADR 0034): `taxed` (gravado, lleva 5 % o 19 %), `exempt` (exento) o `excluded` (excluido); los dos últimos llevan 0 %. Una combinación imposible se rechaza con `tax-kind-rate-mismatch`. Se compara con la tarifa que el producto ya tiene si solo mandas uno de los dos.
+             * @enum {string}
+             */
+            taxKind?: "taxed" | "exempt" | "excluded";
             /**
              * Format: uuid
              * @description `null` quita la categoría.
@@ -1405,6 +1441,12 @@ export interface components {
              * @enum {integer}
              */
             taxRateBp: 0 | 500 | 1900;
+            /**
+             * @description El tipo tributario con que se vendió (ADR 0034): `taxed` lleva 5 % o 19 %; `exempt` y `excluded` llevan 0 %. Es obligatorio: una venta sin él no se podría clasificar después. Si no es el del catálogo de hoy, la venta se acepta con el que trae y se marca `price-differs`.
+             * @example taxed
+             * @enum {string}
+             */
+            taxKind: "taxed" | "exempt" | "excluded";
         };
         PaymentRequestDto: {
             /** @enum {string} */
@@ -1471,6 +1513,11 @@ export interface components {
         };
         SaleVoidDto: {
             /**
+             * @description El folio propio de la anulación (ADR 0036): `ANU-` y el número de anulación del negocio, con seis cifras como mínimo. Es la secuencia del negocio, sin saltos y en el orden en que se anotaron, y no se parece al folio de ninguna venta.
+             * @example ANU-000001
+             */
+            folio: string;
+            /**
              * Format: date-time
              * @description Cuándo se anuló.
              */
@@ -1496,6 +1543,8 @@ export interface components {
             discount: number;
             /** @enum {integer} */
             taxRateBp: 0 | 500 | 1900;
+            /** @enum {string} */
+            taxKind: "taxed" | "exempt" | "excluded";
         };
         PaymentDto: {
             /** @enum {string} */
@@ -1680,6 +1729,59 @@ export interface components {
              * @example Se equivocó de producto
              */
             reason: string;
+        };
+        ReportRowDto: {
+            /**
+             * @description El tipo tributario del renglón (ADR 0034). Los renglones son siempre cuatro y van en este orden: `taxed` al 19 %, `taxed` al 5 %, `exempt` y `excluded`.
+             * @enum {string}
+             */
+            taxKind: "taxed" | "exempt" | "excluded";
+            /**
+             * @description La tarifa, en puntos básicos.
+             * @enum {integer}
+             */
+            rateBp: 0 | 500 | 1900;
+            /** @description Lo vendido en este renglón, con el IVA incluido. */
+            total: number;
+            /** @description La base gravable. */
+            base: number;
+            /** @description El IVA: el total menos la base. */
+            tax: number;
+        };
+        ReportPaymentDto: {
+            /** @enum {string} */
+            method: "cash" | "card" | "transfer";
+            /** @description Pesos cobrados con este medio, sin el vuelto. */
+            amount: number;
+        };
+        ReportSectionDto: {
+            /** @description Cuántas ventas entran. */
+            count: number;
+            /** @description Con el IVA incluido: la suma de los renglones. */
+            total: number;
+            base: number;
+            tax: number;
+            rows: components["schemas"]["ReportRowDto"][];
+            /** @description Siempre los tres medios (`cash`, `card` y `transfer`), en ese orden. */
+            payments: components["schemas"]["ReportPaymentDto"][];
+        };
+        MonthlyReportDto: {
+            /** @example 2026-10 */
+            month: string;
+            /**
+             * Format: date-time
+             * @description La medianoche de Bogotá con que empieza el mes (incluida).
+             */
+            from: string;
+            /**
+             * Format: date-time
+             * @description La medianoche de Bogotá con que empieza el mes siguiente (excluida).
+             */
+            to: string;
+            /** @description Las ventas hechas en el mes (por su hora efectiva), aunque después se anularan. */
+            sales: components["schemas"]["ReportSectionDto"];
+            /** @description Las ventas anuladas en el mes, con los montos de la venta que se anuló, sea cual sea el mes de la venta. Van aparte: no se restan de `sales` (ADR 0032 y 0035). */
+            voids: components["schemas"]["ReportSectionDto"];
         };
         SyncOperationDto: {
             /**
@@ -3208,6 +3310,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SaleDto"];
+                };
+            };
+            /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ReportsController_monthly: {
+        parameters: {
+            query: {
+                /** @description El mes, año-mes (`AAAA-MM`). */
+                month: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthlyReportDto"];
                 };
             };
             /** @description Cualquier error. El cuerpo es un `application/problem+json` (RFC 9457): el cliente se guía por `code` y por el estado HTTP, no por el texto. */

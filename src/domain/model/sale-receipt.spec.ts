@@ -8,7 +8,13 @@ import {
   setQuantity,
   type Cart,
 } from './sale-cart';
-import { buildReceipt, receiptLineLabel, saleBody, type SalePayment } from './sale-receipt';
+import {
+  buildReceipt,
+  receiptLineLabel,
+  saleBody,
+  totalsByKind,
+  type SalePayment,
+} from './sale-receipt';
 
 const AT = new Date('2026-10-19T20:42:00.000Z');
 
@@ -20,6 +26,7 @@ const product = (id: number, change: Partial<Product> = {}): Product => ({
   unit: 'unit',
   unitPrice: 1_000,
   taxRateBp: 0,
+  taxKind: 'exempt',
   active: true,
   categoryId: null,
   minStockMilli: null,
@@ -28,9 +35,19 @@ const product = (id: number, change: Partial<Product> = {}): Product => ({
   ...change,
 });
 
-const arroz = product(1, { name: 'Arroz 500 g', unitPrice: 3_200, taxRateBp: 1_900 });
-const aceite = product(2, { name: 'Aceite 1 L', unitPrice: 12_500, taxRateBp: 1_900 });
-const pan = product(3, { name: 'Pan tajado', unitPrice: 2_800, taxRateBp: 1_900 });
+const taxed = { taxRateBp: 1_900, taxKind: 'taxed' } as const;
+const arroz = product(1, { name: 'Arroz 500 g', unitPrice: 3_200, ...taxed });
+const aceite = product(2, { name: 'Aceite 1 L', unitPrice: 12_500, ...taxed });
+const pan = product(3, { name: 'Pan tajado', unitPrice: 2_800, ...taxed });
+const leche = product(4, { name: 'Leche 1 L', unitPrice: 4_000 });
+const sal = product(5, { name: 'Sal', unitPrice: 1_500, taxKind: 'excluded' });
+
+/** Una venta de las tres clases: 1 aceite gravado al 19 %, 2 leches exentas y 1 sal excluida con $ 100 de descuento. */
+function mixedCart(): Cart {
+  let sale = addProduct(EMPTY_CART, aceite);
+  sale = setQuantity(addProduct(sale, leche), leche.id, 2_000);
+  return setDiscount(addProduct(sale, sal), sal.id, 100);
+}
 
 /** La venta del diseno: 2 arroz, 1 aceite con $ 500 de descuento y 3 panes. */
 function cart(): Cart {
@@ -67,6 +84,7 @@ describe('the body of a sale', () => {
           unitPrice: 3_200,
           discount: 0,
           taxRateBp: 1_900,
+          taxKind: 'taxed',
         },
         {
           productId: aceite.id,
@@ -74,6 +92,7 @@ describe('the body of a sale', () => {
           unitPrice: 12_500,
           discount: 500,
           taxRateBp: 1_900,
+          taxKind: 'taxed',
         },
         {
           productId: pan.id,
@@ -81,6 +100,7 @@ describe('the body of a sale', () => {
           unitPrice: 2_800,
           discount: 0,
           taxRateBp: 1_900,
+          taxKind: 'taxed',
         },
       ],
       payments: [{ method: 'cash', amount: 26_800, reference: null }],
@@ -123,6 +143,7 @@ describe('the receipt of a sale', () => {
         unit: 'unit',
         unitPrice: 3_200,
         discount: 0,
+        taxKind: 'taxed',
         total: 6_400,
       },
       {
@@ -131,6 +152,7 @@ describe('the receipt of a sale', () => {
         unit: 'unit',
         unitPrice: 12_500,
         discount: 500,
+        taxKind: 'taxed',
         total: 12_000,
       },
       {
@@ -139,6 +161,7 @@ describe('the receipt of a sale', () => {
         unit: 'unit',
         unitPrice: 2_800,
         discount: 0,
+        taxKind: 'taxed',
         total: 8_400,
       },
     ]);
@@ -177,6 +200,61 @@ describe('the receipt of a sale', () => {
   });
 });
 
+describe('the tax kind of a sale (ADR 0034 of the backend)', () => {
+  const mixed = () => ({ ...input(), cart: mixedCart() });
+
+  it('goes in every line of the body, as it was sold, next to the rate', () => {
+    const lines = saleBody(mixed())['lines'] as { taxKind: string; taxRateBp: number }[];
+
+    expect(lines.map(({ taxKind, taxRateBp }) => [taxKind, taxRateBp])).toEqual([
+      ['taxed', 1_900],
+      ['exempt', 0],
+      ['excluded', 0],
+    ]);
+  });
+
+  it('goes in every line of the receipt', () => {
+    expect(buildReceipt(mixed()).lines.map((line) => line.taxKind)).toEqual([
+      'taxed',
+      'exempt',
+      'excluded',
+    ]);
+  });
+
+  it('adds up what was sold exempt and what was sold excluded, discounts included', () => {
+    const receipt = buildReceipt(mixed());
+
+    expect(receipt.summary.total).toBe(21_900);
+    expect(receipt.summary.byKind).toEqual({ exempt: 8_000, excluded: 1_400 });
+  });
+
+  it('adds up nothing for a sale of only taxed products', () => {
+    expect(buildReceipt(input()).summary.byKind).toEqual({ exempt: 0, excluded: 0 });
+  });
+
+  it('keeps the IVA of the taxed lines only: the exempt and the excluded add none', () => {
+    expect(buildReceipt(mixed()).summary.tax).toBe(1_996);
+  });
+
+  describe('totalsByKind', () => {
+    it('adds the lines of each kind and leaves the taxed ones out', () => {
+      expect(
+        totalsByKind([
+          { taxKind: 'exempt', total: 100 },
+          { taxKind: 'taxed', total: 5_000 },
+          { taxKind: 'excluded', total: 30 },
+          { taxKind: 'exempt', total: 20 },
+          { taxKind: 'excluded', total: 7 },
+        ]),
+      ).toEqual({ exempt: 120, excluded: 37 });
+    });
+
+    it('is zero for no lines', () => {
+      expect(totalsByKind([])).toEqual({ exempt: 0, excluded: 0 });
+    });
+  });
+});
+
 describe('a line of the receipt, in a sentence', () => {
   it('is the quantity, the name and, when there is one, the discount', () => {
     const [arrozLine, aceiteLine] = buildReceipt(input()).lines;
@@ -185,8 +263,16 @@ describe('a line of the receipt, in a sentence', () => {
     expect(receiptLineLabel(aceiteLine!)).toBe('1 × Aceite 1 L (− $ 500)');
   });
 
+  it('says exempt or excluded at the end when the line carries no IVA, and nothing when it is taxed', () => {
+    const [aceiteLine, lecheLine, salLine] = buildReceipt({ ...input(), cart: mixedCart() }).lines;
+
+    expect(receiptLineLabel(aceiteLine!)).toBe('1 × Aceite 1 L');
+    expect(receiptLineLabel(lecheLine!)).toBe('2 × Leche 1 L · Exento');
+    expect(receiptLineLabel(salLine!)).toBe('1 × Sal (− $ 100) · Excluido');
+  });
+
   it('says the unit and the decimals of what is weighed', () => {
-    const queso = product(4, { name: 'Queso', unit: 'kilogram', unitPrice: 20_000 });
+    const queso = product(4, { name: 'Queso', unit: 'kilogram', unitPrice: 20_000, ...taxed });
     const sale = setQuantity(addProduct(EMPTY_CART, queso), queso.id, 1_250);
 
     const [line] = buildReceipt({ ...input(), cart: sale }).lines;

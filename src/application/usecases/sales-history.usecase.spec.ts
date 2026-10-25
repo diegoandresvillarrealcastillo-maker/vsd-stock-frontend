@@ -26,7 +26,16 @@ const wireSale = (id: string, overrides: Record<string, unknown> = {}) => ({
 
 const wireDetail = (id: string, overrides: Record<string, unknown> = {}) => ({
   ...wireSale(id),
-  lines: [{ productId: 'p-1', quantityMilli: 1_000, unitPrice: 14_800, discount: 0, taxRateBp: 0 }],
+  lines: [
+    {
+      productId: 'p-1',
+      quantityMilli: 1_000,
+      unitPrice: 14_800,
+      discount: 0,
+      taxRateBp: 0,
+      taxKind: 'exempt',
+    },
+  ],
   payments: [{ method: 'cash', amount: 14_800, reference: null }],
   summary: { total: 14_800, base: 14_800, tax: 0, byRate: [] },
   ...overrides,
@@ -144,6 +153,7 @@ describe('SalesHistoryUseCase', () => {
   describe('voiding', () => {
     it('sends the key, the reason and the shift the cash comes out of, and gives the sale as it stayed', async () => {
       const voided = {
+        folio: 'ANU-000003',
         voidedAt: '2026-10-19T21:20:00.000Z',
         voidedByUserId: 'user-2',
         operationId: 'op-void',
@@ -163,6 +173,7 @@ describe('SalesHistoryUseCase', () => {
         body: { operationId: 'op-void', reason: 'El cliente se arrepintió', shiftId: 'shift-9' },
       });
       expect(result.sale.voided?.reason).toBe('El cliente se arrepintió');
+      expect(result.sale.voided?.folio).toBe('ANU-000003');
       expect(result.replayed).toBe(false);
     });
 

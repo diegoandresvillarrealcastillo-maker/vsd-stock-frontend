@@ -1,20 +1,27 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Role } from '../../domain/model/permissions';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createTestConnection } from '../../../test/support/connection';
 import { createTestLocal } from '../../../test/support/local';
 import { FakeSyncEngine } from '../../../test/support/sync-engine';
+import { createTestMascotsPreference } from '../../../test/support/mascots';
 import { createTestThemePreference } from '../../../test/support/theme';
 import { AuthProvider } from '../auth/AuthProvider';
 import { ConnectionProvider } from '../connection/ConnectionProvider';
 import { LocalWorkspaceProvider } from '../local/LocalWorkspaceProvider';
 import { MotionProvider } from '../motion/MotionProvider';
 import { SyncProvider } from '../sync/SyncProvider';
+import { MascotasProvider } from '../mascotas/MascotasProvider';
 import { ThemeProvider } from '../theme/ThemeProvider';
 import { AppShell } from './AppShell';
+
+/** Una pantalla que no llega a dibujarse, como un archivo perezoso que no bajo. */
+function ScreenThatBreaks(): ReactNode {
+  throw new Error('Failed to fetch dynamically imported module');
+}
 
 async function setup({
   role = 'owner',
@@ -35,6 +42,7 @@ async function setup({
   auth.answer(testMe('ana', role, businessName));
   const connection = createTestConnection();
   const theme = createTestThemePreference();
+  const mascots = createTestMascotsPreference();
   const local = createTestLocal();
   prepare?.(local);
 
@@ -42,15 +50,17 @@ async function setup({
     return (
       <ThemeProvider preference={theme.preference}>
         <ConnectionProvider monitor={connection.monitor}>
-          <MotionProvider>
-            <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
-              <LocalWorkspaceProvider workspace={local.workspace}>
-                <SyncProvider engine={sync}>
-                  <MemoryRouter initialEntries={[at]}>{children}</MemoryRouter>
-                </SyncProvider>
-              </LocalWorkspaceProvider>
-            </AuthProvider>
-          </MotionProvider>
+          <MascotasProvider preference={mascots.preference}>
+            <MotionProvider>
+              <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
+                <LocalWorkspaceProvider workspace={local.workspace}>
+                  <SyncProvider engine={sync}>
+                    <MemoryRouter initialEntries={[at]}>{children}</MemoryRouter>
+                  </SyncProvider>
+                </LocalWorkspaceProvider>
+              </AuthProvider>
+            </MotionProvider>
+          </MascotasProvider>
         </ConnectionProvider>
       </ThemeProvider>
     );
@@ -62,13 +72,14 @@ async function setup({
         <Route index element={<p>Pantalla de inicio</p>} />
         <Route path="catalogo" element={<p>Pantalla de catálogo</p>} />
         <Route path="personas" element={<p>Pantalla de personas</p>} />
+        <Route path="inventario" element={<ScreenThatBreaks />} />
       </Route>
     </Routes>,
     { wrapper: Providers },
   );
   // Espera a que se sepa quien es la persona.
   await waitFor(() => expect(screen.queryByText(/cargando tu cuenta/i)).toBeNull());
-  return { auth, connection, theme, local, sync };
+  return { auth, connection, theme, mascots, local, sync };
 }
 
 const nav = () => screen.getByRole('navigation', { name: 'Principal' });
@@ -88,7 +99,14 @@ describe('AppShell', () => {
     it.each(['admin', 'owner'] as const)('offers %s every page', async (role) => {
       await setup({ role });
 
-      expect(labels()).toEqual(['Inicio', 'Catálogo', 'Inventario', 'Compras', 'Personas']);
+      expect(labels()).toEqual([
+        'Inicio',
+        'Catálogo',
+        'Inventario',
+        'Compras',
+        'Reportes',
+        'Personas',
+      ]);
     });
 
     it('points each link at its path', async () => {
@@ -97,7 +115,14 @@ describe('AppShell', () => {
       const hrefs = within(nav())
         .getAllByRole('link')
         .map((link) => link.getAttribute('href'));
-      expect(hrefs).toEqual(['/', '/catalogo', '/inventario', '/compras', '/personas']);
+      expect(hrefs).toEqual([
+        '/',
+        '/catalogo',
+        '/inventario',
+        '/compras',
+        '/reportes',
+        '/personas',
+      ]);
     });
 
     it('marks the page the person is on, for a screen reader too', async () => {
@@ -165,6 +190,25 @@ describe('AppShell', () => {
 
       expect(screen.getByRole('button', { name: /cambiar a tema/i })).toBeDefined();
     });
+
+    it('has the button to turn the mascots off, in the header with the theme one', async () => {
+      await setup();
+
+      const header = screen.getByRole('banner');
+      expect(
+        within(header)
+          .getByRole('button', { name: 'Mostrar mascotas' })
+          .getAttribute('aria-pressed'),
+      ).toBe('true');
+    });
+
+    it('turns the mascots off for the whole frame when it is pressed', async () => {
+      const { mascots } = await setup();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Mostrar mascotas' }));
+
+      expect(mascots.preference.enabled()).toBe(false);
+    });
   });
 
   describe('signing out', () => {
@@ -209,6 +253,39 @@ describe('AppShell', () => {
       fireEvent.click(within(nav()).getByRole('link', { name: 'Inicio' }));
 
       expect(screen.getByText('Pantalla de inicio')).toBeDefined();
+    });
+  });
+
+  describe('a screen that does not open (C4-R0)', () => {
+    beforeEach(() => {
+      // React cuenta en la consola lo que atrapa el limite; esta prueba lo provoca a proposito.
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('says so inside the frame: the menu stays, so the person is not left with a blank page', async () => {
+      await setup({ at: '/inventario' });
+
+      expect(screen.getByRole('alert').textContent).toContain('No se pudo abrir esta pantalla');
+      expect(labels()).toEqual([
+        'Inicio',
+        'Catálogo',
+        'Inventario',
+        'Compras',
+        'Reportes',
+        'Personas',
+      ]);
+    });
+
+    it('lets go of the warning when the person goes to another screen', async () => {
+      await setup({ at: '/inventario' });
+
+      fireEvent.click(within(nav()).getByRole('link', { name: 'Catálogo' }));
+
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.getByText('Pantalla de catálogo')).toBeDefined();
     });
   });
 });

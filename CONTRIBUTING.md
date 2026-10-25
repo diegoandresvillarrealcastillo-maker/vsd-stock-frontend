@@ -63,6 +63,11 @@ npm run contract:generate # solo regenera los tipos a partir de la copia
 
 - Con `CONTRACT_REF=otra-rama` apuntas a otra rama del backend (por ejemplo, la de un PR que todavía no se
   fusiona).
+- En el CI, la rama del backend es la primera que el backend tenga de estas: la de tu propio Pull Request (o, en un
+  push, la que lo recibe), la base del Pull Request y `desarrollo`. Un PR apilado tiene por base la rama de otro PR
+  del frontend, que el backend quizá no tiene. Si tu ticket necesita cambios del backend, su rama se llama igual en
+  los dos repositorios y el CI la encuentra aunque tu PR vaya apilado sobre otro. Solo pasa a la siguiente cuando el
+  backend dice que la rama no existe; si la red falla, el trabajo se detiene.
 - **No edites `contract/openapi.json`, `contract/calculation-vectors.json` ni `schema.d.ts` a mano.** Una prueba
   compara los tipos con lo que genera la herramienta y dice qué comando ejecutar. El CI compara las copias con el
   backend y lista lo que cambió (en los vectores, qué secciones).
@@ -107,6 +112,11 @@ npm run build
 
 Además, el CI ejecuta `npm run contract:check` y `npm run lighthouse` (necesita Chrome; audita `dist/`, así que
 primero `npm run build`). Con Lighthouse la accesibilidad tiene que dar 100.
+
+Si tocas la landing (`sitio/`), el CI también compila `npm run build:sitio` y ejecuta `npm run lighthouse:sitio` (audita
+`sitio/dist/`, la accesibilidad también tiene que dar 100) y `npm run e2e:sitio` (axe en claro y oscuro, movimiento reducido y el peso
+de la carga inicial contra `scripts/presupuesto-sitio.json`). Qué mide cada uno y cómo correrlo:
+[`docs/rendimiento-de-la-landing.md`](docs/rendimiento-de-la-landing.md).
 
 Husky corre ESLint y Prettier sobre lo que cambia antes de cada commit, y valida el mensaje. **No uses
 `--no-verify`**: el CI repite todo y no se puede saltar.

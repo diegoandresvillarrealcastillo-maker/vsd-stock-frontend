@@ -2,6 +2,8 @@ import { AnimatePresence, m } from 'framer-motion';
 import type { ConnectionState, ConnectionStatus } from '../../domain/model/connection';
 import type { StorageProtection } from '../../domain/model/storage-protection';
 import { useConnection } from '../connection/ConnectionProvider';
+import { MascotaDePantalla } from '../mascotas/MascotaDePantalla';
+import { useMascotas } from '../mascotas/MascotasProvider';
 import { useIconSwap, usePulse, useReveal } from '../motion/use-motion';
 import { useStorageProtection } from '../pwa/PwaProvider';
 import { Button } from './Button';
@@ -105,6 +107,7 @@ export function ConnectionPanel() {
   const reveal = useReveal();
   const { status } = state;
   const storage = useStorageProtection();
+  const { activas: mascotas } = useMascotas();
 
   return (
     <div role="status" className={CARD}>
@@ -134,6 +137,18 @@ export function ConnectionPanel() {
             <Detail state={state} />
           </p>
         </div>
+        {/* Ori (C4-M3): dormida sin conexion, despierta con red. Mientras se comprueba no se sabe cual, asi que no se dibuja
+            ninguna, pero se guarda su lugar: la tarjeta no salta cuando el servidor contesta. */}
+        {mascotas &&
+          (status === 'checking' ? (
+            <div aria-hidden="true" data-reserva-de-mascota="" className="size-16 shrink-0" />
+          ) : (
+            <MascotaDePantalla
+              personaje="ori"
+              estado={status === 'offline' ? 'dormida' : 'normal'}
+              className="shrink-0"
+            />
+          ))}
       </div>
       {/* Reserva su linea: el panel no salta cuando el navegador contesta. */}
       <p className="min-h-5 text-sm text-fg-muted">{STORAGE_NOTE[storage]}</p>

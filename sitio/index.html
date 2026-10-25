@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>VSD Stock</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="theme-color" content="#0a1a3f" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e1f44" media="(prefers-color-scheme: dark)" />
+    <!--
+      Pinta el tema antes de que arranque React, con el MISMO script del index.html de la aplicacion (la prueba
+      test/sitio/construccion.spec.ts exige que sean iguales; el de la aplicacion lo prueba test/design/theme-bootstrap.spec.ts).
+      Lleva la misma clave guardada: quien eligio un tema en la aplicacion lo ve igual aqui si abre las dos en el mismo sitio.
+    -->
+    <script>
+      (function () {
+        var mode = null;
+        try {
+          mode = window.localStorage.getItem('vsd-stock-theme');
+        } catch (_) {
+          // Almacenamiento bloqueado: se sigue al sistema.
+        }
+        if (mode !== 'light' && mode !== 'dark') {
+          mode =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        }
+        document.documentElement.dataset.theme = mode;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"><!--app--></div>
+    <script type="module" src="/pagina/main.tsx"></script>
+  </body>
+</html>

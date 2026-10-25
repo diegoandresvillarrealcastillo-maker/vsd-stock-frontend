@@ -1,11 +1,79 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_PESOS, Money } from './money';
-import { TAX_RATES_BP, splitTaxIncluded } from './tax';
+import {
+  TAX_CHOICES,
+  TAX_KINDS,
+  TAX_RATES_BP,
+  isTaxKind,
+  splitTaxIncluded,
+  startingTaxKind,
+  taxKindFitsRate,
+  taxKindLabel,
+} from './tax';
 
 const split = (total: number, rateBp: number) => {
   const { base, tax } = splitTaxIncluded(Money.of(total), rateBp);
   return { base: base.amount, tax: tax.amount };
 };
+
+describe('the tax kind (ADR 0034 of the backend)', () => {
+  it('knows the three kinds, taxed first', () => {
+    expect(TAX_KINDS).toEqual(['taxed', 'exempt', 'excluded']);
+  });
+
+  it.each(TAX_KINDS)('recognises the kind %s', (kind) => {
+    expect(isTaxKind(kind)).toBe(true);
+  });
+
+  it.each(['unclassified', 'Taxed', '', 'toString', 5, null, undefined])(
+    'does not take %j for a kind',
+    (value) => {
+      expect(isTaxKind(value)).toBe(false);
+    },
+  );
+
+  it.each([500, 1900])('lets a taxed product carry %i basis points', (rateBp) => {
+    expect(taxKindFitsRate('taxed', rateBp)).toBe(true);
+  });
+
+  it.each([0, 700, 10_000, -500])(
+    'does not let a taxed product carry %i basis points',
+    (rateBp) => {
+      expect(taxKindFitsRate('taxed', rateBp)).toBe(false);
+    },
+  );
+
+  it.each(['exempt', 'excluded'] as const)(
+    'lets the kind %s carry 0 % and nothing else',
+    (kind) => {
+      expect(taxKindFitsRate(kind, 0)).toBe(true);
+      expect(taxKindFitsRate(kind, 500)).toBe(false);
+      expect(taxKindFitsRate(kind, 1900)).toBe(false);
+    },
+  );
+
+  it('starts an old record, which has no kind, as the backend migration does', () => {
+    expect(startingTaxKind(500)).toBe('taxed');
+    expect(startingTaxKind(1900)).toBe('taxed');
+    expect(startingTaxKind(0)).toBe('exempt');
+  });
+
+  it('names each kind the way a shopkeeper says it', () => {
+    expect(taxKindLabel('taxed')).toBe('Gravado');
+    expect(taxKindLabel('exempt')).toBe('Exento');
+    expect(taxKindLabel('excluded')).toBe('Excluido');
+  });
+
+  it('offers four choices, the general rate first, and every one fits its own rate', () => {
+    expect(TAX_CHOICES).toEqual([
+      { kind: 'taxed', rateBp: 1900 },
+      { kind: 'taxed', rateBp: 500 },
+      { kind: 'exempt', rateBp: 0 },
+      { kind: 'excluded', rateBp: 0 },
+    ]);
+    for (const { kind, rateBp } of TAX_CHOICES) expect(taxKindFitsRate(kind, rateBp)).toBe(true);
+  });
+});
 
 describe('splitTaxIncluded', () => {
   it('knows the three rates of the delivery', () => {

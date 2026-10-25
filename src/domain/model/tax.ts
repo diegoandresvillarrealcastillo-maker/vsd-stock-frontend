@@ -8,6 +8,49 @@ import { divideRounded } from './rounding';
  */
 export const TAX_RATES_BP: readonly number[] = [0, 500, 1900];
 
+/**
+ * El tipo tributario de un producto y de cada linea que se vende (ADR 0034 del backend): gravado lleva 5 % o 19 %; exento y excluido
+ * llevan 0 %. Para el calculo da igual, pero para declarar van en renglones distintos. El sistema no sabe cual producto es cual:
+ * guarda lo que el negocio le dice.
+ */
+export const TAX_KINDS = ['taxed', 'exempt', 'excluded'] as const;
+export type TaxKind = (typeof TAX_KINDS)[number];
+
+export function isTaxKind(value: unknown): value is TaxKind {
+  return TAX_KINDS.includes(value as TaxKind);
+}
+
+/** Si el tipo cabe con la tarifa: lo gravado lleva 5 % o 19 %, y lo exento o excluido, 0 %. La base de datos rechaza lo que no cabe. */
+export function taxKindFitsRate(kind: TaxKind, rateBp: number): boolean {
+  return kind === 'taxed' ? rateBp !== 0 && TAX_RATES_BP.includes(rateBp) : rateBp === 0;
+}
+
+/**
+ * El tipo de algo que se guardo antes de que existiera el tipo: lo que la migracion del backend le da a las filas que ya tenia
+ * (gravado si lleva IVA, exento si no). Es un valor de arranque, no una clasificacion: el negocio lo corrige producto por producto.
+ */
+export function startingTaxKind(rateBp: number): TaxKind {
+  return rateBp > 0 ? 'taxed' : 'exempt';
+}
+
+const KIND_LABELS: Record<TaxKind, string> = {
+  taxed: 'Gravado',
+  exempt: 'Exento',
+  excluded: 'Excluido',
+};
+
+export function taxKindLabel(kind: TaxKind): string {
+  return KIND_LABELS[kind];
+}
+
+/** Lo que se ofrece al crear o cambiar un producto: cada tipo con la tarifa que le cabe, la general primero. */
+export const TAX_CHOICES: readonly { readonly kind: TaxKind; readonly rateBp: number }[] = [
+  { kind: 'taxed', rateBp: 1900 },
+  { kind: 'taxed', rateBp: 500 },
+  { kind: 'exempt', rateBp: 0 },
+  { kind: 'excluded', rateBp: 0 },
+];
+
 const BASIS_POINTS = 10_000;
 
 export interface TaxBreakdown {

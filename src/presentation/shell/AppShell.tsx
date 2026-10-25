@@ -1,7 +1,9 @@
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { itemOfPath, navigationFor } from '../../domain/model/navigation';
 import { useAccount } from '../auth/AuthProvider';
+import { MascotasToggle } from '../components/MascotasToggle';
 import { NeedsConnection } from '../components/NeedsConnection';
+import { ScreenLoader } from '../components/ScreenLoader';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { SessionControls } from '../local/SessionControls';
 import { StorageNotice } from '../local/StorageNotice';
@@ -24,6 +26,12 @@ export function AppShell() {
   }
   const { role, businessName, fullName } = state.me.membership;
   const needsConnection = itemOfPath(pathname)?.requiresConnection ?? false;
+  // Las pantallas bajan cuando se entra a ellas (C4-R0): aqui esperan, y aqui se dice si una no abrio.
+  const screen = (
+    <ScreenLoader resetKey={pathname}>
+      <Outlet />
+    </ScreenLoader>
+  );
 
   return (
     <div className="min-h-dvh bg-surface text-fg">
@@ -41,6 +49,7 @@ export function AppShell() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ThemeToggle />
+            <MascotasToggle />
             <SessionControls />
           </div>
         </div>
@@ -71,13 +80,7 @@ export function AppShell() {
         <div className="mb-4">
           <SyncStatus />
         </div>
-        {needsConnection ? (
-          <NeedsConnection>
-            <Outlet />
-          </NeedsConnection>
-        ) : (
-          <Outlet />
-        )}
+        {needsConnection ? <NeedsConnection>{screen}</NeedsConnection> : screen}
       </main>
     </div>
   );

@@ -16,8 +16,18 @@ import {
 } from '../../../test/support/fake-selling';
 import { shiftId } from '../../../test/support/fake-shifts';
 
-const arroz = item(1, { name: 'Arroz 500 g', unitPrice: 3_200, taxRateBp: 1_900 });
-const aceite = item(2, { name: 'Aceite 1 L', unitPrice: 12_500, taxRateBp: 1_900 });
+const arroz = item(1, {
+  name: 'Arroz 500 g',
+  unitPrice: 3_200,
+  taxRateBp: 1_900,
+  taxKind: 'taxed',
+});
+const aceite = item(2, {
+  name: 'Aceite 1 L',
+  unitPrice: 12_500,
+  taxRateBp: 1_900,
+  taxKind: 'taxed',
+});
 
 /** La venta de siempre: 2 arroz y 1 aceite con $ 500 de descuento = $ 18.400. */
 function fill(t: TestSelling) {
@@ -124,6 +134,7 @@ describe('SellingUseCase', () => {
               unitPrice: 3_200,
               discount: 0,
               taxRateBp: 1_900,
+              taxKind: 'taxed',
             },
             {
               productId: aceite.id,
@@ -131,6 +142,7 @@ describe('SellingUseCase', () => {
               unitPrice: 12_500,
               discount: 500,
               taxRateBp: 1_900,
+              taxKind: 'taxed',
             },
           ],
           payments: [{ method: 'cash', amount: 18_400, reference: null }],

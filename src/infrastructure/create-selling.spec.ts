@@ -105,7 +105,12 @@ describe('createSelling', () => {
   it('sells without a connection and sends the shift and the sale, in order, when it returns', async () => {
     const t = await wire();
     await t.shifts.open(50_000);
-    const product = item(1, { name: 'Arroz 500 g', unitPrice: 3_200, taxRateBp: 1_900 });
+    const product = item(1, {
+      name: 'Arroz 500 g',
+      unitPrice: 3_200,
+      taxRateBp: 1_900,
+      taxKind: 'taxed',
+    });
     t.selling.add(product);
     t.selling.add(product);
 
@@ -144,6 +149,7 @@ describe('createSelling', () => {
           unitPrice: 3_200,
           discount: 0,
           taxRateBp: 1_900,
+          taxKind: 'taxed',
         },
       ],
       payments: [{ method: 'cash', amount: 6_400, reference: null }],

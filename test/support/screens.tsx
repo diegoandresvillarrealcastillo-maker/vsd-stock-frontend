@@ -4,7 +4,9 @@ import { MemoryRouter, useLocation } from 'react-router';
 import type { BusinessPeople } from '../../src/domain/ports/in/business-people';
 import type { Catalog } from '../../src/domain/ports/in/catalog';
 import type { Inventory } from '../../src/domain/ports/in/inventory';
+import type { MascotsPreference } from '../../src/domain/ports/in/mascots-preference';
 import type { Purchasing } from '../../src/domain/ports/in/purchasing';
+import type { Reports } from '../../src/domain/ports/in/reports';
 import type { SalesHistory } from '../../src/domain/ports/in/sales-history';
 import type { Selling } from '../../src/domain/ports/in/selling';
 import type { Shifts } from '../../src/domain/ports/in/shifts';
@@ -14,11 +16,13 @@ import { CatalogProvider } from '../../src/presentation/catalog/CatalogProvider'
 import { InventoryProvider } from '../../src/presentation/inventory/InventoryProvider';
 import { PurchasingProvider } from '../../src/presentation/purchasing/PurchasingProvider';
 import { ReadCopyProvider } from '../../src/presentation/copy/ReadCopyProvider';
+import { ReportsProvider } from '../../src/presentation/reports/ReportsProvider';
 import { SalesProvider } from '../../src/presentation/sales/SalesProvider';
 import { SellingProvider } from '../../src/presentation/selling/SellingProvider';
 import { ShiftProvider } from '../../src/presentation/shift/ShiftProvider';
 import { SyncProvider } from '../../src/presentation/sync/SyncProvider';
 import { ConnectionProvider } from '../../src/presentation/connection/ConnectionProvider';
+import { MascotasProvider } from '../../src/presentation/mascotas/MascotasProvider';
 import { MotionProvider } from '../../src/presentation/motion/MotionProvider';
 import { PeopleProvider } from '../../src/presentation/people/PeopleProvider';
 import { ThemeProvider } from '../../src/presentation/theme/ThemeProvider';
@@ -26,9 +30,11 @@ import { createTestAuth, type TestAuth } from './auth';
 import { createFakeCatalog } from './catalog';
 import { createTestConnection } from './connection';
 import { createTestLocal, type TestLocal } from './local';
+import { createTestMascotsPreference } from './mascots';
 import { createFakeInventory } from './inventory';
 import { createFakePeople } from './people';
 import { createFakePurchasing } from './purchasing';
+import { createFakeReports } from './reports';
 import { createFakeSalesHistory } from './sales';
 import { FakeReadCopy } from './read-copy';
 import { FakeShifts } from './shifts';
@@ -59,6 +65,8 @@ interface Options {
   catalog?: Catalog;
   inventory?: Inventory;
   purchasing?: Purchasing;
+  /** Los reportes. Por omision, el de octubre de 2026 con ventas y sin anulaciones. */
+  reports?: Reports;
   /** El motor de sincronizacion de mentira. Por omision, uno que no tiene nada que decir. */
   sync?: FakeSyncEngine;
   /** La copia de lectura de mentira. Por omision, una vacia que no tiene nada que decir. */
@@ -70,9 +78,11 @@ interface Options {
   /** Las ventas que el servidor ya tiene. Por omision, una lista de una venta. */
   sales?: SalesHistory;
   connection?: ReturnType<typeof createTestConnection>;
+  /** La preferencia de mascotas. Por omision, una nueva (las mascotas se ven). */
+  mascots?: MascotsPreference;
 }
 
-/** Monta una pantalla con todo lo que la aplicacion le da: tema, conexion, movimiento, cuenta, personas, catalogo, existencias, compras y enrutador. */
+/** Monta una pantalla con todo lo que la aplicacion le da: tema, conexion, mascotas, movimiento, cuenta, personas, catalogo, existencias, compras y enrutador. */
 export function renderScreen(ui: ReactElement, options: Options = {}) {
   const auth = options.auth ?? createTestAuth();
   const local = options.local ?? createTestLocal();
@@ -80,48 +90,54 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
   const catalog = options.catalog ?? createFakeCatalog();
   const inventory = options.inventory ?? createFakeInventory();
   const purchasing = options.purchasing ?? createFakePurchasing();
+  const reports = options.reports ?? createFakeReports();
   const sync = options.sync ?? new FakeSyncEngine();
   const copy = options.copy ?? new FakeReadCopy();
   const shifts = options.shifts ?? new FakeShifts();
   const selling = options.selling ?? new FakeSelling();
   const sales = options.sales ?? createFakeSalesHistory();
   const connection = options.connection ?? createTestConnection();
+  const mascots = options.mascots ?? createTestMascotsPreference().preference;
   // La ruta puede traer lo que se pregunta en la direccion: `/mostrador/ventas?vista=todas`.
   const [pathname = '/', query = ''] = (options.path ?? '/').split('?');
   const search = query === '' ? '' : `?${query}`;
   const view = render(
     <ThemeProvider preference={createTestThemePreference().preference}>
       <ConnectionProvider monitor={connection.monitor}>
-        <MotionProvider>
-          <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
-            <LocalWorkspaceProvider workspace={local.workspace}>
-              <SyncProvider engine={sync}>
-                <ReadCopyProvider copy={copy}>
-                  <ShiftProvider shifts={shifts}>
-                    <SellingProvider selling={selling}>
-                      <SalesProvider history={sales}>
-                        <PeopleProvider people={people}>
-                          <CatalogProvider catalog={catalog}>
-                            <InventoryProvider inventory={inventory}>
-                              <PurchasingProvider purchasing={purchasing}>
-                                <MemoryRouter
-                                  initialEntries={[{ pathname, search, state: options.state }]}
-                                >
-                                  <Where />
-                                  {ui}
-                                </MemoryRouter>
-                              </PurchasingProvider>
-                            </InventoryProvider>
-                          </CatalogProvider>
-                        </PeopleProvider>
-                      </SalesProvider>
-                    </SellingProvider>
-                  </ShiftProvider>
-                </ReadCopyProvider>
-              </SyncProvider>
-            </LocalWorkspaceProvider>
-          </AuthProvider>
-        </MotionProvider>
+        <MascotasProvider preference={mascots}>
+          <MotionProvider>
+            <AuthProvider sessions={auth.sessions} loadMe={auth.loadMe}>
+              <LocalWorkspaceProvider workspace={local.workspace}>
+                <SyncProvider engine={sync}>
+                  <ReadCopyProvider copy={copy}>
+                    <ShiftProvider shifts={shifts}>
+                      <SellingProvider selling={selling}>
+                        <SalesProvider history={sales}>
+                          <PeopleProvider people={people}>
+                            <CatalogProvider catalog={catalog}>
+                              <InventoryProvider inventory={inventory}>
+                                <PurchasingProvider purchasing={purchasing}>
+                                  <ReportsProvider reports={reports}>
+                                    <MemoryRouter
+                                      initialEntries={[{ pathname, search, state: options.state }]}
+                                    >
+                                      <Where />
+                                      {ui}
+                                    </MemoryRouter>
+                                  </ReportsProvider>
+                                </PurchasingProvider>
+                              </InventoryProvider>
+                            </CatalogProvider>
+                          </PeopleProvider>
+                        </SalesProvider>
+                      </SellingProvider>
+                    </ShiftProvider>
+                  </ReadCopyProvider>
+                </SyncProvider>
+              </LocalWorkspaceProvider>
+            </AuthProvider>
+          </MotionProvider>
+        </MascotasProvider>
       </ConnectionProvider>
     </ThemeProvider>,
   );
@@ -133,11 +149,13 @@ export function renderScreen(ui: ReactElement, options: Options = {}) {
     catalog,
     inventory,
     purchasing,
+    reports,
     sync,
     copy,
     shifts,
     selling,
     sales,
     connection,
+    mascots,
   };
 }

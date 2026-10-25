@@ -30,7 +30,7 @@ el backend en marcha: ver [Conexión con el backend](#conexión-con-el-backend).
 | `npm run dev`               | Servidor de desarrollo de Vite.                                                          |
 | `npm run build`             | Revisa los tipos y genera la versión de producción en `dist/`.                           |
 | `npm run preview`           | Sirve `dist/` para probar la versión de producción.                                      |
-| `npm run budget`            | Falla si lo que baja el navegador pesa más que el presupuesto (después de compilar).     |
+| `npm run budget`            | Falla si lo que baja el navegador pesa más que el presupuesto (el arranque, aparte).     |
 | `npm test`                  | Ejecuta las pruebas (Vitest, jsdom y Testing Library).                                   |
 | `npm run test:coverage`     | Pruebas con cobertura; falla si `domain/` o `application/` bajan del 80 %.               |
 | `npm run lint`              | ESLint, incluidas las **fronteras de la arquitectura**.                                  |
@@ -40,7 +40,9 @@ el backend en marcha: ver [Conexión con el backend](#conexión-con-el-backend).
 | `npm run contract:check`    | Comprueba que ambas copias coinciden con las del backend (lo mismo que hace el CI).      |
 | `npm run contract:generate` | Regenera los tipos a partir de la copia del contrato, sin red.                           |
 | `npm run lighthouse`        | Audita `dist/` con Lighthouse (necesita Chrome y `npm run build` antes).                 |
+| `npm run lighthouse:sitio`  | Audita `sitio/dist/` (la landing) con Lighthouse (necesita Chrome y `build:sitio`).      |
 | `npm run e2e`               | Pruebas en navegadores de verdad (Chromium, Firefox y WebKit); `e2e:chromium`, solo uno. |
+| `npm run e2e:sitio`         | Pruebas de la landing en Chromium: axe, movimiento reducido y peso de la carga.          |
 
 ## Arquitectura
 
@@ -462,7 +464,7 @@ naranja del logo (`#f97801`) solo como acento.**
 - **Pruebas primero:** cada pieza nace de una prueba que se vio fallar (ADR 0007).
 - **Hooks de Husky:** antes de cada commit se corren ESLint y Prettier sobre lo que cambia, y se valida el
   mensaje con commitlint.
-- **CI** (GitHub Actions), ocho trabajos:
+- **CI** (GitHub Actions), diez trabajos:
   - escaneo de secretos (gitleaks sobre todo el historial);
   - convención de commits;
   - calidad del código (estilo y fronteras, formato, tipos, pruebas con cobertura —incluidos los tipos
@@ -473,6 +475,9 @@ naranja del logo (`#f97801`) solo como acento.**
     veces más lenta y red 4G lenta, ver [`docs/rendimiento.md`](docs/rendimiento.md));
   - navegador real (Chromium, Firefox y WebKit): la web compilada contra la API y la base reales, sin red, con dos pestañas y con
     varios dispositivos, y axe en cada pantalla ([`docs/pruebas-en-navegador.md`](docs/pruebas-en-navegador.md)); solo Chromium bloquea;
+  - la landing con Lighthouse («Landing (Lighthouse)»): accesibilidad 100, con el mismo perfil de móvil que la aplicación;
+  - la landing en un navegador real («Landing (navegador)»): axe en claro y oscuro, movimiento reducido, peso de la carga inicial y
+    política de contenido ([`docs/rendimiento-de-la-landing.md`](docs/rendimiento-de-la-landing.md));
   - análisis de código con CodeQL;
   - vulnerabilidades de las dependencias de producción.
 
@@ -480,6 +485,7 @@ naranja del logo (`#f97801`) solo como acento.**
 
 - Cómo contribuir (ramas, commits, PR, comprobaciones, contrato y diseño): [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Rendimiento y Lighthouse: [`docs/rendimiento.md`](docs/rendimiento.md).
+- Rendimiento, accesibilidad y movimiento reducido de la landing (qué se midió, el presupuesto de peso y lo que no cubre): [`docs/rendimiento-de-la-landing.md`](docs/rendimiento-de-la-landing.md).
 - La aplicación instalable (qué guarda el service worker y qué nunca, cómo se actualiza, el almacenamiento
   protegido y el presupuesto de peso): [`docs/aplicacion-instalable.md`](docs/aplicacion-instalable.md).
 - Lo que se guarda en el equipo, cómo se protege y cuándo se olvida: [`docs/almacenamiento-local.md`](docs/almacenamiento-local.md).
@@ -490,6 +496,13 @@ naranja del logo (`#f97801`) solo como acento.**
 - Cómo se prueba todo en navegadores de verdad (qué se prueba, cómo correrlo, la pila y lo que encontró): [`docs/pruebas-en-navegador.md`](docs/pruebas-en-navegador.md).
 - El recorrido de la aplicación completa con el que se cierra cada ciclo, paso a paso y con lo que debe pasar:
   [`docs/recorrido-del-ciclo-2.md`](docs/recorrido-del-ciclo-2.md).
+- El del Ciclo 3, hecho en un teléfono contra PRE: vender, cobrar y cerrar caja con y sin conexión, y qué se mide (toque, cuadros, contraseña,
+  almacenamiento): [`docs/recorrido-del-ciclo-3.md`](docs/recorrido-del-ciclo-3.md).
+- Las cinco mascotas (Fungito, Sparky, Ojo de Gato, Obsidian y Ori): el componente, qué estado ya es cierto en el producto y qué
+  prometen sus historias que todavía no existe: [`docs/mascotas.md`](docs/mascotas.md).
+- El diagrama «Cortar internet» de la landing (la máquina de las ventas, qué dice el teléfono, cuándo se mueve y cuándo no): [`docs/diagrama-de-la-venta.md`](docs/diagrama-de-la-venta.md).
+- La calculadora de IVA y el arqueo de ejemplo de la landing (qué usan del producto, qué dicen, qué no hacen y por qué cada demo tiene su panel): [`docs/demos-de-la-landing.md`](docs/demos-de-la-landing.md).
+- La banda de la demo de la landing (las pestañas Vender, IVA y Caja, qué se descarga y cuándo) y el chip que dice si la demo de pruebas está despierta o en reposo (cómo pregunta, qué dice, qué no sabe): [`docs/banda-de-la-demo.md`](docs/banda-de-la-demo.md).
 - Todos los ADR del proyecto, también los de este repositorio, viven en el backend:
   [`vsd-stock-backend/docs/adr`](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/tree/desarrollo/docs/adr).
 - El flujo de trabajo (ramas, Issues, commits y PR) está en el
@@ -497,3 +510,4 @@ naranja del logo (`#f97801`) solo como acento.**
   el CORS que necesita la API, en el
   [ADR 0012](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0012-cors-con-lista-explicita-de-origenes-y-sin-credenciales.md).
 - Cómo se publica la web de PRE en Cloudflare Pages (pasos, variables, encabezados y comprobación): [`docs/despliegue-de-la-web.md`](docs/despliegue-de-la-web.md).
+- Cómo se compila, se publica y se comprueba la landing, en su propio proyecto de Cloudflare Pages (vista previa por rama, dirección pública solo desde `desarrollo` fusionado y lo que verifica `npm run verify:sitio`): [`docs/sitio.md`](docs/sitio.md).

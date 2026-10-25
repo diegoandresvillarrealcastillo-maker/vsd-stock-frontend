@@ -13,19 +13,28 @@ const arroz = item(1, {
   barcode: '7701234567897',
   unitPrice: 3_200,
   taxRateBp: 1_900,
+  taxKind: 'taxed',
 });
-const aceite = item(2, { name: 'Aceite 1 L', sku: 'ACE-1L', unitPrice: 12_500, taxRateBp: 1_900 });
+const aceite = item(2, {
+  name: 'Aceite 1 L',
+  sku: 'ACE-1L',
+  unitPrice: 12_500,
+  taxRateBp: 1_900,
+  taxKind: 'taxed',
+});
 const aceiteOliva = item(3, {
   name: 'Aceite de oliva 500 ml',
   sku: 'ACE-OL5',
   unitPrice: 28_900,
   taxRateBp: 1_900,
+  taxKind: 'taxed',
 });
 const aceiteCinco = item(4, {
   name: 'Aceite 5 L',
   sku: 'ACE-5L',
   unitPrice: 54_000,
   taxRateBp: 1_900,
+  taxKind: 'taxed',
 });
 const queso = item(5, {
   name: 'Queso campesino',
@@ -33,8 +42,15 @@ const queso = item(5, {
   unit: 'kilogram',
   unitPrice: 20_000,
   taxRateBp: 0,
+  taxKind: 'exempt',
 });
-const pan = item(6, { name: 'Pan tajado', sku: 'PAN-1', unitPrice: 2_800, taxRateBp: 500 });
+const pan = item(6, {
+  name: 'Pan tajado',
+  sku: 'PAN-1',
+  unitPrice: 2_800,
+  taxRateBp: 500,
+  taxKind: 'taxed',
+});
 const viejo = item(7, { name: 'Aceite viejo', sku: 'ACE-OLD', active: false });
 // Su nombre trae dentro el codigo del arroz: leer ese codigo encuentra a los dos.
 const combo = item(8, { name: 'Combo ARR-500 de regalo', sku: 'COMBO-1', unitPrice: 9_000 });

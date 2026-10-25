@@ -1,6 +1,7 @@
 import { ApiError } from '../../../domain/model/api-error';
 import type { QueuedOperation, SyncResult } from '../../../domain/model/outbox';
 import { parseProblem } from '../../../domain/model/problem';
+import { startingTaxKind } from '../../../domain/model/tax';
 import type { ApiGateway } from '../../../domain/ports/out/api-gateway';
 import type { SyncApi, SyncResponse } from '../../../domain/ports/out/sync-api';
 
@@ -40,6 +41,25 @@ function parseResponse(body: unknown): SyncResponse | null {
   return { serverTime: at, results: parsed };
 }
 
+/**
+ * El cuerpo de una operacion tal como viaja. Una venta que se encolo antes de que existiera el tipo tributario (ADR 0034 del backend)
+ * no lo trae en sus lineas y el servidor lo exige: se le da el mismo valor de arranque que la migracion le dio a lo que ya tenia
+ * (gravado si lleva IVA, exento si no). Lo que no se entiende se manda como esta, para que el servidor lo rechace en vez de que se
+ * invente un tipo. La cola no se toca: solo lo que viaja.
+ */
+function bodyToSend(operation: QueuedOperation): Record<string, unknown> {
+  const lines = operation.body['lines'];
+  if (operation.kind !== 'sale' || !Array.isArray(lines)) return operation.body;
+  return {
+    ...operation.body,
+    lines: (lines as unknown[]).map((line) =>
+      isRecord(line) && line['taxKind'] === undefined && typeof line['taxRateBp'] === 'number'
+        ? { ...line, taxKind: startingTaxKind(line['taxRateBp']) }
+        : line,
+    ),
+  };
+}
+
 /** El lote de sincronizacion de la API (`POST /v1/sync`, ADR 0028) por la API de la sesion. */
 export class ApiSync implements SyncApi {
   constructor(private readonly api: ApiGateway) {}
@@ -55,7 +75,7 @@ export class ApiSync implements SyncApi {
           ...(operation.kind === 'shift-close' && operation.shiftId !== null
             ? { shiftId: operation.shiftId }
             : {}),
-          body: operation.body,
+          body: bodyToSend(operation),
         })),
       },
     });

@@ -1,4 +1,6 @@
 dist/
+sitio/dist/
+sitio/dist-ssr/
 coverage/
 node_modules/
 package-lock.json

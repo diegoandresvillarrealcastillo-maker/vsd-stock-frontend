@@ -46,6 +46,8 @@ export interface ServerSale {
   readonly total: number;
   readonly needsAdjustment: boolean;
   readonly attention: boolean;
+  /** `null` mientras no este anulada; con el folio propio de la anulacion cuando lo esta (ADR 0036 del backend). */
+  readonly voided: { readonly folio: string } | null;
 }
 
 export interface ServerStock {
@@ -150,6 +152,8 @@ export async function openBusiness(
         unit: 'unit',
         unitPrice: seed.unitPrice,
         taxRateBp: seed.taxRateBp ?? 0,
+        // El servidor no adivina el tipo (ADR 0034): con IVA, gravado; sin el, exento.
+        taxKind: (seed.taxRateBp ?? 0) === 0 ? 'exempt' : 'taxed',
       },
     });
     if ((seed.stock ?? 0) > 0) {
@@ -186,6 +190,23 @@ async function allPages<T>(path: string, token: string): Promise<T[]> {
 /** Todas las ventas que el servidor tiene del negocio. */
 export function serverSales(business: Business): Promise<ServerSale[]> {
   return allPages<ServerSale>('/v1/sales', business.token);
+}
+
+export interface ServerSaleLine {
+  readonly productId: string;
+  readonly taxRateBp: number;
+  readonly taxKind: 'taxed' | 'exempt' | 'excluded';
+}
+
+/** Las lineas de una venta como el servidor las guardo, con la tarifa y el tipo con que se vendieron. */
+export async function serverSaleLines(
+  business: Business,
+  saleId: string,
+): Promise<ServerSaleLine[]> {
+  const sale = await request<{ lines: ServerSaleLine[] }>(`${URLS.api}/v1/sales/${saleId}`, {
+    token: business.token,
+  });
+  return sale.lines;
 }
 
 /** La existencia que el servidor tiene de cada producto. */

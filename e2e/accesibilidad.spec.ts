@@ -117,6 +117,10 @@ for (const theme of ['light', 'dark'] as const) {
       await page.getByRole('link', { name: 'Ver y cambiar proveedores' }).click();
       await expectAccessible(page, 'Proveedores');
 
+      await goToAdmin(page, 'Reportes');
+      await expect(page.getByText(/^En .+ no hubo ventas\.$/)).toBeVisible();
+      await expectAccessible(page, 'Reporte mensual, un mes sin ventas');
+
       await goToAdmin(page, 'Personas');
       await expect(page.getByRole('link', { name: /Ana Gómez/ })).toBeVisible();
       await expectAccessible(page, 'Personas');
@@ -125,6 +129,24 @@ for (const theme of ['light', 'dark'] as const) {
       await goToAdmin(page, 'Personas');
       await page.getByRole('link', { name: /Ana Gómez/ }).click();
       await expectAccessible(page, 'Una persona');
+    });
+
+    test('the monthly report with sales', async ({ page }) => {
+      const business = await openBusiness();
+      await signIn(page, business.credentials);
+      await expectTheme(page, theme);
+      await openCounter(page);
+      await openShift(page, 50_000);
+      await waitForCopy(page, 'pan', 'Pan tajado');
+      await sellCash(page, [
+        { search: 'pan', name: 'Pan tajado' },
+        { search: 'arroz', name: 'Arroz 500 g' },
+      ]);
+
+      await page.getByRole('link', { name: 'Administración' }).click();
+      await goToAdmin(page, 'Reportes');
+      await expect(page.getByRole('region', { name: 'Ventas del mes' })).toBeVisible();
+      await expectAccessible(page, 'Reporte mensual, con ventas');
     });
 
     test('the screens of someone who has no business yet', async ({ page }) => {

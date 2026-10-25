@@ -81,6 +81,16 @@ describe('CounterShell', () => {
     expect(screen.queryByRole('banner')).toBeNull();
   });
 
+  it('has the button to turn the mascots off in the header, also without a connection', async () => {
+    await resumed();
+
+    const header = await screen.findByRole('banner');
+    const button = within(header).getByRole('button', { name: 'Mostrar mascotas' });
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+  });
+
   it('says in the header which business and which person', async () => {
     await online();
 

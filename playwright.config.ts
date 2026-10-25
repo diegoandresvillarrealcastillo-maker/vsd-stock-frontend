@@ -20,6 +20,8 @@ const inCi = process.env['CI'] !== undefined;
 export default defineConfig({
   testDir: 'e2e',
   testMatch: '**/*.spec.ts',
+  // La landing tiene sus propias pruebas y su propia configuracion (`e2e/sitio/`, `npm run e2e:sitio`): no necesitan esta pila.
+  testIgnore: 'sitio/**',
   // Cada prueba abre su propio negocio: no comparten datos y pueden correr juntas.
   fullyParallel: true,
   workers: inCi ? 2 : 3,

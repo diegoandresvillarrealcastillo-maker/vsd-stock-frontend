@@ -5,6 +5,7 @@ import { BusinessPeopleUseCase } from '../application/usecases/business-people.u
 import { CatalogUseCase } from '../application/usecases/catalog.usecase';
 import { InventoryUseCase } from '../application/usecases/inventory.usecase';
 import { PurchasingUseCase } from '../application/usecases/purchasing.usecase';
+import { ReportsUseCase } from '../application/usecases/reports.usecase';
 import { SalesHistoryUseCase } from '../application/usecases/sales-history.usecase';
 import { App } from '../presentation/App';
 import '../presentation/styles/index.css';
@@ -13,6 +14,7 @@ import { resolveAuthConfig } from './auth-config';
 import { createAuth } from './create-auth';
 import { createConnectionMonitor } from './create-connection-monitor';
 import { createLocalWorkspace } from './create-local-workspace';
+import { createMascotsPreference } from './create-mascots-preference';
 import { createPwa } from './create-pwa';
 import { createReadCopy } from './create-read-copy';
 import { createSelling } from './create-selling';
@@ -32,6 +34,9 @@ const theme = createThemePreference({
   matchMedia: typeof window.matchMedia === 'function' ? window.matchMedia.bind(window) : undefined,
   root: document.documentElement,
 });
+
+// Si las mascotas se ven (C4-M3): se encienden solas y la persona puede apagarlas desde la cabecera.
+const mascots = createMascotsPreference({ getStorage: () => window.localStorage });
 
 const apiBaseUrl = resolveApiBaseUrl(import.meta.env);
 // Se llama a `window.fetch` como metodo de window: suelto lanzaria "Illegal invocation".
@@ -103,6 +108,8 @@ const people = new BusinessPeopleUseCase(auth.api);
 const catalog = new CatalogUseCase(auth.api);
 const inventory = new InventoryUseCase(auth.api);
 const purchasing = new PurchasingUseCase(auth.api);
+// El reporte mensual: lo calcula el servidor y pide conexion (ADR 0035 del backend).
+const reports = new ReportsUseCase(auth.api);
 // Las ventas que el servidor ya tiene: verlas, anularlas y revisarlas pide conexion (ADR 0027); las de este equipo salen de la cola.
 const sales = new SalesHistoryUseCase(auth.api);
 
@@ -111,6 +118,7 @@ createRoot(container).render(
     <BrowserRouter>
       <App
         theme={theme}
+        mascots={mascots}
         connection={connection}
         auth={auth}
         local={local}
@@ -123,6 +131,7 @@ createRoot(container).render(
         catalog={catalog}
         inventory={inventory}
         purchasing={purchasing}
+        reports={reports}
         pwa={pwa}
       />
     </BrowserRouter>

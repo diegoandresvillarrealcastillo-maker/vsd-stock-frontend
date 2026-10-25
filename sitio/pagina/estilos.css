@@ -1,0 +1,161 @@
+/*
+ * Estilos de la landing (ADR 0033). Los tokens son los del producto, los mismos nombres y los mismos valores: se importan,
+ * no se copian, asi la pagina y la aplicacion no pueden separarse sin que alguien lo decida. Lo que la landing agrega es
+ * suyo: las tipografias (la aplicacion usa las del sistema para abrir sin conexion; una pagina de presentacion si puede
+ * pagar sus fuentes, y son propias, servidas desde el mismo sitio) y el color de las lineas finas.
+ */
+@import '../../src/presentation/styles/index.css';
+
+@theme static {
+  --font-display:
+    'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Las lineas finas de la cuadricula y los separadores: el mismo tono del fondo de los esqueletos en cada tema. */
+  --color-rule: var(--color-skeleton);
+
+  /* El marco del telefono del diagrama: el azul de la banda, que sobre el fondo claro se ve y sobre el oscuro se pierde (abajo). */
+  --color-bisel: var(--color-band);
+}
+
+:root[data-theme='dark'] {
+  --color-bisel: var(--color-border);
+}
+
+html {
+  /* Los enlaces internos (#funciones) se deslizan en vez de saltar, salvo para quien pidio menos movimiento. */
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Quien pidio menos movimiento no ve moverse nada: ni una transicion, ni una animacion. Es una red para toda la pagina, no una lista
+ * de cosas por apagar: lo que se agregue manana tambien queda quieto sin que nadie se acuerde. La duracion es de una centesima de
+ * milisegundo y no cero para que `transitionend` y `animationend` sigan llegando a quien los espera. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* El fondo de cuadricula del hero: lineas finas que se desvanecen hacia los bordes, como una hoja de contabilidad. */
+.cuadricula {
+  background-image:
+    linear-gradient(to right, var(--color-rule) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-rule) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 35%, #000 25%, transparent 75%);
+}
+
+/* Un resplandor naranja, muy tenue, detras del dibujo del hero. */
+.resplandor {
+  background: radial-gradient(
+    ellipse 50% 45% at 80% 25%,
+    color-mix(in srgb, var(--color-accent) 16%, transparent),
+    transparent 70%
+  );
+}
+
+/* La palabra que lleva el peso del titulo: subrayada como con un marcador, sin el amarillo que trae <mark>. */
+.marca {
+  background: linear-gradient(
+    transparent 62%,
+    color-mix(in srgb, var(--color-accent) 40%, transparent) 62%
+  );
+  color: inherit;
+  padding: 0 0.08em;
+  box-decoration-break: clone;
+}
+
+/* El boton de tema muestra el icono de lo que haria: el sol en el tema oscuro, la luna en el claro. Es CSS y no JavaScript
+ * para que el servidor y el navegador pinten lo mismo: ninguno sabe de antemano que tema eligio la persona. */
+.icono-sol {
+  display: none;
+}
+
+:root[data-theme='dark'] .icono-sol {
+  display: block;
+}
+
+:root[data-theme='dark'] .icono-luna {
+  display: none;
+}
+
+/* El foco sobre las bandas oscuras y sobre el naranja: el azul del foco de la pagina no se ve sobre el azul de la banda. */
+.banda :focus-visible {
+  outline-color: var(--color-accent);
+}
+
+.banda-naranja :focus-visible {
+  outline-color: var(--color-on-accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* El viaje de una venta por el diagrama (C4-L4): una bolita que recorre una linea recta. Solo `transform` y `opacity` (ADR 0008).
+ * Cuanto recorre, cuanto tarda y cuanto espera antes de salir lo escribe el componente en --recorrido, --duracion y --retraso
+ * (salen de `diagrama/ritmo.ts`), asi el reloj del dibujo es uno solo. */
+.viaje {
+  animation-duration: var(--duracion);
+  animation-delay: var(--retraso, 0ms);
+  animation-timing-function: var(--ease-standard);
+  animation-fill-mode: both;
+}
+
+.viaje-horizontal {
+  animation-name: viaje-horizontal;
+}
+
+.viaje-vertical {
+  animation-name: viaje-vertical;
+}
+
+@keyframes viaje-horizontal {
+  from {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(var(--recorrido));
+  }
+}
+
+@keyframes viaje-vertical {
+  from {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(var(--recorrido));
+  }
+}
+
+/* Quien pidio menos movimiento no ve viajar la venta: el estado cambia sin animar (el componente ni la dibuja; esto lo asegura). */
+@media (prefers-reduced-motion: reduce) {
+  .viaje {
+    display: none;
+  }
+}

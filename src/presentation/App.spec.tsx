@@ -9,17 +9,20 @@ import { createFakeCatalog } from '../../test/support/catalog';
 import { createFakeInventory } from '../../test/support/inventory';
 import { createFakePeople } from '../../test/support/people';
 import { createFakePurchasing } from '../../test/support/purchasing';
+import { createFakeReports } from '../../test/support/reports';
 import { createTestPwa } from '../../test/support/pwa';
 import { FakeReadCopy } from '../../test/support/read-copy';
 import { createFakeSalesHistory } from '../../test/support/sales';
 import { FakeSelling } from '../../test/support/selling';
 import { FakeShifts } from '../../test/support/shifts';
 import { FakeSyncEngine } from '../../test/support/sync-engine';
+import { createTestMascotsPreference } from '../../test/support/mascots';
 import { createTestThemePreference } from '../../test/support/theme';
 import { App } from './App';
 
 function renderApp({
   theme = createTestThemePreference().preference,
+  mascots = createTestMascotsPreference().preference,
   connection = createTestConnection(),
   auth = createTestAuth(),
   sync = new FakeSyncEngine(),
@@ -30,6 +33,7 @@ function renderApp({
   path = '/ingresar',
 }: {
   theme?: ReturnType<typeof createTestThemePreference>['preference'];
+  mascots?: ReturnType<typeof createTestMascotsPreference>['preference'];
   connection?: ReturnType<typeof createTestConnection>;
   auth?: TestAuth;
   sync?: FakeSyncEngine;
@@ -43,6 +47,7 @@ function renderApp({
     <MemoryRouter initialEntries={[path]}>
       <App
         theme={theme}
+        mascots={mascots}
         connection={connection.monitor}
         auth={auth}
         local={createTestLocal().workspace}
@@ -55,6 +60,7 @@ function renderApp({
         catalog={createFakeCatalog()}
         inventory={createFakeInventory()}
         purchasing={createFakePurchasing()}
+        reports={createFakeReports()}
         pwa={createTestPwa().pwa}
       />
     </MemoryRouter>,
@@ -143,6 +149,22 @@ describe('App', () => {
     expect(await within(screen.getByRole('main')).findByText('Ana Gómez')).toBeDefined();
   });
 
+  it('gives every screen the reports of the business, so none has to build the use case', async () => {
+    renderApp({ auth: signedIn('owner'), path: '/reportes' });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Reporte mensual' })).toBeDefined();
+    expect(await screen.findByRole('list', { name: 'Ventas por tarifa' })).toBeDefined();
+  });
+
+  it('shows the report to the management only: a cashier who types the address is told it is not for them', async () => {
+    renderApp({ auth: signedIn('cashier'), path: '/reportes' });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'No tienes acceso' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Reporte mensual' })).toBeNull();
+  });
+
   it('gives the whole interface the motion provider, so no screen has to set it up', async () => {
     renderApp({ auth: signedIn('owner'), path: '/' });
     await screen.findByText('Tienda La Esquina');
@@ -163,6 +185,19 @@ describe('App', () => {
 
     expect(applied).toEqual(['light', 'dark']);
     expect(screen.getByRole('button', { name: 'Cambiar a tema claro' })).toBeDefined();
+  });
+
+  it('gives the whole interface the mascots: Ori sleeps without a connection, and the header button takes the mascots away', async () => {
+    const connection = renderApp({ auth: signedIn('owner'), path: '/' });
+    await act(async () => {
+      await connection.health.fail();
+    });
+    expect(screen.getByRole('img', { name: 'Ori, durmiendo' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar mascotas' }));
+
+    expect(screen.queryByRole('img', { name: 'Ori, durmiendo' })).toBeNull();
+    expect(screen.getByText('Sin conexión')).toBeDefined();
   });
 
   it('starts watching the connection when it opens, and shows what the server answers', async () => {

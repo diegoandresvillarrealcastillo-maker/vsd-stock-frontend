@@ -48,6 +48,9 @@ const SALIDA_A_ENTRADA =
 const PRESENTACION_A_ADAPTADORES =
   'presentation/ no importa de adapters/ ni de infrastructure/: salta los casos de uso. La interfaz recibe los casos de uso ya cableados (por un contexto o un hook en presentation/hooks/) y llama a esos casos de uso; es infrastructure/ quien los construye.';
 
+const SITIO_A_APLICACION =
+  'sitio/ (la landing, ADR 0033) solo importa de la aplicacion el dominio puro (src/domain/) y las imagenes de las mascotas (src/presentation/assets/mascotas/): es otro producto, para otras personas, y no comparte casos de uso, pantallas ni componentes. Si necesita un calculo, que viva en domain/ y asi lo usan los dos.';
+
 const DINAMICO =
   'En domain/ y application/ no se usan require ni import() dinamico: esconden dependencias que no-restricted-imports no ve. Usa un import estatico y, si hace falta algo de afuera, un puerto en domain/ports/out/.';
 
@@ -178,6 +181,26 @@ export const boundaries = [
             {
               group: ['**/adapters/**', '**/infrastructure/**'],
               message: PRESENTACION_A_ADAPTADORES,
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // ---------- La landing toma del producto el dominio y las mascotas, nada mas (ADR 0033) ----------
+  {
+    files: ['sitio/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              // Todo import que entra en el `src/` de la aplicacion y no va al dominio ni a las mascotas. La carpeta de la
+              // propia landing se llama `pagina/`, no `src/`, para que esta regla no confunda lo suyo con lo de la aplicacion.
+              regex: '(^|/)src/(?!domain/|presentation/assets/mascotas/)',
+              message: SITIO_A_APLICACION,
             },
           ],
         },

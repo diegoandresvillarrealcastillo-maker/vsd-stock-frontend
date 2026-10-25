@@ -33,11 +33,22 @@ const wireRecord = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+/** Una linea como la manda el servidor: gravada al 19 %, con el tipo que le toca. */
+const wireLine = (overrides: Record<string, unknown> = {}) => ({
+  productId: 'p',
+  quantityMilli: 1_000,
+  unitPrice: 1_000,
+  discount: 0,
+  taxRateBp: 1_900,
+  taxKind: 'taxed',
+  ...overrides,
+});
+
 const wireDetail = (overrides: Record<string, unknown> = {}) => ({
   ...wireRecord(),
   lines: [
-    { productId: 'p-arroz', quantityMilli: 2_000, unitPrice: 3_200, discount: 0, taxRateBp: 1_900 },
-    { productId: 'p-pan', quantityMilli: 3_000, unitPrice: 2_800, discount: 0, taxRateBp: 1_900 },
+    wireLine({ productId: 'p-arroz', quantityMilli: 2_000, unitPrice: 3_200 }),
+    wireLine({ productId: 'p-pan', quantityMilli: 3_000, unitPrice: 2_800 }),
   ],
   payments: [{ method: 'cash', amount: 14_800, reference: null }],
   summary: {
@@ -88,6 +99,7 @@ describe('reading a sale of the list', () => {
     });
     const voided = record({
       voided: {
+        folio: 'ANU-000007',
         voidedAt: '2026-10-19T21:20:00.000Z',
         voidedByUserId: 'u-3',
         operationId: 'op-9',
@@ -101,6 +113,7 @@ describe('reading a sale of the list', () => {
       note: 'Ajustado',
     });
     expect(voided.voided).toEqual({
+      folio: 'ANU-000007',
       voidedAt: new Date('2026-10-19T21:20:00.000Z'),
       voidedByUserId: 'u-3',
       operationId: 'op-9',
@@ -140,10 +153,17 @@ describe('reading a sale of the list', () => {
       }),
       wireRecord({ voided: 'si' }),
       wireRecord({
-        voided: { voidedAt: 'ayer', voidedByUserId: 'u', operationId: 'o', reason: 'r' },
+        voided: {
+          folio: 'ANU-000001',
+          voidedAt: 'ayer',
+          voidedByUserId: 'u',
+          operationId: 'o',
+          reason: 'r',
+        },
       }),
       wireRecord({
         voided: {
+          folio: 'ANU-000001',
           voidedAt: '2026-10-19T21:20:00.000Z',
           voidedByUserId: 'u',
           operationId: 3,
@@ -152,10 +172,47 @@ describe('reading a sale of the list', () => {
       }),
       wireRecord({
         voided: {
+          folio: 'ANU-000001',
           voidedAt: '2026-10-19T21:20:00.000Z',
           voidedByUserId: 'u',
           operationId: 'o',
           reason: null,
+        },
+      }),
+      wireRecord({
+        voided: {
+          folio: 'ANU-000001',
+          voidedAt: '2026-10-19T21:20:00.000Z',
+          voidedByUserId: 7,
+          operationId: 'o',
+          reason: 'r',
+        },
+      }),
+      // Una anulación sin folio, o con uno que no es texto, no es la que el contrato promete (ADR 0036 del backend).
+      wireRecord({
+        voided: {
+          voidedAt: '2026-10-19T21:20:00.000Z',
+          voidedByUserId: 'u',
+          operationId: 'o',
+          reason: 'r',
+        },
+      }),
+      wireRecord({
+        voided: {
+          folio: 7,
+          voidedAt: '2026-10-19T21:20:00.000Z',
+          voidedByUserId: 'u',
+          operationId: 'o',
+          reason: 'r',
+        },
+      }),
+      wireRecord({
+        voided: {
+          folio: null,
+          voidedAt: '2026-10-19T21:20:00.000Z',
+          voidedByUserId: 'u',
+          operationId: 'o',
+          reason: 'r',
         },
       }),
       wireRecord({ attention: 1 }),
@@ -177,8 +234,16 @@ describe('reading a whole sale', () => {
         unitPrice: 3_200,
         discount: 0,
         taxRateBp: 1_900,
+        taxKind: 'taxed',
       },
-      { productId: 'p-pan', quantityMilli: 3_000, unitPrice: 2_800, discount: 0, taxRateBp: 1_900 },
+      {
+        productId: 'p-pan',
+        quantityMilli: 3_000,
+        unitPrice: 2_800,
+        discount: 0,
+        taxRateBp: 1_900,
+        taxKind: 'taxed',
+      },
     ]);
     expect(sale?.payments).toEqual([{ method: 'cash', amount: 14_800, reference: null }]);
     expect(sale?.summary).toEqual({
@@ -193,21 +258,17 @@ describe('reading a whole sale', () => {
     for (const bad of [
       wireDetail({ lines: 'x' }),
       wireDetail({ lines: [null] }),
-      wireDetail({
-        lines: [{ productId: 7, quantityMilli: 1, unitPrice: 1, discount: 0, taxRateBp: 0 }],
-      }),
-      wireDetail({
-        lines: [{ productId: 'p', quantityMilli: 1.5, unitPrice: 1, discount: 0, taxRateBp: 0 }],
-      }),
-      wireDetail({
-        lines: [{ productId: 'p', quantityMilli: 1, unitPrice: '1', discount: 0, taxRateBp: 0 }],
-      }),
-      wireDetail({
-        lines: [{ productId: 'p', quantityMilli: 1, unitPrice: 1, discount: null, taxRateBp: 0 }],
-      }),
-      wireDetail({
-        lines: [{ productId: 'p', quantityMilli: 1, unitPrice: 1, discount: 0, taxRateBp: 700 }],
-      }),
+      wireDetail({ lines: [wireLine({ productId: 7 })] }),
+      wireDetail({ lines: [wireLine({ quantityMilli: 1.5 })] }),
+      wireDetail({ lines: [wireLine({ unitPrice: '1' })] }),
+      wireDetail({ lines: [wireLine({ discount: null })] }),
+      wireDetail({ lines: [wireLine({ taxRateBp: 700 })] }),
+      wireDetail({ lines: [wireLine({ taxKind: undefined })] }),
+      wireDetail({ lines: [wireLine({ taxKind: 'unclassified' })] }),
+      wireDetail({ lines: [wireLine({ taxKind: 1 })] }),
+      wireDetail({ lines: [wireLine({ taxKind: 'taxed', taxRateBp: 0 })] }),
+      wireDetail({ lines: [wireLine({ taxKind: 'exempt', taxRateBp: 1_900 })] }),
+      wireDetail({ lines: [wireLine({ taxKind: 'excluded', taxRateBp: 500 })] }),
       wireDetail({ payments: 'x' }),
       wireDetail({ payments: [null] }),
       wireDetail({ payments: [{ method: 'cheque', amount: 1, reference: null }] }),
@@ -229,6 +290,17 @@ describe('reading a whole sale', () => {
     }
   });
 
+  it.each([
+    ['taxed', 1_900],
+    ['taxed', 500],
+    ['exempt', 0],
+    ['excluded', 0],
+  ] as const)('reads a line sold as %s at %i basis points', (taxKind, taxRateBp) => {
+    const sale = parseSaleDetail(wireDetail({ lines: [wireLine({ taxKind, taxRateBp })] }));
+
+    expect(sale?.lines[0]).toMatchObject({ taxKind, taxRateBp });
+  });
+
   it('says what each line cost: what it is worth less the discount', () => {
     expect(
       saleLineAmount({
@@ -237,6 +309,7 @@ describe('reading a whole sale', () => {
         unitPrice: 3_200,
         discount: 0,
         taxRateBp: 1_900,
+        taxKind: 'taxed',
       }),
     ).toBe(6_400);
     expect(
@@ -246,6 +319,7 @@ describe('reading a whole sale', () => {
         unitPrice: 8_000,
         discount: 500,
         taxRateBp: 0,
+        taxKind: 'exempt',
       }),
     ).toBe(11_500);
   });
@@ -276,6 +350,7 @@ describe('where a sale is', () => {
     const voided = record({
       attention: true,
       voided: {
+        folio: 'ANU-000002',
         voidedAt: '2026-10-19T21:20:00.000Z',
         voidedByUserId: 'u-3',
         operationId: 'op-9',

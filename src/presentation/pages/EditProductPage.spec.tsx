@@ -17,6 +17,7 @@ const ARROZ = testProduct({
   unit: 'unit',
   unitPrice: 3200,
   taxRateBp: 500,
+  taxKind: 'taxed',
   categoryId: 'granos',
   minStockMilli: 10_000,
 });
@@ -78,11 +79,28 @@ describe('EditProductPage', () => {
     expect(value('Código de barras (opcional)')).toBe('7701234567897');
     expect(value('Unidad')).toBe('unit');
     expect(value('Precio de venta (IVA incluido)')).toBe('3200');
-    expect(screen.getByRole<HTMLInputElement>('radio', { name: '5 %' }).checked).toBe(true);
+    expect(screen.getByRole<HTMLInputElement>('radio', { name: 'Gravado 5 %' }).checked).toBe(true);
     expect(value('Categoría')).toBe('granos');
     expect(value('Existencia mínima (opcional)')).toBe('10');
     expect(screen.getByText('ARR-500')).toBeDefined();
   });
+
+  it.each([
+    ['taxed', 1900, 'Gravado 19 %'],
+    ['exempt', 0, 'Exento'],
+    ['excluded', 0, 'Excluido'],
+  ] as const)(
+    'shows a product of the kind %s with %i basis points as «%s»',
+    async (taxKind, taxRateBp, label) => {
+      setup(createFakeCatalog([testProduct({ id: 'arroz', taxKind, taxRateBp })], CATEGORIES));
+      await screen.findByRole('heading', { level: 1 });
+
+      expect(screen.getByRole<HTMLInputElement>('radio', { name: label }).checked).toBe(true);
+      expect(screen.getAllByRole<HTMLInputElement>('radio').filter((r) => r.checked)).toHaveLength(
+        1,
+      );
+    },
+  );
 
   it('shows a product without barcode, category or minimum as empty fields', async () => {
     setup(
@@ -143,7 +161,7 @@ describe('EditProductPage', () => {
       type('SKU (código interno)', 'ARR-501');
       type('Código de barras (opcional)', '');
       fireEvent.change(screen.getByLabelText('Unidad'), { target: { value: 'kilogram' } });
-      fireEvent.click(screen.getByRole('radio', { name: '19 %' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Gravado 19 %' }));
       fireEvent.change(screen.getByLabelText('Categoría'), { target: { value: '' } });
       type('Existencia mínima (opcional)', '');
       save();
@@ -154,9 +172,60 @@ describe('EditProductPage', () => {
         barcode: null,
         unit: 'kilogram',
         taxRateBp: 1900,
+        taxKind: 'taxed',
         categoryId: null,
         minStockMilli: null,
       });
+    });
+
+    it.each([
+      ['Gravado 19 %', 1900, 'taxed'],
+      ['Exento', 0, 'exempt'],
+      ['Excluido', 0, 'excluded'],
+    ] as const)(
+      'sends the rate and the kind together when the IVA changes to «%s»',
+      async (label, taxRateBp, taxKind) => {
+        const { catalog } = setup();
+        await screen.findByRole('heading', { level: 1 });
+
+        fireEvent.click(screen.getByRole('radio', { name: label }));
+        save();
+
+        await screen.findByText('Cambios guardados.');
+        expect(catalog.updateProduct).toHaveBeenCalledWith('arroz', { taxRateBp, taxKind });
+      },
+    );
+
+    it('moves a product from exempt to excluded, which changes the kind and not the rate, and sends both', async () => {
+      const { catalog } = setup(
+        createFakeCatalog(
+          [testProduct({ id: 'arroz', taxKind: 'exempt', taxRateBp: 0 })],
+          CATEGORIES,
+        ),
+      );
+      await screen.findByRole('heading', { level: 1 });
+
+      fireEvent.click(screen.getByRole('radio', { name: 'Excluido' }));
+      save();
+
+      await screen.findByText('Cambios guardados.');
+      expect(catalog.updateProduct).toHaveBeenCalledWith('arroz', {
+        taxRateBp: 0,
+        taxKind: 'excluded',
+      });
+    });
+
+    it('sends nothing about the IVA when the person goes back to the one the product already had', async () => {
+      const { catalog } = setup();
+      await screen.findByRole('heading', { level: 1 });
+
+      fireEvent.click(screen.getByRole('radio', { name: 'Exento' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Gravado 5 %' }));
+      type('Nombre', 'Arroz Diana');
+      save();
+
+      await screen.findByText('Cambios guardados.');
+      expect(catalog.updateProduct).toHaveBeenCalledWith('arroz', { name: 'Arroz Diana' });
     });
 
     it('sends a new category and a new minimum', async () => {
@@ -410,12 +479,14 @@ describe('EditProductPage', () => {
     });
 
     it('the IVA', async () => {
-      await saved({ taxRateBp: 1900 }, () =>
-        fireEvent.click(screen.getByRole('radio', { name: '0 %' })),
+      await saved({ taxRateBp: 1900, taxKind: 'taxed' }, () =>
+        fireEvent.click(screen.getByRole('radio', { name: 'Exento' })),
       );
 
-      expect(screen.getByRole<HTMLInputElement>('radio', { name: '19 %' }).checked).toBe(true);
-      expect(screen.getByRole<HTMLInputElement>('radio', { name: '0 %' }).checked).toBe(false);
+      expect(screen.getByRole<HTMLInputElement>('radio', { name: 'Gravado 19 %' }).checked).toBe(
+        true,
+      );
+      expect(screen.getByRole<HTMLInputElement>('radio', { name: 'Exento' }).checked).toBe(false);
     });
 
     it('the category', async () => {

@@ -102,10 +102,59 @@ son JavaScript y no cuentan.
 
 **El presupuesto es un techo, no una meta.** Lo que falta del Ciclo 3 (el almacenamiento cifrado, el motor de
 sincronización y la pantalla de venta) cabe en los 38 KB que quedan; si no cupiera, la salida está en
-[`docs/aplicacion-instalable.md`](aplicacion-instalable.md): separar por rutas las pantallas de administración. El CI ejecuta
-`npm run budget` después de compilar y rompe si alguna de las tres partes se pasa.
+[`docs/aplicacion-instalable.md`](aplicacion-instalable.md): separar por rutas las pantallas de administración (se hizo en
+C4-R0, más abajo). El CI ejecuta `npm run budget` después de compilar y rompe si alguna parte se pasa.
+
+### Después de C4-R0 (la administración baja aparte)
+
+Medido con `npm run budget` (gzip al nivel 9) sobre la compilación de C4-R0, con el tipo tributario (C4-E1) ya dentro:
+
+| Pieza                                              | Antes (un solo archivo) | Cada pantalla por su lado | **Ahora (un trozo de administración)** | Presupuesto |
+| -------------------------------------------------- | ----------------------: | ------------------------: | -------------------------------------: | ----------: |
+| Archivos de JavaScript                             |                       1 |                        21 |                                      2 |           — |
+| JavaScript, todo                                   |                173,0 KB |                  190,5 KB |                               174,2 KB |      190 KB |
+| JavaScript del arranque (lo que el mostrador paga) |                173,0 KB |                  164,4 KB |                               159,5 KB |      165 KB |
+| Administración (baja al entrar a una pantalla)     |                       — |                   26,1 KB |                                14,7 KB |           — |
+
+**Qué se aprende de la tabla:**
+
+- **El arranque baja 13,5 KB (7,8 %)**: las 14 pantallas del marco de administración (inicio, catálogo, inventario, compras y
+  personas) con lo que solo ellas usan (el formulario del producto, el panel del código de invitación) ya no viajan con el
+  mostrador. No es mucho porque la administración, en gzip, pesa poco: 14,7 KB de 174,2. **El beneficio grande es el de adelante**:
+  cada pantalla que se agregue a la administración (el reporte mensual, la anulación con folio) entra en ese archivo y deja el
+  arranque como está.
+- **Partir cada pantalla en su propio archivo costaba más de lo que ahorraba.** Con 14 `import()` separados el arranque bajaba 8,6 KB
+  y el total **subía 17,5 KB**, porque cada archivo chico se comprime sin el diccionario de los demás (la administración pasaba de
+  14,7 a 26,1 KB). Por eso las rutas importan **un solo archivo** (`pages/administration.ts`, que reexporta las 14): un solo
+  destino de `import()`, un solo trozo, y el total casi no cambia (+1,2 KB por el trozo mismo).
+- **El service worker baja todo en la instalación** (guarda todo `dist/`, ver [`aplicacion-instalable.md`](aplicacion-instalable.md)),
+  así que lo que se evita es descarga y análisis **en el camino de la primera pantalla**, no el peso que se guarda en el equipo.
+
+**Los presupuestos nuevos y su razón.** Arranque **165 KB** (159,5 hoy, ~3 % de margen): es el techo del mostrador, y si una
+pantalla de administración se cuela en el arranque, este número lo dice. Total **190 KB** (era 180; 174,2 hoy): lo que se baja
+una sola vez al instalar, con sitio para las pantallas de administración que siguen en este ciclo, que ahora van a un archivo
+que no pesa en el mostrador. La comprobación del arranque lee `dist/index.html` (el script de módulo y lo que precarga), que es
+exactamente lo que el navegador pide al abrir.
+
+### Después de C4-M3 (las mascotas en la aplicación)
+
+Medido con `npm run budget` sobre la misma rama, antes y después de las mascotas, con el reporte mensual (C4-R1) ya dentro:
+
+| Pieza                                 | Antes de las mascotas |   **Ahora** | Presupuesto |
+| ------------------------------------- | --------------------: | ----------: | ----------: |
+| JavaScript, todo                      |              175,9 KB |    177,0 KB |      190 KB |
+| JavaScript del arranque               |              160,2 KB |    161,1 KB |      165 KB |
+| CSS                                   |                7,5 KB |      7,5 KB |       12 KB |
+| Dibujos en `dist/` (WebP, no cuentan) |                     0 | 6 · 75,8 KB |           — |
+
+**Qué cuesta cada cosa:**
+
+- **+1,1 KB de JavaScript, +0,9 KB en el arranque.** Es la preferencia de apagar (caso de uso, almacenamiento, proveedor y botón) y la puerta `MascotaDePantalla`. Los dos marcos llevan el botón y el cierre de turno viaja con el mostrador, por eso el arranque se mueve; el panel de la conexión y el catálogo están en el trozo de administración. El arranque queda con 3,9 KB de margen frente a su techo de 165.
+- **Las imágenes, aparte.** La aplicación ya no importa `Mascota` (que trae los 20 dibujos, 293 KB) sino los seis que usa: `dist/` pasó de 0 a 6 dibujos de la aplicación y el service worker los guarda al instalar. Ori dormida tiene que estar guardada: es la que se ve cuando no hay red. Las imágenes cargan cuando están cerca de la pantalla (`loading="lazy"`), así que ninguna retrasa lo primero que se ve.
 
 ## Lighthouse: lo más cercano a un teléfono de gama baja
+
+> La landing (`sitio/`) se mide aparte, con el mismo perfil y sus propios umbrales y presupuesto: [`rendimiento-de-la-landing.md`](rendimiento-de-la-landing.md).
 
 **Decisión (2026-10-16):** el equipo no tiene un teléfono de gama baja, así que la comprobación en un
 dispositivo real se sustituye por Lighthouse en cada PR. Lighthouse audita `dist/` con la emulación de un

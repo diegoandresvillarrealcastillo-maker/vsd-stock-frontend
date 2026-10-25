@@ -1,7 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { formatPesos } from '../../domain/model/quantity';
-import { describeDifference, parseCash } from '../../domain/model/shift';
+import { describeCount, parseCash } from '../../domain/model/shift';
 import type { ShiftState } from '../../domain/ports/in/shifts';
 import { Callout } from '../components/Callout';
 import { FormAlert } from '../components/FormAlert';
@@ -11,6 +10,7 @@ import { SubmitButton } from '../components/SubmitButton';
 import { focusField } from '../forms/focus-field';
 import { useSubmit } from '../forms/use-submit';
 import { useLocal } from '../local/LocalWorkspaceProvider';
+import { MascotaDePantalla } from '../mascotas/MascotaDePantalla';
 import { useShift } from '../shift/ShiftProvider';
 
 const FIELD = 'efectivo-contado';
@@ -18,11 +18,14 @@ const SHIFT_PATH = '/mostrador/turno';
 
 type OpenState = Extract<ShiftState, { status: 'open' }>;
 
-function Heading({ children }: { children: string }) {
+function Heading({ children, mascot }: { children: string; mascot: ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-3xl font-semibold text-fg">Cerrar turno</h1>
-      <p className="text-base text-fg-muted">{children}</p>
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex min-w-0 flex-col gap-2">
+        <h1 className="text-3xl font-semibold text-fg">Cerrar turno</h1>
+        <p className="text-base text-fg-muted">{children}</p>
+      </div>
+      {mascot}
     </div>
   );
 }
@@ -66,12 +69,22 @@ function CloseForm({
     void onClose(counted.value);
   }
 
-  const outcome = counted.ok
-    ? { counted: counted.value, note: describeDifference(counted.value - expected) }
-    : null;
+  const note = counted.ok ? describeCount(expected, counted.value) : null;
 
   return (
     <>
+      {/* Ojo de Gato (C4-M3) lee su libro mientras se cuenta y se alegra solo cuando la caja cuadra; nunca regana por una diferencia. */}
+      <Heading
+        mascot={
+          <MascotaDePantalla
+            personaje="gato"
+            estado={note?.kind === 'balanced' ? 'feliz' : 'normal'}
+            className="shrink-0"
+          />
+        }
+      >
+        Cuenta el efectivo que hay en la caja y escríbelo. Te decimos si cuadra.
+      </Heading>
       {problem !== null && (
         <FormAlert title="No pudimos cerrar el turno">{problem.message}</FormAlert>
       )}
@@ -92,12 +105,9 @@ function CloseForm({
           disabled={pending}
           {...(missing === undefined ? {} : { error: missing })}
         />
-        {outcome !== null && (
-          <Callout
-            tone={outcome.note.kind === 'balanced' ? 'ok' : 'warn'}
-            title={outcome.note.title}
-          >
-            {`Esperabas ${formatPesos(expected)} y contaste ${formatPesos(outcome.counted)}.${outcome.note.kind === 'balanced' ? '' : ' Si cierras así, queda anotado.'}`}
+        {note !== null && (
+          <Callout tone={note.kind === 'balanced' ? 'ok' : 'warn'} title={note.title}>
+            {`${note.detail}${note.kind === 'balanced' ? '' : ' Si cierras así, queda anotado.'}`}
           </Callout>
         )}
         <SubmitButton pending={pending} pendingLabel="Guardando…">
@@ -135,14 +145,17 @@ export function CloseShiftPage() {
   if (open === null) {
     return (
       <>
-        <Heading>No tienes un turno abierto que cerrar.</Heading>
+        <Heading
+          mascot={<MascotaDePantalla personaje="gato" estado="dormida" className="shrink-0" />}
+        >
+          No tienes un turno abierto que cerrar.
+        </Heading>
         <BackToShift />
       </>
     );
   }
   return (
     <>
-      <Heading>Cuenta el efectivo que hay en la caja y escríbelo. Te decimos si cuadra.</Heading>
       <CloseForm expected={open.summary.expectedAmount} onSaving={setSaving} />
       <BackToShift />
     </>

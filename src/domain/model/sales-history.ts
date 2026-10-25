@@ -1,6 +1,7 @@
 import { Money } from './money';
 import type { QueuedOperation } from './outbox';
 import { lineTotal } from './sale-totals';
+import { isTaxKind, taxKindFitsRate, type TaxKind } from './tax';
 
 // Las ventas que el servidor ya tiene (C3-13, ADR 0027): lo que la lista y el detalle leen de la red, y lo que se dice de cada una.
 // Los datos de la red no son de fiar: cada lector devuelve `null` si algo no es lo que dice el contrato.
@@ -29,6 +30,8 @@ export interface SaleReview {
 
 /** Quién la anuló, cuándo y por qué. Una venta anulada no se borra ni se edita. */
 export interface SaleVoid {
+  /** El folio propio de la anulación, como `ANU-000001`: una secuencia del negocio, sin saltos (ADR 0036 del backend). */
+  readonly folio: string;
   readonly voidedAt: Date;
   readonly voidedByUserId: string;
   readonly operationId: string;
@@ -63,6 +66,8 @@ export interface SaleLineView {
   readonly unitPrice: number;
   readonly discount: number;
   readonly taxRateBp: number;
+  /** Gravado, exento o excluido: como se vendio la linea (ADR 0034 del backend). */
+  readonly taxKind: TaxKind;
 }
 
 export interface SalePaymentView {
@@ -129,12 +134,12 @@ export function parseReview(value: unknown): SaleReview | null {
 
 function parseVoid(value: unknown): SaleVoid | null {
   if (!isRecord(value)) return null;
-  const { voidedByUserId, operationId, reason } = value;
+  const { folio, voidedByUserId, operationId, reason } = value;
   const voidedAt = readDate(value['voidedAt']);
-  if (voidedAt === null) return null;
+  if (voidedAt === null || typeof folio !== 'string') return null;
   if (typeof voidedByUserId !== 'string' || typeof operationId !== 'string') return null;
   if (typeof reason !== 'string') return null;
-  return { voidedAt, voidedByUserId, operationId, reason };
+  return { folio, voidedAt, voidedByUserId, operationId, reason };
 }
 
 export function parseSaleRecord(value: unknown): SaleRecord | null {
@@ -186,11 +191,12 @@ export function parseSaleRecord(value: unknown): SaleRecord | null {
 
 function parseLine(value: unknown): SaleLineView | null {
   if (!isRecord(value)) return null;
-  const { productId, quantityMilli, unitPrice, discount, taxRateBp } = value;
+  const { productId, quantityMilli, unitPrice, discount, taxRateBp, taxKind } = value;
   if (typeof productId !== 'string') return null;
   if (!isPesos(quantityMilli) || !isPesos(unitPrice) || !isPesos(discount)) return null;
   if (!isOneOf(RATES, taxRateBp)) return null;
-  return { productId, quantityMilli, unitPrice, discount, taxRateBp };
+  if (!isTaxKind(taxKind) || !taxKindFitsRate(taxKind, taxRateBp)) return null;
+  return { productId, quantityMilli, unitPrice, discount, taxRateBp, taxKind };
 }
 
 function parsePayment(value: unknown): SalePaymentView | null {

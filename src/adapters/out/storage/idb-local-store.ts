@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { parseProduct, type Product } from '../../../domain/model/catalog';
+import { parseStoredProduct, type Product } from '../../../domain/model/catalog';
 import { LocalKeyLostError } from '../../../domain/model/local-errors';
 import { parseProfile, type LocalProfile } from '../../../domain/model/local-profile';
 import {
@@ -273,7 +273,7 @@ export class IdbLocalStore implements LocalStore {
       const name = productName(product.id);
       const existing = await this.db.get('records', name);
       if (existing !== undefined) {
-        const current = parseProduct(await this.openOrUndefined(name, existing));
+        const current = parseStoredProduct(await this.openOrUndefined(name, existing));
         // Gana el que cambio despues: la pagina de un minuto antes puede llegar otra vez y no debe deshacer nada.
         if (current !== null && current.updatedAt.getTime() > product.updatedAt.getTime()) continue;
       }
@@ -285,7 +285,7 @@ export class IdbLocalStore implements LocalStore {
   async readProducts(): Promise<Product[]> {
     const products: Product[] = [];
     for (const record of await this.recordsStartingWith(PRODUCT_PREFIX)) {
-      const product = parseProduct(await this.openOrUndefined(record.name, record));
+      const product = parseStoredProduct(await this.openOrUndefined(record.name, record));
       if (product !== null) products.push(product);
     }
     return products;
