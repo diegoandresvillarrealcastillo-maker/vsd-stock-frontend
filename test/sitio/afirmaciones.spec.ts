@@ -681,6 +681,19 @@ describe('what has to be settled before the page is published', () => {
     }
   });
 
+  it('waits only for the answer about phones, which needs the test on a real Android (Diego, 2026-10-25)', () => {
+    expect(PENDIENTES_DE_PUBLICAR).toHaveLength(1);
+    expect(PENDIENTES_DE_PUBLICAR[0]?.quien).toBe('Samuel');
+    expect(PENDIENTES_DE_PUBLICAR[0]?.que).toMatch(/Android real/);
+  });
+
+  it('no longer waits for the reading aloud with a shopkeeper, nor for the legal notice of the first WhatsApp reply', () => {
+    const todo = PENDIENTES_DE_PUBLICAR.map((pendiente) => pendiente.que).join(' ');
+
+    expect(todo).not.toMatch(/voz alta|tienda/i);
+    expect(todo).not.toMatch(/WhatsApp|1581|aviso/i);
+  });
+
   it('refuses to publish while anything is pending, and says what', () => {
     expect(puedePublicar([])).toEqual({ puede: true, pendientes: [] });
 

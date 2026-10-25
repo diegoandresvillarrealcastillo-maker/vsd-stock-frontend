@@ -54,7 +54,7 @@ Ningún estado dice «caída», «falla» ni «error»: la API de PRE vive en un
 - **El diagrama sale dos veces:** arriba, en la entrada, y en la pestaña Vender. La pestaña lo necesitaba (la issue pide reutilizar lo de L4) y quitar el de la entrada dejaría el primer pantallazo sin su dibujo. El costo es que quien baja ve el mismo dibujo otra vez. Si Diego prefiere uno solo, es quitar una de las dos líneas (`Hero.tsx` o la pestaña en `Demo.tsx`). Cada copia lleva sus `id` (`diagrama-…` y `demo-diagrama-…`), y cada una se detiene cuando sale de pantalla (una pestaña escondida cuenta como fuera), así que en la práctica solo corre la que se ve.
 - **La banda decide cuánto mide cada demo, no al revés.** Vender mide 725 px a 1280, IVA 387 y Caja 246: la página se mueve al cambiar de pestaña. Se aceptó antes que dejar un hueco del alto de la más grande.
 - **Las tarjetas pintan su propio texto** (`text-fg`). La banda es azul con texto blanco, y una tarjeta que solo ponía su fondo heredaba el blanco: axe encontró 16 elementos blanco sobre blanco en el tema claro (15 en la calculadora y uno en el arqueo). Pasó a ser parte de `tarjeta`, `tarjetaClara` y del diagrama, y una prueba lo vigila.
-- **El texto de Vender es nuevo** (`demo.vender`) y dice lo mismo que ya dicen el diagrama y las tarjetas. Falta que alguien lo lea en voz alta con una persona que atienda una tienda, como el resto de la página.
+- **El texto de Vender es nuevo** (`demo.vender`) y dice lo mismo que ya dicen el diagrama y las tarjetas. Nadie lo ha leído en voz alta con una persona que atienda una tienda, como el resto de la página; el 25 de octubre de 2026 se pospuso y ya no frena la publicación.
 
 ## Cómo verla y qué la vigila
 

@@ -80,6 +80,15 @@ describe('docs/sitio.md', () => {
     expect(guia).toMatch(/pendient/i);
   });
 
+  it('says that the reading aloud with a shopkeeper was postponed on 2026-10-25, that the page has not been through it, and that it no longer stops the publication', () => {
+    expect(guia).toMatch(/pospu/i);
+    expect(guia).toContain('25 de octubre de 2026');
+    expect(guia).toMatch(/la p[áa]gina no pas[óo] por esa lectura/i);
+    expect(guia).toMatch(/no se ha le[ií]do en voz alta con nadie/i);
+    expect(guia).not.toMatch(/sigue siendo un pendiente de publicaci/);
+    expect(guia).not.toMatch(/mientras falte, por ejemplo, haber le[ií]do el texto en voz alta/);
+  });
+
   it.each([...NOMBRES_DE_COMPROBACIONES])(
     'says that the check "%s" is made when verifying',
     (nombre) => {

@@ -171,7 +171,7 @@ al menos un elemento).
 - **Solo Chromium.** Firefox y WebKit no corren las pruebas de la landing. axe lee el documento y no el motor, pero un layout distinto
   en Safari no se ve aquí.
 - **El contraste lo miden programas.** Ninguna persona con poca visión miró la página.
-- **La lectura en voz alta del texto con una persona de tienda está pendiente.** Es parte de lo que pide L7 y la hace Diego; el
-  resultado queda en el PR. El texto de la pestaña «Vender» (nuevo en L6) tampoco se ha leído en voz alta con nadie.
+- **La lectura en voz alta del texto con una persona de tienda no se ha hecho.** Era parte de lo que pide L7; el 25 de octubre de 2026 Diego
+  decidió que ya no frena la publicación y la dejó para más adelante. El texto de la pestaña «Vender» (nuevo en L6) tampoco se ha leído en voz alta con nadie.
 - **El chip y la API de PRE dormida de verdad.** Las pruebas contestan `/health` a su manera; mirarlo una vez con la API de PRE
   realmente dormida sigue pendiente.
