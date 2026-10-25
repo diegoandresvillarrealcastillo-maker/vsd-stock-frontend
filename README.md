@@ -500,7 +500,7 @@ naranja del logo (`#f97801`) solo como acento.**
   almacenamiento): [`docs/recorrido-del-ciclo-3.md`](docs/recorrido-del-ciclo-3.md).
 - Las cinco mascotas (Fungito, Sparky, Ojo de Gato, Obsidian y Ori): el componente, qué estado ya es cierto en el producto y qué
   prometen sus historias que todavía no existe: [`docs/mascotas.md`](docs/mascotas.md).
-- El diagrama «Cortar internet» de la landing (la máquina de las ventas, qué dice el teléfono, cuándo se mueve y cuándo no): [`docs/diagrama-de-la-venta.md`](docs/diagrama-de-la-venta.md).
+- El diagrama «Cómo viaja una venta» de la landing (la máquina de las ventas, qué dice el teléfono, cuándo se mueve y cuándo no): [`docs/diagrama-de-la-venta.md`](docs/diagrama-de-la-venta.md).
 - La calculadora de IVA y el arqueo de ejemplo de la landing (qué usan del producto, qué dicen, qué no hacen y por qué cada demo tiene su panel): [`docs/demos-de-la-landing.md`](docs/demos-de-la-landing.md).
 - La banda de la demo de la landing (las pestañas Vender, IVA y Caja, qué se descarga y cuándo) y el chip que dice si la demo de pruebas está despierta o en reposo (cómo pregunta, qué dice, qué no sabe): [`docs/banda-de-la-demo.md`](docs/banda-de-la-demo.md).
 - Todos los ADR del proyecto, también los de este repositorio, viven en el backend:

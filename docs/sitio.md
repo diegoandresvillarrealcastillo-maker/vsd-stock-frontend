@@ -114,6 +114,19 @@ El subdominio es el nombre del proyecto: `vsd-stock-sitio` es `vsd-stock-sitio.p
 
 Si la dirección cambia, avisa a quien tenga el enlace: el de WhatsApp, el de las redes y el de la demo de PRE se escriben en `sitio/pagina/destinos.ts`.
 
+## Cómo se escribe el texto
+
+Todo el texto de la página vive en `sitio/pagina/contenido.ts` y se escribe en **lenguaje de tendero**: las palabras que se dicen en el mostrador, no las del
+equipo que lo construyó. Una auditoría de QA (2026-10-25) leyó la página como la leería un tendero y marcó la jerga que había: «servidor», «cola de envío»,
+«base», «folio», «gerencia», «demo», «tienda piloto», «Backend», «Frontend», «ADR»… Cada una tiene hoy su frase de tendero («tu cuenta», «ventas por enviar»,
+«valor sin IVA», «numeración de los comprobantes», «el dueño o administrador», «prueba con ventas de ejemplo», «probarlo en mi tienda», «información técnica»).
+
+`test/sitio/afirmaciones.spec.ts` impide que vuelvan (el bloque «the page speaks the language of a shopkeeper») y vigila lo demás que la página no puede afirmar
+(facturas, tarjetas, precios, funciones que no existen). Si una palabra de la lista es de verdad necesaria en una frase, se discute antes de quitarla de la lista:
+la lista es la memoria de lo que un tendero no entendió.
+
+Esa auditoría **no fue una prueba con un tendero**: leer la página en voz alta con uno sigue siendo un pendiente de publicación (`sitio/pagina/pendientes.ts`).
+
 ## Si algo sale mal
 
 - **Se niega a publicar:** lee las razones, que salen todas juntas. Cada una dice qué cambiar.
@@ -135,7 +148,7 @@ Si la dirección cambia, avisa a quien tenga el enlace: el de WhatsApp, el de la
 
 ## Otros documentos de la landing
 
-- El diagrama «Cortar internet» (la máquina de las ventas, qué dice el teléfono): [`docs/diagrama-de-la-venta.md`](diagrama-de-la-venta.md).
+- El diagrama «Cómo viaja una venta» (la máquina de las ventas, qué dice el teléfono): [`docs/diagrama-de-la-venta.md`](diagrama-de-la-venta.md).
 - La banda de la demo y el chip del estado de PRE: [`docs/banda-de-la-demo.md`](banda-de-la-demo.md).
 - Rendimiento, accesibilidad y movimiento reducido (qué se midió y el presupuesto de peso): [`docs/rendimiento-de-la-landing.md`](rendimiento-de-la-landing.md).
 - Las mascotas y lo que sus historias prometen: [`docs/mascotas.md`](mascotas.md).

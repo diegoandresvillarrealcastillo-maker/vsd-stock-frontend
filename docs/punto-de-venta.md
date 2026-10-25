@@ -19,7 +19,7 @@ cada persona ([`almacenamiento-local.md`](almacenamiento-local.md)).
    Una sola forma de pago por venta. «Confirmar venta» la guarda **en este equipo**: no hace falta conexión.
 
 3. **Comprobante** (`/mostrador/comprobante`). Muestra el folio, lo vendido, lo cobrado y el vuelto, y dice dónde está la venta:
-   «Guardada en este equipo. Se envía cuando haya conexión.», «Guardada y enviada al servidor.» o, si el servidor no la aceptó, «El
+   «Guardada en este equipo. Se envía cuando haya conexión.», «Venta guardada en tu cuenta.» o, si el servidor no la aceptó, «El
    servidor no la aceptó: la gerencia puede revisarla.». **No es una factura**, y lo dice. «Nueva venta» vuelve a vender.
 
 Sin un turno abierto la pantalla no vende: dice «Abre un turno para vender» y lleva al turno.

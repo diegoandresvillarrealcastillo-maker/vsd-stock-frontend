@@ -30,7 +30,7 @@ test('nothing is blocked and nothing logs an error while the page is opened and 
     await page.getByRole('tab', { name: pestana }).click();
     await expect(page.getByRole('tabpanel', { name: pestana })).toBeVisible();
   }
-  await page.getByRole('switch', { name: 'Cortar internet' }).first().click();
+  await page.getByRole('switch', { name: 'Simular una caída de internet' }).first().click();
   await page.getByRole('button', { name: 'Cambiar entre tema claro y oscuro' }).first().click();
   await page.waitForTimeout(500);
 

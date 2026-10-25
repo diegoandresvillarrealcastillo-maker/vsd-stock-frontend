@@ -19,5 +19,5 @@ export const REPOSITORIO_FRONTEND =
  * cookies, ni analitica (ADR 0033). El numero es publico: recibira mensajes no deseados.
  */
 export const WHATSAPP_NUMERO = '573245889281';
-export const WHATSAPP_MENSAJE = 'Hola, quiero ser tienda piloto de VSD Stock.';
+export const WHATSAPP_MENSAJE = 'Hola, quiero probar VSD Stock en mi tienda.';
 export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(WHATSAPP_MENSAJE)}`;

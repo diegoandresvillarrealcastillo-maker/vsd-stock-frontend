@@ -79,7 +79,7 @@ test.describe('landing with less motion asked for', () => {
   }) => {
     await abrir(page);
 
-    await page.getByRole('switch', { name: 'Cortar internet' }).first().click();
+    await page.getByRole('switch', { name: 'Simular una caída de internet' }).first().click();
     // Mas que lo que espera el dibujo antes de que salga una venta (1,4 s) mas lo que tarda en llegar (0,7 s).
     await page.waitForTimeout(3_000);
 
@@ -107,7 +107,7 @@ test.describe('landing without asking for less motion', () => {
     await abrir(page);
 
     // El dibujo solo se mueve mientras se ve en pantalla: se lleva el interruptor a la vista y se corta el internet.
-    const interruptor = page.getByRole('switch', { name: 'Cortar internet' }).first();
+    const interruptor = page.getByRole('switch', { name: 'Simular una caída de internet' }).first();
     await interruptor.scrollIntoViewIfNeeded();
     await interruptor.click();
     await expect(page.locator('.viaje').first()).toBeAttached({ timeout: 10_000 });
