@@ -84,6 +84,8 @@ describe('docs/recorrido-del-ciclo-3.md', () => {
     ['Enviando…', 'src/domain/model/sync-summary.ts'],
     ['Sin conexión', 'src/domain/model/sync-summary.ts'],
     ['Todo enviado', 'src/domain/model/sync-summary.ts'],
+    ['Falta entrar con tu contraseña', 'src/domain/model/sync-summary.ts'],
+    ['Entrar con contraseña', 'src/presentation/sync/SyncStatus.tsx'],
     ['Por enviar', `${pantallas}/SalesPage.tsx`],
     ['Mi turno', `${pantallas}/SalesPage.tsx`],
     ['No pudimos cargar las ventas', `${pantallas}/SalesPage.tsx`],
@@ -110,6 +112,44 @@ describe('docs/recorrido-del-ciclo-3.md', () => {
 
     expect(filas.length).toBeGreaterThanOrEqual(25);
     expect(filas).toEqual(filas.map((_, indice) => indice + 1));
+  });
+
+  describe('when the connection comes back after «Continuar sin conexión» (row 19, #108)', () => {
+    const fila = (numero: number) =>
+      new RegExp(`^\\| ${String(numero)} +\\|.*$`, 'm').exec(seccion('Lo que se recorre'))?.[0] ??
+      '';
+
+    it('says that there is no session, so nothing is sent by itself, and what the card offers', () => {
+      const diecinueve = fila(19).replaceAll(/\s+/g, ' ');
+
+      expect(diecinueve).toContain('Falta entrar con tu contraseña');
+      expect(diecinueve).toContain('Entrar con contraseña');
+      // Lo que no puede pasar: que el boton borre lo guardado.
+      expect(diecinueve).toContain('no borra nada');
+      expect(diecinueve).toContain('Todo enviado');
+    });
+
+    it('puts the card before the password and the password before «Todo enviado»: nothing is sent without it', () => {
+      const diecinueve = fila(19);
+
+      const tarjeta = diecinueve.indexOf('Falta entrar con tu contraseña');
+      const contrasena = diecinueve.indexOf('escribir la contraseña');
+      const enviado = diecinueve.indexOf('«Todo enviado»');
+      expect(tarjeta).toBeGreaterThan(-1);
+      expect(contrasena).toBeGreaterThan(tarjeta);
+      expect(enviado).toBeGreaterThan(contrasena);
+    });
+
+    it('asks to repeat row 19 by the other way, with the session alive, because the run only went through the first', () => {
+      expect(documento).toContain('Fila 19, por el otro camino');
+      expect(documento).toContain('sin cerrar la aplicación');
+      expect(documento).toContain('sin que nadie escriba la contraseña');
+    });
+
+    it('counts the password of row 19 among those that are measured, in the row and in the table', () => {
+      expect(fila(21)).toContain('las filas 2, 4, 19 y esta');
+      expect(seccion('Qué se mide')).toContain('(2, 4, 19, 21 y las que se sumen)');
+    });
   });
 
   it('names the routes of the counter, which are the ones of the router', () => {

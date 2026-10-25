@@ -2,10 +2,23 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest';
 import { createTestAuth, testMe, testSession } from '../../../test/support/auth';
 import { createTestConnection } from '../../../test/support/connection';
+import { createTestLocal, rememberPerson } from '../../../test/support/local';
 import { renderScreen } from '../../../test/support/screens';
 import { FakeSyncEngine } from '../../../test/support/sync-engine';
+import type { LocalProfile } from '../../domain/model/local-profile';
 import type { SyncState } from '../../domain/ports/in/sync-engine';
 import { SyncStatus } from './SyncStatus';
+
+const ANA: LocalProfile = {
+  authUserId: 'ana',
+  email: 'ana@example.com',
+  userId: 'u-ana',
+  businessId: 'b-1',
+  businessName: 'Tienda La Esquina',
+  role: 'cashier',
+  fullName: 'Ana Gómez',
+  verifiedAt: '2026-10-17T10:00:00.000Z',
+};
 
 function mount(state: Partial<SyncState> = {}, options: { online?: boolean } = {}) {
   const auth = createTestAuth({ stored: testSession('ana') });
@@ -116,6 +129,83 @@ describe('SyncStatus', () => {
       await waitFor(() => {
         expect(auth.sessions.current()).toBeNull();
       });
+    });
+  });
+
+  describe('when the counter was resumed without a connection: nobody entered with a password, so there is no session', () => {
+    /** El mostrador reanudado desde «Continuar sin conexión»: hay base abierta y registros por enviar, pero ninguna sesión. */
+    async function resumed(state: Partial<SyncState>) {
+      const local = createTestLocal();
+      rememberPerson(local, ANA);
+      local.stores.dataOf('ana').pending = 3;
+      await local.workspace.resume();
+      const sync = new FakeSyncEngine(state);
+      const view = renderScreen(<SyncStatus />, {
+        local,
+        sync,
+        connection: createTestConnection({ online: true }),
+      });
+      return { ...view, local, sync };
+    }
+
+    it('says that the password is missing, not that a session expired: there was none', async () => {
+      await resumed({ sessionExpired: true, pending: 3 });
+
+      expect(within(region()).getByText('Falta entrar con tu contraseña')).toBeDefined();
+      expect(within(region()).queryByText('Tu sesión caducó')).toBeNull();
+      expect(region().textContent).toContain('Entra con tu contraseña para enviarlos.');
+      expect(region().textContent).toContain('Los registros guardados no se pierden.');
+    });
+
+    it('takes the person to the sign-in page with the button of the card, which does something', async () => {
+      await resumed({ sessionExpired: true, pending: 3 });
+      expect(screen.getByTestId('ruta').textContent).toBe('/');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Entrar con contraseña' }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('ruta').textContent).toBe('/ingresar');
+      });
+    });
+
+    it('does not forget what is saved here to get there: the records and the person stay', async () => {
+      const { local } = await resumed({ sessionExpired: true, pending: 3 });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Entrar con contraseña' }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('ruta').textContent).toBe('/ingresar');
+      });
+      expect(local.stores.forgotten).toEqual([]);
+      expect(local.pointer.get()).toBe('ana');
+      expect(local.workspace.current()).not.toBeNull();
+      expect(local.stores.dataOf('ana').pending).toBe(3);
+    });
+
+    it('does not offer the button of a person who has a session', async () => {
+      await resumed({ sessionExpired: true, pending: 3 });
+
+      expect(screen.queryByRole('button', { name: 'Entrar de nuevo' })).toBeNull();
+    });
+  });
+
+  describe('while the account is still being asked who the person is', () => {
+    it('still has a session to close: the card is the one of a session that expired, and its button closes it', () => {
+      // El primer pintado: la sesion existe (se guardo al entrar), `GET /v1/me` todavia no contesto.
+      mount({ sessionExpired: true, pending: 1 });
+
+      expect(within(region()).getByText('Tu sesión caducó')).toBeDefined();
+      expect(screen.getByRole('button', { name: 'Entrar de nuevo' })).toBeDefined();
+      expect(screen.queryByRole('button', { name: 'Entrar con contraseña' })).toBeNull();
+    });
+  });
+
+  describe('a button that would do nothing is not offered', () => {
+    it('does not offer to try again while it is offline, even if sending failed before', () => {
+      mount({ attention: 1, phase: 'waiting', pending: 1 }, { online: false });
+
+      expect(within(region()).getByText('1 requiere atención')).toBeDefined();
+      expect(screen.queryByRole('button')).toBeNull();
     });
   });
 
