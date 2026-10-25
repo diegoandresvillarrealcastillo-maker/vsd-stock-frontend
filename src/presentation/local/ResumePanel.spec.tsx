@@ -1,8 +1,9 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { CounterLockedError } from '../../domain/model/local-errors';
 import { COUNTER_RESUME_WINDOW_MS, type LocalProfile } from '../../domain/model/local-profile';
 import { formatMoment } from '../../domain/model/moment';
+import { createTestConnection } from '../../../test/support/connection';
 import { createTestLocal, rememberPerson, type TestLocal } from '../../../test/support/local';
 import { renderScreen } from '../../../test/support/screens';
 import { SignInPage } from '../pages/SignInPage';
@@ -21,11 +22,11 @@ const profile = (verified: Date): LocalProfile => ({
   verifiedAt: verified.toISOString(),
 });
 
-function mount(verified?: Date) {
+function mount(verified?: Date, connection = createTestConnection()) {
   const local: TestLocal = createTestLocal(NOW);
   if (verified !== undefined) rememberPerson(local, profile(verified));
-  const view = renderScreen(<SignInPage />, { path: '/ingresar', local });
-  return { ...view, local };
+  const view = renderScreen(<SignInPage />, { path: '/ingresar', local, connection });
+  return { ...view, local, connection };
 }
 
 describe('what the sign-in page offers to whoever worked here before', () => {
@@ -122,6 +123,104 @@ describe('what the sign-in page offers to whoever worked here before', () => {
       const alert = await screen.findByRole('alert');
       expect(alert.textContent).toContain('No encontramos lo que tenías guardado');
       expect(screen.getByTestId('ruta').textContent).toBe('/ingresar');
+    });
+  });
+
+  describe('and the connection (ADR 0038)', () => {
+    const offered = () => screen.queryByRole('button', { name: 'Continuar sin conexión' });
+
+    it('is offered while the connection is only being checked: a sleeping API must not leave the counter shut', async () => {
+      mount(new Date(NOW.getTime() - 5 * HOUR));
+
+      await screen.findByRole('region', { name: 'Último en este equipo' });
+
+      expect(offered()).not.toBeNull();
+    });
+
+    it('is offered when there is no network at all', async () => {
+      mount(new Date(NOW.getTime() - 5 * HOUR), createTestConnection({ online: false }));
+
+      await screen.findByRole('region', { name: 'Último en este equipo' });
+
+      expect(offered()).not.toBeNull();
+    });
+
+    it('is offered when the server did not answer', async () => {
+      const { connection } = mount(new Date(NOW.getTime() - 5 * HOUR));
+      await screen.findByRole('region', { name: 'Último en este equipo' });
+
+      await act(async () => {
+        await connection.health.fail();
+      });
+
+      expect(offered()).not.toBeNull();
+    });
+
+    it('is not offered once the server answered: with a connection the way in is the password', async () => {
+      const { connection } = mount(new Date(NOW.getTime() - 5 * HOUR));
+      await screen.findByRole('region', { name: 'Último en este equipo' });
+
+      await act(async () => {
+        await connection.health.succeed();
+      });
+
+      expect(offered()).toBeNull();
+    });
+
+    it('still says who worked here, keeps their email in the field and promises that what was saved is kept', async () => {
+      const { connection } = mount(new Date(NOW.getTime() - 5 * HOUR));
+      await screen.findByRole('region', { name: 'Último en este equipo' });
+
+      await act(async () => {
+        await connection.health.succeed();
+      });
+
+      const panel = screen.getByRole('region', { name: 'Último en este equipo' });
+      expect(panel.textContent).toContain('Ana Gómez · Cajero');
+      expect(panel.textContent).toContain('Tienda La Esquina');
+      expect(panel.textContent).toContain('Lo que tienes guardado en este equipo se conserva.');
+      expect(screen.getByLabelText<HTMLInputElement>('Correo').value).toBe('ana@example.com');
+    });
+
+    it('does not talk about going on without a connection once there is one', async () => {
+      const { connection } = mount(new Date(NOW.getTime() - 5 * HOUR));
+      await screen.findByRole('region', { name: 'Último en este equipo' });
+      expect(screen.getByRole('region').textContent).toContain('Si no tienes conexión');
+
+      await act(async () => {
+        await connection.health.succeed();
+      });
+
+      expect(screen.getByRole('region').textContent).not.toContain('Si no tienes conexión');
+      expect(screen.getByRole('region').textContent).not.toContain('puedes seguir en el mostrador');
+    });
+
+    it('is offered again if the connection is lost afterwards', async () => {
+      const { connection } = mount(new Date(NOW.getTime() - 5 * HOUR));
+      await screen.findByRole('region', { name: 'Último en este equipo' });
+      await act(async () => {
+        await connection.health.succeed();
+      });
+      expect(offered()).toBeNull();
+
+      act(() => {
+        connection.hints.emit(false);
+      });
+
+      expect(offered()).not.toBeNull();
+    });
+
+    it('does not change what a blocked counter says, with or without a connection', async () => {
+      const { connection } = mount(new Date(NOW.getTime() - COUNTER_RESUME_WINDOW_MS - HOUR));
+      await screen.findByRole('region', { name: 'Último en este equipo' });
+      const before = screen.getByRole('region').textContent;
+
+      await act(async () => {
+        await connection.health.succeed();
+      });
+
+      expect(screen.getByRole('region').textContent).toBe(before);
+      expect(offered()).toBeNull();
     });
   });
 
