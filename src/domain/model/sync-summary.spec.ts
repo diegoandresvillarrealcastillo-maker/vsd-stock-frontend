@@ -127,6 +127,11 @@ describe('what the device says about sending', () => {
 
       expect(summary).toMatchObject({ headline: 'Sin conexión', action: null });
     });
+
+    it('does not offer to try again when the last record left and there is no connection to try with', () => {
+      expect(summarizeSync('offline', state({ phase: 'waiting' })).action).toBeNull();
+      expect(summarizeSync('checking', state({ phase: 'waiting' })).action).toBeNull();
+    });
   });
 
   describe('what needs attention', () => {
@@ -152,6 +157,13 @@ describe('what the device says about sending', () => {
       expect(
         summarizeSync('online', state({ attention: 1, phase: 'waiting', pending: 1 })).action,
       ).toBe('retry');
+    });
+
+    it('does not offer to try again while there is no connection to try with: the button would do nothing', () => {
+      const failed = state({ attention: 1, phase: 'waiting', pending: 1 });
+
+      expect(summarizeSync('offline', failed).action).toBeNull();
+      expect(summarizeSync('checking', failed).action).toBeNull();
     });
 
     it('comes before the connection: a problem to solve matters more than being offline', () => {
@@ -182,6 +194,64 @@ describe('what the device says about sending', () => {
         headline: 'Tu sesión caducó',
         detail: 'Entra de nuevo para seguir enviando.',
       });
+    });
+  });
+
+  describe('when the counter was resumed without a connection and there is no session at all', () => {
+    const signedOut = { signedIn: false };
+
+    it('says what is missing, the password, and not that a session expired: there was none', () => {
+      const summary = summarizeSync(
+        'online',
+        state({ sessionExpired: true, pending: 3 }),
+        signedOut,
+      );
+
+      expect(summary).toMatchObject({
+        tone: 'warn',
+        headline: 'Falta entrar con tu contraseña',
+        action: 'sign-in',
+      });
+      expect(summary.detail).toBe(
+        '3 registros por enviar. Entra con tu contraseña para enviarlos. Los registros guardados no se pierden.',
+      );
+    });
+
+    it('says it in the singular, and when nothing waits it only says what to do', () => {
+      expect(
+        summarizeSync('online', state({ sessionExpired: true, pending: 1 }), signedOut).detail,
+      ).toBe(
+        '1 registro por enviar. Entra con tu contraseña para enviarlo. Los registros guardados no se pierden.',
+      );
+      expect(summarizeSync('online', state({ sessionExpired: true }), signedOut).detail).toBe(
+        'Entra con tu contraseña para seguir enviando.',
+      );
+    });
+
+    it('still comes before everything else', () => {
+      const summary = summarizeSync(
+        'online',
+        state({ sessionExpired: true, pending: 3, attention: 1, phase: 'waiting' }),
+        signedOut,
+      );
+
+      expect(summary.headline).toBe('Falta entrar con tu contraseña');
+    });
+
+    it('changes nothing when nothing was refused for lack of a session', () => {
+      expect(summarizeSync('online', state({ pending: 2 }), signedOut)).toMatchObject({
+        headline: 'Por enviar',
+        action: null,
+      });
+      expect(summarizeSync('offline', state({ pending: 2 }), signedOut).headline).toBe(
+        'Sin conexión',
+      );
+    });
+
+    it('is what a person with a session gets when nothing says otherwise', () => {
+      expect(summarizeSync('online', state({ sessionExpired: true }), { signedIn: true })).toEqual(
+        summarizeSync('online', state({ sessionExpired: true })),
+      );
     });
   });
 });

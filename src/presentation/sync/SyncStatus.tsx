@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router';
 import { summarizeSync } from '../../domain/model/sync-summary';
 import { useAccount } from '../auth/AuthProvider';
 import { Button } from '../components/Button';
@@ -14,8 +15,12 @@ import { useSync } from './SyncProvider';
 export function SyncStatus() {
   const { state: connection } = useConnection();
   const { state, syncNow } = useSync();
-  const { signOut } = useAccount();
-  const summary = summarizeSync(connection.status, state);
+  const { state: account, signOut } = useAccount();
+  const navigate = useNavigate();
+  // Sin sesion (el mostrador se reanudo sin conexion) no hay nada que cerrar: `signOut` no hace nada, y el boton tiene que llevar
+  // a entrar con la contrasena SIN olvidar lo guardado. Con sesion, entrar de nuevo es cerrarla (ADR 0022), que conserva la cola.
+  const signedIn = account.status !== 'signed-out';
+  const summary = summarizeSync(connection.status, state, { signedIn });
 
   if (summary.tone === 'ok') {
     return (
@@ -37,10 +42,11 @@ export function SyncStatus() {
       {summary.action === 'sign-in' && (
         <Button
           onClick={() => {
-            void signOut();
+            if (signedIn) void signOut();
+            else void navigate('/ingresar');
           }}
         >
-          Entrar de nuevo
+          {signedIn ? 'Entrar de nuevo' : 'Entrar con contraseña'}
         </Button>
       )}
     </StatusCard>
