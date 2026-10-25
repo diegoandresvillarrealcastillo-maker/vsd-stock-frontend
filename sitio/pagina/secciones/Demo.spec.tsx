@@ -137,7 +137,7 @@ describe('la banda de la demo: las pestanas', () => {
     ).toEqual(claves.map((clave) => `demo-panel-${clave}`));
   });
 
-  it('abre en Vender con el diagrama vivo: el interruptor «Cortar internet» esta ahi', () => {
+  it('abre en Vender con el diagrama vivo: el interruptor «Simular una caída de internet» esta ahi', () => {
     render(<Demo />);
 
     expect(pestana('Vender').getAttribute('aria-selected')).toBe('true');

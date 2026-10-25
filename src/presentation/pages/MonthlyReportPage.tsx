@@ -79,6 +79,48 @@ function Block({
   );
 }
 
+/**
+ * Lo que hay que saber antes de usar el reporte (auditoria contable del 25 de octubre de 2026): los cuatro renglones resumen las
+ * ventas para el control interno, no alcanzan para preparar la declaracion. Va arriba, antes de cualquier cifra, y se ve aunque el mes
+ * no tenga ventas o el reporte no cargue. El reporte lo calcula al pedirlo y elige las ventas por la hora en que ocurrieron: una venta
+ * hecha sin conexion que llega despues de cerrar el mes cambia ese mes.
+ */
+function UseNotice() {
+  return (
+    <div role="note" aria-label="Para qué sirve este reporte">
+      <Callout tone="warn" title="Este reporte es de control interno, no es tu declaración de IVA">
+        <div className="flex flex-col gap-2">
+          <p>
+            No reemplaza la factura electrónica ni la declaración de impuestos. Sirve para ver cómo
+            van tus ventas y para dárselo a quien lleva tus cuentas.
+          </p>
+          <p>
+            A la declaración le faltan cosas que este reporte no tiene: tus compras y gastos, el IVA
+            que puedes descontar, las retenciones y los períodos de tu declaración (pueden ser de
+            dos meses o más). Tu contador lo concilia con sus documentos.
+          </p>
+          <ul className="flex list-disc flex-col gap-1 pl-5">
+            <li>
+              No copies el «Total vendido» como tus ingresos: lleva el IVA adentro. Para los
+              ingresos usa el valor sin IVA.
+            </li>
+            <li>
+              Si una venta hecha sin conexión llega después de cerrar el mes, ese mes cambia. Antes
+              de dárselo a tu contador, conecta todos los equipos y espera a que digan «Todo
+              enviado».
+            </li>
+            <li>
+              Exento y excluido salen como los marcaste en cada producto; si dudas de cuál es,
+              pregúntale a tu contador. Que un producto sea exento no significa que puedas descontar
+              o pedir de vuelta el IVA de tus compras.
+            </li>
+          </ul>
+        </div>
+      </Callout>
+    </div>
+  );
+}
+
 function ReportView({ report }: { report: MonthlyReport }) {
   const { sales, voids } = report;
   const label = monthLabel(report.month);
@@ -137,6 +179,7 @@ export function MonthlyReportPage() {
           Lo que vendiste en el mes, separado como lo necesita quien lleva tus cuentas.
         </p>
       </div>
+      <UseNotice />
       <div className="flex flex-col gap-3">
         <h2 aria-live="polite" className="text-2xl font-semibold text-fg">
           {monthLabel(month)}
@@ -172,9 +215,6 @@ export function MonthlyReportPage() {
         />
       )}
       {state.status === 'ready' && <ReportView report={state.data} />}
-      <Callout tone="info" title="Para el control interno y para tu contador">
-        No es la declaración de impuestos ni reemplaza la factura electrónica.
-      </Callout>
     </section>
   );
 }

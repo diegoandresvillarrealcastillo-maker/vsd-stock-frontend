@@ -1,6 +1,6 @@
 # El diagrama «Cortar internet» de la landing
 
-El primer dibujo de la landing (`sitio/`, ADR 0033) cuenta lo que hace VSD Stock sin decirlo: una venta pasa del mostrador a la cola de envío, de ahí por internet al servidor y al libro de movimientos. La persona que visita la página puede **cortar internet** con un interruptor y ver que la venta no se pierde: se queda guardada en el equipo y se envía, una tras otra, cuando la red vuelve.
+El primer dibujo de la landing (`sitio/`, ADR 0033) cuenta lo que hace VSD Stock sin decirlo: una venta pasa del mostrador a las ventas por enviar (la cola), de ahí por internet a la cuenta del negocio (el servidor) y al libro de movimientos. La persona que visita la página puede **simular una caída de internet** con un interruptor y ver que la venta no se pierde: se queda guardada en el equipo y se envía, una tras otra, cuando la red vuelve. El interruptor y los puestos dicen «Simular una caída de internet», «Ventas por enviar» y «Tu cuenta» porque una auditoría de QA (2026-10-25) leyó la página como un tendero y «Cortar internet», «Cola de envío» y «Servidor» no se entendían o parecían una acción de verdad.
 
 Es un dibujo. No llama a ninguna API, no guarda nada y los folios (`K7-000142`) son de ejemplo. Lo que sí es real es lo que dice: los textos de «Sin conexión», «por enviar» o «Todo enviado» los escribe el mismo código que los dice en la aplicación.
 
@@ -32,7 +32,7 @@ Lo que el dibujo hace solo lo decide `siguientePaso`, que también dice qué ven
 
 - **La ficha de conexión** (`Conectado` o `Sin conexión`, con su color y su punto) es una región `status`: un lector de pantalla la anuncia cuando cambia, y solo cambia al tocar el interruptor.
 - **El resumen del envío** lo escribe `summarizeSync`, el código de la aplicación: «Sin conexión · 3 registros por enviar. Están guardados solo en este equipo.», «Enviando…», «Todo enviado», «Nada por enviar». Si el titular repetiría la ficha («Sin conexión»), no se escribe dos veces. El detalle solo aparece cuando hay algo por enviar: el de «Todo enviado» trae la hora de la última vez y el servidor y el navegador la escribirían distinto.
-- **La última venta** muestra su folio y la nota de su comprobante en la aplicación: «Guardada en este equipo. Se envía cuando haya conexión.» mientras espera en la cola (aunque haya red: se guarda primero en el equipo) y «Guardada y enviada al servidor.» cuando llegó al libro.
+- **La última venta** muestra su folio y la nota de su comprobante en la aplicación: «Guardada en este equipo. Se envía cuando haya conexión.» mientras espera en la cola (aunque haya red: se guarda primero en el equipo) y «Venta guardada en tu cuenta.» cuando llegó al libro. Una prueba (`test/sitio/afirmaciones.spec.ts`) comprueba que las dos frases estén, tal cual, en `ReceiptPage.tsx`.
 - **Ori** pone la cara que le toca (`rostroDeOri`, y solo una que el producto ya hace, ver [`mascotas.md`](mascotas.md)): dormida sin conexión; feliz cuando todo llegó **y** el libro tiene al menos una venta, porque sin ninguna venta enviada no hay nada que celebrar; tranquila el resto del tiempo, también mientras la cola sale hacia el servidor.
 
 ## Cuándo se mueve y cuándo no

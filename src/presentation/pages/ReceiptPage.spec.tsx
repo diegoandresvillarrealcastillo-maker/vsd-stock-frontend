@@ -97,7 +97,7 @@ describe('ReceiptPage', () => {
         t.sync.set({ pending: 0, lastSyncedAt: new Date('2026-10-19T14:00:00.000Z') });
       });
 
-      expect(await screen.findByText('Guardada y enviada al servidor.')).toBeDefined();
+      expect(await screen.findByText('Venta guardada en tu cuenta.')).toBeDefined();
     });
 
     it('looks again when only the number of operations waiting changes', async () => {
@@ -111,7 +111,7 @@ describe('ReceiptPage', () => {
         t.sync.set({ pending: 0 });
       });
 
-      expect(await screen.findByText('Guardada y enviada al servidor.')).toBeDefined();
+      expect(await screen.findByText('Venta guardada en tu cuenta.')).toBeDefined();
     });
 
     it('looks again when only the number of operations that need attention changes', async () => {
@@ -142,7 +142,7 @@ describe('ReceiptPage', () => {
         await t.local.stores.lastStore.resolveOperations([saleId(1)]);
         t.sync.set({ lastSyncedAt: new Date('2026-10-19T14:00:00.000Z') });
       });
-      await screen.findByText('Guardada y enviada al servidor.');
+      await screen.findByText('Venta guardada en tu cuenta.');
 
       await act(async () => {
         t.selling.newSale();

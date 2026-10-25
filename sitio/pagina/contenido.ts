@@ -82,7 +82,7 @@ export const contenido = {
   meta: {
     titulo: 'VSD Stock — punto de venta, inventario y caja que no se detienen',
     descripcion:
-      'VSD Stock es el punto de venta de la tienda de barrio: vende aunque se caiga el internet, calcula el IVA de cada precio y cuadra la caja por turno. Versión en pruebas.',
+      'VSD Stock es el punto de venta de la tienda de barrio: vende aunque se caiga el internet, separa el IVA que ya está incluido en el precio y cuadra la caja por turno. Versión en pruebas.',
   },
 
   marca: 'VSD Stock',
@@ -97,7 +97,7 @@ export const contenido = {
   anuncio: {
     nombre: 'Aviso',
     etiqueta: 'EN PRUEBAS',
-    texto: 'Vender, caja y modo sin conexión ya funcionan. Buscamos tiendas piloto',
+    texto: 'Vender, caja y modo sin conexión ya funcionan. Buscamos tiendas para probarlo',
     enlace: { texto: 'Escríbenos por WhatsApp', href: WHATSAPP_URL },
   },
 
@@ -112,7 +112,7 @@ export const contenido = {
       { texto: 'Confianza', href: `#${anclas.confianza}` },
       { texto: 'Preguntas', href: `#${anclas.preguntas}` },
     ] as readonly Enlace[],
-    cta: { texto: 'Ser tienda piloto', href: WHATSAPP_URL } as Enlace,
+    cta: { texto: 'Probarlo en mi tienda', href: WHATSAPP_URL } as Enlace,
     abrirMenu: 'Abrir el menú',
     cerrarMenu: 'Cerrar el menú',
     // Un solo nombre para los dos estados: el servidor no sabe que tema eligio la persona, y el nombre no debe cambiar al cargar.
@@ -121,8 +121,8 @@ export const contenido = {
 
   /** La barra de abajo del telefono: aparece cuando el hero ya paso. */
   barraContacto: {
-    etiqueta: 'Invitación a ser tienda piloto',
-    texto: 'Buscamos tiendas piloto para probar VSD Stock.',
+    etiqueta: 'Invitación a probar VSD Stock en tu tienda',
+    texto: 'Buscamos tiendas para probar VSD Stock.',
     boton: 'Escríbenos',
     cerrar: 'Cerrar este aviso',
   },
@@ -132,13 +132,14 @@ export const contenido = {
     // El componente separa las partes con un espacio: aqui ninguna lleva espacios en los extremos.
     titulo: { antes: 'Vende aunque se caiga el', marca: 'internet', despues: '.' },
     subtitulo:
-      'VSD Stock es el punto de venta de la tienda de barrio: registra el cobro sin conexión, calcula el IVA de cada precio y cuadra la caja cuando cierras el turno.',
-    ctaPrincipal: { texto: 'Quiero ser tienda piloto', href: WHATSAPP_URL } as Enlace,
-    ctaSecundario: { texto: 'Ver la demo de pruebas', href: DEMO_DE_PRE } as Enlace,
-    nota: 'Versión en pruebas. La demo usa datos ficticios.',
+      'Registra tus ventas, controla cuántos productos te quedan y revisa cuánto dinero debe haber en caja al terminar el turno. Las ventas se guardan en el equipo y se envían a tu cuenta cuando vuelve la conexión.',
+    ctaPrincipal: { texto: 'Quiero probarlo en mi tienda', href: WHATSAPP_URL } as Enlace,
+    ctaSecundario: { texto: 'Probar con ventas de ejemplo', href: DEMO_DE_PRE } as Enlace,
+    // La factura se dice aquí, junto al primer botón (auditoría de QA): una tienda lo lee antes de escribirnos.
+    nota: 'Versión en pruebas, con acompañamiento. La prueba usa datos ficticios. VSD Stock no emite factura electrónica; esa obligación se gestiona por separado.',
     sellos: [
       'Funciona sin conexión (en pruebas)',
-      'Código a la vista',
+      'Código publicado para revisión',
       'IVA con revisión contable externa',
     ],
   },
@@ -148,22 +149,23 @@ export const contenido = {
     titulo: 'Cómo viaja una venta',
     nodos: {
       mostrador: 'Mostrador',
-      cola: 'Cola de envío',
-      servidor: 'Servidor',
+      cola: 'Ventas por enviar',
+      servidor: 'Tu cuenta',
       libro: 'Libro de movimientos',
     },
-    interruptor: 'Cortar internet',
+    // Dice que es una simulación: quien lo toca no está cortando el internet de nadie.
+    interruptor: 'Simular una caída de internet',
     estados: { conectado: 'Conectado', sinConexion: 'Sin conexión' },
     // El formato del folio de una venta (serie del equipo y consecutivo): un ejemplo, no una venta real.
     folio: 'K7-000142',
     porEnviar: 'por enviar',
     // Las dos notas de la ultima venta son las del comprobante de la aplicacion (ReceiptPage): la que espera y la que ya llego.
     guardada: 'Guardada en este equipo. Se envía cuando haya conexión.',
-    enviada: 'Guardada y enviada al servidor.',
+    enviada: 'Venta guardada en tu cuenta.',
     ultimaVenta: 'Última venta',
     telefono: 'Pantalla del teléfono del mostrador',
     descripcion:
-      'Con internet, la venta sale del mostrador, pasa por la cola de envío y llega al servidor, que la anota en el libro de movimientos. Sin internet, se queda en la cola, en el equipo, hasta que vuelva la conexión.',
+      'Con internet, la venta sale del mostrador y llega a tu cuenta, donde queda anotada en el libro de movimientos. Sin internet, se queda guardada en el equipo, entre las ventas por enviar, hasta que vuelva la conexión.',
   },
 
   problema: {
@@ -180,7 +182,7 @@ export const contenido = {
         etiqueta: 'CAJA',
         titulo: 'La caja no cuadra y nadie sabe por qué.',
         texto:
-          'Sin un turno con su apertura, sus cobros y su conteo, la diferencia no tiene dueño.',
+          'Sin un turno con su apertura, sus cobros y su conteo, es difícil saber de dónde salió la diferencia.',
       },
       {
         etiqueta: 'INVENTARIO',
@@ -190,7 +192,7 @@ export const contenido = {
       {
         etiqueta: 'IVA',
         titulo: 'El IVA, con calculadora.',
-        texto: 'Sacar la base y el IVA de cada precio a mano… y que al final no sume.',
+        texto: 'Sacar el valor sin IVA y el IVA de cada precio a mano… y que al final no sume.',
       },
     ],
   },
@@ -217,7 +219,7 @@ export const contenido = {
     ],
     /**
      * El arqueo de ejemplo: el efectivo que debe haber y el que la pagina muestra contado al abrir, en pesos. El mensaje lo escribe
-     * el dominio (`describeCount`); la diferencia entre los dos es la de la tarjeta «Una caja que cuadra» (`miniaturas.caja`).
+     * el dominio (`describeCount`); la diferencia entre los dos es la de la tarjeta «Sabes cuánto falta o sobra al cerrar» (`miniaturas.caja`).
      */
     arqueo: {
       esperado: 170000,
@@ -238,39 +240,40 @@ export const contenido = {
         id: 'sin-conexion',
         titulo: 'Sin conexión, de verdad.',
         texto:
-          'Se instala como aplicación y abre sin internet. Vender, registrar el cobro, abrir y cerrar turno y consultar existencias funcionan sin red; lo probamos con la red cortada en navegadores reales. Cada equipo lleva su propia serie de folios (K7-000142): dos cajas sin red no repiten número.',
+          'Se instala como aplicación y abre sin internet. Vender, registrar el cobro, abrir y cerrar turno y consultar existencias funcionan sin red; lo probamos con la red cortada en navegadores reales. Cada equipo numera sus propios comprobantes (K7-000142): dos cajas sin red no repiten número.',
       },
       {
         id: 'iva',
         titulo: 'IVA que siempre suma.',
         texto:
-          'Los precios llevan el IVA incluido (0 %, 5 % o 19 %). VSD Stock separa base e IVA con una sola regla de redondeo: base más IVA es siempre el total.',
+          'Los precios llevan el IVA incluido (0 %, 5 % o 19 %). VSD Stock separa el valor sin IVA y el IVA con una sola regla de redondeo: el valor sin IVA más el IVA es siempre el total.',
         ejemplo: ejemploDeApertura,
-        nota: 'El cálculo lo recalculó una revisión contable externa. Antes de vender en vivo lo validamos con quien lleva las declaraciones de tu tienda.',
+        nota: 'Una revisión contable externa comprobó estos ejemplos. Antes de usarlo con ventas reales lo validamos con quien lleva las declaraciones de tu tienda.',
       },
       {
         id: 'caja',
-        titulo: 'Una caja que cuadra.',
+        // No promete que la caja siempre cuadre: promete decir cuánto falta o sobra (auditoría de QA).
+        titulo: 'Sabes cuánto falta o sobra al cerrar.',
         texto:
-          'Turno con apertura, cobros en efectivo y otros medios por separado, conteo al cierre y la diferencia anotada. Cerrar con diferencia se permite: queda registrada para la gerencia.',
+          'Turno con apertura, cobros en efectivo y otros medios por separado, conteo al cierre y la diferencia anotada. Cerrar con diferencia se permite: queda registrada para que el dueño o administrador la revise.',
       },
       {
         id: 'inventario',
         titulo: 'Un inventario que se explica.',
         texto:
-          'La existencia es la suma de los movimientos. Anular una venta no borra nada: agrega los movimientos que la compensan, de existencia y de caja.',
+          'La existencia sale de sumar y restar los movimientos de cada producto. Si anulas una venta, VSD Stock registra la anulación y su efecto en el inventario y la caja, sin borrar la venta.',
       },
       {
         id: 'estante',
         titulo: 'El estante manda.',
         texto:
-          'Si el sistema dice que no hay y en el estante sí, vendes: la línea te avisa y la venta queda marcada para ajustar. Hoy lees códigos con tu lector USB o Bluetooth, o buscas por nombre.',
+          'Si el sistema dice que no hay y en el estante sí, vendes: el producto aparece con una advertencia y la venta queda marcada para ajustar. Hoy lees códigos con tu lector USB o Bluetooth, o buscas por nombre.',
       },
       {
         id: 'roles',
         titulo: 'Cada persona, lo suyo.',
         texto:
-          'Tres roles: dueño, administrador y cajero. El cajero vende y cuadra su turno; no ve utilidades ni anula ventas. Lo guardado en cada equipo va cifrado.',
+          'Tres roles: dueño, administrador y cajero. El cajero vende y cuadra su turno; no ve utilidades ni anula ventas. Los datos guardados en el equipo están protegidos mediante cifrado.',
         roles: ['dueño', 'administrador', 'cajero'],
       },
     ] as readonly Tarjeta[],
@@ -280,7 +283,7 @@ export const contenido = {
      */
     miniaturas: {
       sinConexion: { pendientes: 1 },
-      iva: { precio: 'Precio', base: 'Base', iva: 'IVA' },
+      iva: { precio: 'Precio', base: 'Valor sin IVA', iva: 'IVA' },
       caja: { etiqueta: 'Al cerrar el turno', diferencia: -2000 },
       inventario: {
         etiqueta: 'Movimientos',
@@ -300,16 +303,17 @@ export const contenido = {
   calculadora: {
     ejemplo: ejemploDeApertura,
     titulo: 'Pruébalo con un precio.',
-    texto: 'Escribe un precio con el IVA incluido y mira cómo VSD Stock separa la base y el IVA.',
+    texto:
+      'Escribe un precio con el IVA incluido y mira cómo VSD Stock separa el valor sin IVA y el IVA.',
     campo: 'Precio con IVA incluido',
     ayuda: 'Escribe solo números, sin puntos ni comas.',
     tarifa: 'Tarifa de IVA',
     ejemplos: 'O prueba con un ejemplo',
-    suma: 'Base más IVA',
+    suma: 'Valor sin IVA más IVA',
   },
 
   demo: {
-    etiqueta: 'LA DEMO',
+    etiqueta: 'LA PRUEBA',
     titulo: 'Corta la red. Sigue vendiendo.',
     // Las pestañas de la banda (C4-L6): una demo por pestaña, las mismas que están más arriba en la página.
     pestanas: { etiqueta: 'Elige una demostración', vender: 'Vender', iva: 'IVA', caja: 'Caja' },
@@ -318,12 +322,12 @@ export const contenido = {
     vender: {
       titulo: 'Mira qué pasa con una venta sin red.',
       texto:
-        'Corta el internet con el interruptor. La venta se guarda en el equipo y la cola de envío sube; cuando vuelve la red, sale una venta tras otra.',
+        'Simula una caída de internet con el interruptor. La venta se guarda en el equipo y aumenta el número de ventas pendientes de enviar; cuando vuelve la red, se envían una tras otra.',
     },
     cifras: [
       {
         valor: '5 de 5',
-        texto: 'ejemplos de IVA que una revisión contable externa recalculó, y coinciden',
+        texto: 'ejemplos de IVA que una revisión contable externa comprobó, y coinciden',
       },
       {
         valor: '6 cajas',
@@ -331,8 +335,8 @@ export const contenido = {
       },
       { valor: '3 roles', texto: 'dueño, administrador y cajero' },
     ],
-    boton: { texto: 'Abrir la demo de pruebas', href: DEMO_DE_PRE } as Enlace,
-    nota: 'Datos ficticios. Si lleva un rato sin uso, puede tardar unos 25 segundos en despertar.',
+    boton: { texto: 'Abrir la prueba con ventas de ejemplo', href: DEMO_DE_PRE } as Enlace,
+    nota: 'Datos ficticios. La primera carga puede tardar unos 25 segundos.',
   },
 
   limites: {
@@ -345,7 +349,7 @@ export const contenido = {
     hace: [
       'Vende y registra el cobro sin conexión',
       'Cuadra la caja por turno',
-      'Calcula el IVA incluido en el precio',
+      'Separa el IVA que ya está incluido en el precio',
       'Mantiene la existencia al día',
       'Anula ventas sin borrar nada',
     ],
@@ -363,17 +367,17 @@ export const contenido = {
     titulo: 'Hecho para que se pueda comprobar.',
     puntos: [
       {
-        titulo: 'Código a la vista',
-        texto: 'Los dos repositorios son públicos en GitHub.',
+        titulo: 'Código publicado para revisión',
+        texto: 'El código está publicado para que especialistas puedan revisarlo.',
         enlaces: [
-          { texto: 'Backend', href: REPOSITORIO_BACKEND },
-          { texto: 'Frontend', href: REPOSITORIO_FRONTEND },
+          { texto: 'Código de la parte que guarda los datos', href: REPOSITORIO_BACKEND },
+          { texto: 'Código de la aplicación', href: REPOSITORIO_FRONTEND },
         ] as readonly Enlace[],
       },
       {
         titulo: 'Decisiones escritas',
         texto:
-          'Cada decisión de arquitectura está escrita en el repositorio, con las alternativas que descartamos y lo que cuesta.',
+          'Cada decisión técnica importante está escrita, con las alternativas que descartamos y lo que cuesta.',
         enlaces: [
           { texto: 'Leer las decisiones', href: `${REPOSITORIO_BACKEND}/tree/desarrollo/docs/adr` },
         ] as readonly Enlace[],
@@ -387,7 +391,7 @@ export const contenido = {
       {
         titulo: 'IVA revisado',
         texto:
-          'Una revisión contable externa recalculó nuestros ejemplos y coinciden. Antes de vender en vivo lo validamos con quien lleva las declaraciones de tu tienda.',
+          'Una revisión contable externa comprobó nuestros ejemplos y coinciden. Antes de usarlo con ventas reales lo validamos con quien lleva las declaraciones de tu tienda.',
         enlaces: [
           {
             texto: 'Leer la revisión',
@@ -396,20 +400,20 @@ export const contenido = {
         ] as readonly Enlace[],
       },
     ],
-    sellosTitulo: 'Las decisiones que lo sostienen',
+    sellosTitulo: 'Información técnica, para especialistas',
     sellos: [
       {
-        texto: 'ADR 0014',
+        texto: 'Decisión 0014',
         detalle: 'Dinero, impuestos y redondeo',
         href: adr('0014-dinero-impuestos-y-redondeo.md'),
       },
       {
-        texto: 'ADR 0017',
+        texto: 'Decisión 0017',
         detalle: 'Roles, permisos y modo sin conexión',
         href: adr('0017-roles-permisos-y-modo-sin-conexion.md'),
       },
       {
-        texto: 'ADR 0032',
+        texto: 'Decisión 0032',
         detalle: 'Un contador revisó la mecánica del IVA',
         href: adr('0032-un-contador-reviso-la-mecanica-del-iva.md'),
       },
@@ -430,7 +434,7 @@ export const contenido = {
         estado: 'DECIDIDO',
         texto: 'Reporte mensual por tarifa, con las anulaciones y los medios de pago aparte.',
       },
-      { estado: 'PENDIENTE', texto: 'Folio propio para las anulaciones.' },
+      { estado: 'PENDIENTE', texto: 'Un número propio para cada anulación.' },
       { estado: 'PENDIENTE', texto: 'Lectura de códigos con la cámara del teléfono.' },
       { estado: 'PENDIENTE', texto: 'Varias formas de pago en una misma venta.' },
     ],
@@ -449,7 +453,7 @@ export const contenido = {
       {
         pregunta: '¿Qué pasa con las ventas hechas sin red?',
         respuesta:
-          'Quedan guardadas, cifradas, en el equipo y se envían solas cuando vuelve la conexión. La pantalla te dice cuáles esperan; si el servidor no acepta alguna, queda para que la gerencia la revise.',
+          'Quedan guardadas, cifradas, en el equipo y se envían solas cuando vuelve la conexión. La pantalla te dice cuáles esperan; si el sistema no acepta alguna, queda para que el dueño o administrador la revise.',
       },
       {
         pregunta: '¿Emite factura electrónica?',
@@ -463,7 +467,7 @@ export const contenido = {
       {
         pregunta: '¿Dos cajas pueden vender a la vez sin red?',
         respuesta:
-          'Sí. Cada equipo tiene su código y su serie de folios, así que no se repiten. En pruebas automáticas simulamos seis.',
+          'Sí. Cada equipo tiene su propio código y numera sus comprobantes, así que los números no se repiten. En pruebas automáticas simulamos seis.',
       },
       {
         pregunta: '¿Funciona en un teléfono barato? ¿En iPhone?',
@@ -473,17 +477,17 @@ export const contenido = {
       {
         pregunta: '¿Qué pasa con mis datos?',
         respuesta:
-          'Lo que se guarda en cada equipo va cifrado y es de cada persona. Al cerrar sesión, si quedan ventas sin enviar, la aplicación te avisa cuántas son antes de olvidar lo guardado.',
+          'Los datos guardados en cada equipo están protegidos mediante cifrado y son de cada persona. Las ventas que no se han enviado quedan guardadas en el equipo. Si cierras sesión antes de enviarlas, esas ventas se perderán; la aplicación te avisa cuántas son antes de cerrar.',
       },
     ],
   },
 
   cta: {
     titulo: 'Prueba VSD Stock en tu mostrador.',
-    subtitulo: 'Buscamos las primeras tiendas piloto. Te acompañamos desde el primer turno.',
-    boton: { texto: 'Quiero ser tienda piloto', href: WHATSAPP_URL } as Enlace,
+    subtitulo: 'Buscamos las primeras tiendas para probarlo. Te acompañamos desde el primer turno.',
+    boton: { texto: 'Quiero probarlo en mi tienda', href: WHATSAPP_URL } as Enlace,
     avisoBoton: 'Se abre WhatsApp',
-    enlaceDemo: { texto: 'O mira la demo de pruebas', href: DEMO_DE_PRE } as Enlace,
+    enlaceDemo: { texto: 'O prueba con ventas de ejemplo', href: DEMO_DE_PRE } as Enlace,
   },
 
   pie: {
@@ -498,12 +502,12 @@ export const contenido = {
         ] as readonly Enlace[],
       },
       {
-        titulo: 'Confianza',
+        titulo: 'Información técnica',
         enlaces: [
-          { texto: 'Código del backend en GitHub', href: REPOSITORIO_BACKEND },
-          { texto: 'Código del frontend en GitHub', href: REPOSITORIO_FRONTEND },
+          { texto: 'Código de la parte que guarda los datos', href: REPOSITORIO_BACKEND },
+          { texto: 'Código de la aplicación', href: REPOSITORIO_FRONTEND },
           {
-            texto: 'Decisiones de arquitectura',
+            texto: 'Decisiones técnicas escritas',
             href: `${REPOSITORIO_BACKEND}/tree/desarrollo/docs/adr`,
           },
         ] as readonly Enlace[],
@@ -519,9 +523,9 @@ export const contenido = {
 
   /** Lo que dice el chip del estado de la demo de PRE (C4-L6). Ninguno dice «caída»: un servidor gratuito dormido no esta roto. */
   estadoDemo: {
-    verificando: 'Verificando la demo… Usa datos ficticios.',
-    despierta: 'Demo de pruebas disponible · datos ficticios',
-    dormida: 'Demo en reposo; puede tardar ~25 s en despertar · datos ficticios',
+    verificando: 'Revisando si la prueba está lista… Usa datos ficticios.',
+    despierta: 'Prueba con ventas de ejemplo disponible · datos ficticios',
+    dormida: 'Prueba en reposo; la primera carga puede tardar ~25 s · datos ficticios',
   },
 };
 

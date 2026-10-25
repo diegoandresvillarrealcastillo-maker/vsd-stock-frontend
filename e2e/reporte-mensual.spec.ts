@@ -62,7 +62,9 @@ test.describe('el reporte mensual', () => {
 
     // Sin anulaciones no hay bloque de anulaciones, y el aviso de lo que el reporte no es siempre se ve.
     await expect(page.getByRole('region', { name: 'Anulaciones del mes' })).toHaveCount(0);
-    await expect(page.getByText('No es la declaración de impuestos')).toBeVisible();
+    await expect(page.getByRole('note', { name: 'Para qué sirve este reporte' })).toContainText(
+      'Este reporte es de control interno, no es tu declaración de IVA',
+    );
 
     // El mes anterior no tuvo ventas; el siguiente esta cerrado porque es el futuro, y volver trae las ventas de hoy.
     const next = page.getByRole('button', { name: 'Mes siguiente' });

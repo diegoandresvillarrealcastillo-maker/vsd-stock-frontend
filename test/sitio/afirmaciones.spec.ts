@@ -112,9 +112,10 @@ describe('the walk over the content', () => {
 
 describe('invoicing: the page never says it issues electronic invoices (the table of claims)', () => {
   const FACTURA = /\bfactur|\bDIAN\b/i;
-  const donde = ['limites', 'preguntas', 'pie'];
+  // La portada también lo dice, junto al primer botón (auditoría de QA): una tienda lo lee antes de escribirnos.
+  const donde = ['hero', 'limites', 'preguntas', 'pie'];
 
-  it('does not mention invoicing or the DIAN outside the limits, the questions and the footer', () => {
+  it('does not mention invoicing or the DIAN outside the hero, the limits, the questions and the footer', () => {
     expect(rutas(fuera(...donde).filter((e) => FACTURA.test(e.texto)))).toEqual([]);
   });
 
@@ -134,7 +135,8 @@ describe('invoicing: the page never says it issues electronic invoices (the tabl
     ).toEqual([]);
   });
 
-  it('says it out loud in the limits, the questions and the footer, which is what makes the page credible', () => {
+  it('says it out loud in the hero, the limits, the questions and the footer, which is what makes the page credible', () => {
+    expect(contenido.hero.nota).toMatch(/no emite factura electr[oó]nica/i);
     expect(contenido.limites.noHace.join(' ')).toMatch(/factura electr[oó]nica/i);
     expect(contenido.limites.pie).toMatch(/Comprobante de venta — no es factura/);
     expect(contenido.pie.aviso).toMatch(/No es un facturador electr[oó]nico/);
@@ -223,8 +225,10 @@ describe('open source: the repositories are public but they have no license', ()
     ).toEqual([]);
   });
 
-  it('says that the code is in sight instead, and links both repositories', () => {
-    const confianza = contenido.confianza.puntos.find((p) => p.titulo === 'Código a la vista');
+  it('says that the code is published for specialists to review instead, and links both repositories', () => {
+    const confianza = contenido.confianza.puntos.find(
+      (p) => p.titulo === 'Código publicado para revisión',
+    );
 
     expect(confianza).toBeDefined();
     expect(confianza?.enlaces.map((e) => e.href)).toEqual([
@@ -317,7 +321,7 @@ describe('what was not measured or not tried is not promised', () => {
 
 describe('what does not exist yet only appears under "what is coming" and in the limits', () => {
   const FUTURO =
-    /reporte(s)? mensual|exent[oa]|excluid[oa]|folio propio|c[aá]mara|varias formas de pago|m[uú]ltiples? (formas|medios) de pago|cuentas por cobrar|copias? de seguridad|backup|sucursal|nube/i;
+    /reporte(s)? mensual|exent[oa]|excluid[oa]|n[uú]mero propio para cada anulaci[oó]n|c[aá]mara|varias formas de pago|m[uú]ltiples? (formas|medios) de pago|cuentas por cobrar|copias? de seguridad|backup|sucursal|nube/i;
 
   it('keeps those features out of the rest of the page, so no card or answer promises them as if they existed', () => {
     expect(rutas(fuera('loQueViene', 'limites').filter((e) => FUTURO.test(e.texto)))).toEqual([]);
@@ -330,7 +334,7 @@ describe('what does not exist yet only appears under "what is coming" and in the
       /exent/i,
       /excluid/i,
       /reporte mensual/i,
-      /folio propio/i,
+      /n[uú]mero propio para cada anulaci[oó]n/i,
       /c[aá]mara/i,
       /varias formas de pago/i,
     ]) {
@@ -372,7 +376,7 @@ describe('there is no account, no form and no way to leave data in the page: con
 
     expect(url.origin).toBe('https://wa.me');
     expect(url.pathname).toBe('/573245889281');
-    expect(url.searchParams.get('text')).toBe('Hola, quiero ser tienda piloto de VSD Stock.');
+    expect(url.searchParams.get('text')).toBe('Hola, quiero probar VSD Stock en mi tienda.');
   });
 
   it('uses that link in every call to action to be a pilot store, and says it opens WhatsApp', () => {
@@ -554,7 +558,7 @@ describe('the demo of PRE: it says the data is fictional and that it may take a 
     const estados = contenido.estadoDemo;
 
     expect(Object.keys(estados).sort()).toEqual(['despierta', 'dormida', 'verificando']);
-    expect(estados.dormida).toMatch(/Demo en reposo; puede tardar ~25 s en despertar/);
+    expect(estados.dormida).toMatch(/Prueba en reposo; la primera carga puede tardar ~25 s/);
     for (const texto of Object.values(estados)) {
       expect(texto, texto).not.toMatch(/ca[ií]d[ao]|fall[oa]|error|no funciona/i);
       expect(texto, texto).toMatch(/ficticios/i);
@@ -571,7 +575,7 @@ describe('the promises that the team keeps', () => {
     const iva = contenido.funciones.tarjetas.find((t) => t.id === 'iva');
 
     expect(iva?.nota).toMatch(/revisión contable externa/);
-    expect(iva?.nota).toMatch(/Antes de vender en vivo/);
+    expect(iva?.nota).toMatch(/Antes de usarlo con ventas reales/);
     const punto = contenido.confianza.puntos.find((p) => p.titulo === 'IVA revisado');
     expect(punto?.texto).toMatch(/quien lleva las declaraciones de tu tienda/);
   });
@@ -579,6 +583,92 @@ describe('the promises that the team keeps', () => {
   it('keeps the honest limits section: what it does and what it does not do', () => {
     expect(contenido.limites.hace.length).toBeGreaterThanOrEqual(5);
     expect(contenido.limites.noHace.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+// Auditoría de QA (25 de octubre de 2026): la página se leyó como la leería un tendero y marcó la jerga técnica. Estas pruebas
+// impiden que vuelva. La lista sale de la tabla de la auditoría; cada palabra tiene su frase de tendero en `contenido.ts`.
+describe('the page speaks the language of a shopkeeper (the audit of QA)', () => {
+  const JERGA: readonly [RegExp, string][] = [
+    [/\bservidor\b/i, 'servidor: «tu cuenta»'],
+    [/\b(backend|frontend)\b/i, 'backend y frontend: «información técnica»'],
+    [/\bADR\b|arquitectura/i, 'ADR y arquitectura: «información técnica»'],
+    [/\bcola\b/i, 'cola de envío: «ventas por enviar»'],
+    [/\bfolios?\b/i, 'folio: «numeración de los comprobantes»'],
+    [/gerencia/i, 'gerencia: «el dueño o administrador»'],
+    [/\bdemo\b/i, 'demo: «prueba con ventas de ejemplo»'],
+    [/piloto/i, 'tienda piloto: «probarlo en mi tienda»'],
+    [/\bbase\b/i, 'base: «valor sin IVA»'],
+    [/recalcul/i, 'recalculó: «comprobó»'],
+    [/en vivo/i, 'en vivo: «con ventas reales»'],
+    [/a la vista/i, 'a la vista: «publicado para revisión»'],
+    [
+      /no tiene due[ñn]o|compensan|la l[ií]nea te avisa|olvidar/i,
+      'frases de la tabla de la auditoría',
+    ],
+    [/cortar internet|corta el internet/i, 'cortar internet: «simular una caída de internet»'],
+  ];
+
+  // `anclas` son los nombres de las secciones en la dirección (#demo, #piloto): no se leen en la página, se escriben en la barra.
+  it.each(JERGA)('does not use %s anywhere in the page', (palabra, cambio) => {
+    expect(
+      rutas(todas.filter((e) => e.seccion !== 'anclas' && palabra.test(e.texto))),
+      `Cámbialo: ${cambio}`,
+    ).toEqual([]);
+  });
+
+  it('says that the switch of the diagram is a simulation', () => {
+    expect(contenido.diagrama.interruptor).toMatch(/Simular una caída de internet/);
+  });
+
+  it('does not promise that the cash always balances: it tells how much is missing or left over when closing', () => {
+    const caja = contenido.funciones.tarjetas.find((t) => t.id === 'caja');
+
+    expect(caja?.titulo).toMatch(/cuánto falta o sobra al cerrar/i);
+    expect(rutas(todas.filter((e) => /una caja que cuadra/i.test(e.texto)))).toEqual([]);
+  });
+
+  it('says who reviews a closing with a difference: the owner or the administrator', () => {
+    const caja = contenido.funciones.tarjetas.find((t) => t.id === 'caja');
+
+    expect(caja?.texto).toMatch(/para que el dueño o administrador la revise/);
+  });
+
+  it('says that closing the session before sending the sales loses them (the app does ask before)', () => {
+    const datos = contenido.preguntas.items.find((p) => /mis datos/i.test(p.pregunta));
+
+    expect(datos?.respuesta).toMatch(
+      /Si cierras sesión antes de enviarlas, esas ventas se perderán/,
+    );
+  });
+
+  it('tells the shopkeeper where the sale went: to the account, in the same words as the receipt of the app', () => {
+    const recibo = readFileSync(join(ROOT, 'src/presentation/pages/ReceiptPage.tsx'), 'utf8');
+
+    expect(contenido.diagrama.enviada).toBe('Venta guardada en tu cuenta.');
+    expect(recibo).toContain(contenido.diagrama.enviada);
+    expect(recibo).toContain(contenido.diagrama.guardada);
+  });
+
+  it('tells the first load apart from the wake-up: "la primera carga puede tardar unos 25 segundos"', () => {
+    expect(contenido.demo.nota).toMatch(/La primera carga puede tardar unos 25 segundos/);
+  });
+
+  it('puts the technical links under one name, "Información técnica", in the page and in the footer', () => {
+    expect(contenido.confianza.sellosTitulo).toBe('Información técnica, para especialistas');
+    expect(contenido.pie.columnas.map((c) => c.titulo)).toContain('Información técnica');
+  });
+
+  it('offers the first button as "probarlo en mi tienda" and the second as "probar con ventas de ejemplo"', () => {
+    expect(contenido.hero.ctaPrincipal.texto).toBe('Quiero probarlo en mi tienda');
+    expect(contenido.cta.boton.texto).toBe('Quiero probarlo en mi tienda');
+    expect(contenido.hero.ctaSecundario.texto).toBe('Probar con ventas de ejemplo');
+  });
+
+  it('separates the VAT that is already inside the price, and says "valor sin IVA" instead of "base"', () => {
+    expect(contenido.limites.hace).toContain('Separa el IVA que ya está incluido en el precio');
+    expect(contenido.funciones.miniaturas.iva.base).toBe('Valor sin IVA');
+    expect(contenido.calculadora.suma).toBe('Valor sin IVA más IVA');
   });
 });
 

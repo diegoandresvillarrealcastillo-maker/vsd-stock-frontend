@@ -107,6 +107,13 @@ describe('docs/sitio.md', () => {
     expect(guia).toMatch(/Lo que no comprueba/i);
   });
 
+  it('says how the text is written, in the words of a shopkeeper, and which test keeps the jargon out', () => {
+    expect(guia).toContain('## Cómo se escribe el texto');
+    expect(guia).toContain('sitio/pagina/contenido.ts');
+    expect(guia).toContain('test/sitio/afirmaciones.spec.ts');
+    expect(guia).toMatch(/lenguaje de tendero/i);
+  });
+
   it('links to the other documents of the landing, and they exist', () => {
     for (const nombre of [
       'diagrama-de-la-venta',

@@ -20,7 +20,7 @@ import {
   parseQuantityMilli,
   quantityToInput,
 } from '../../domain/model/quantity';
-import { splitTaxIncluded, taxKindLabel, TAX_CHOICES, type TaxKind } from '../../domain/model/tax';
+import { splitTaxIncluded, TAX_CHOICES, type TaxKind } from '../../domain/model/tax';
 import type { ProductChange } from '../../domain/ports/in/catalog';
 import { Button } from '../components/Button';
 import { FormAlert } from '../components/FormAlert';
@@ -63,12 +63,24 @@ const SAVED_TEXT: Record<Exclude<Saved, 'no'>, string> = {
   reactivated: 'Producto reactivado. Ya se puede vender.',
 };
 
-/** Lo que se dice bajo el tipo de IVA: cuanto IVA lleva el precio, o que lo exento y lo excluido no lo cobran. */
+/**
+ * Lo que se dice de un producto al 0 %: que es cada tipo, con los ejemplos de la auditoria contable (2026-10-25), para que quien duda
+ * pueda elegir. El sistema no sabe cual producto es cual: guarda lo que el negocio le dice (ADR 0034 del backend).
+ */
+const ZERO_RATE_HINT: Record<Exclude<TaxKind, 'taxed'>, string> = {
+  exempt:
+    'Exento: está dentro del IVA, pero a tarifa 0 %, así que no se cobra. Por ejemplo: huevos frescos, leche de vaca sin azúcar añadida y queso fresco sin madurar.',
+  excluded:
+    'Excluido: está fuera del IVA, así que no se cobra. Por ejemplo: papa, tomate y cebolla frescos.',
+};
+
+const ZERO_RATE_ADVICE =
+  'Se declara aparte. Depende de cómo se vende: fresco no es lo mismo que procesado. Si dudas de cuál es, pregúntale a tu contador.';
+
+/** Lo que se dice bajo el tipo de IVA: cuanto IVA lleva el precio, o que es lo exento y lo excluido, que no lo cobran. */
 function taxHintOf(tax: TaxChoice | null, price: number | null): string {
   if (tax === null) return 'Elige el tipo de IVA para ver cuánto lleva.';
-  if (tax.kind !== 'taxed') {
-    return `${taxKindLabel(tax.kind)} no cobra IVA y se declara aparte. Si dudas de cuál es, pregúntale a tu contador.`;
-  }
+  if (tax.kind !== 'taxed') return `${ZERO_RATE_HINT[tax.kind]} ${ZERO_RATE_ADVICE}`;
   if (price === null) return 'Escribe el precio para ver cuánto IVA lleva.';
   const iva = splitTaxIncluded(Money.of(price), tax.rateBp).tax.amount;
   return `De ${formatPesos(price)} con IVA ${taxLabel(tax.rateBp)}, el IVA es ${formatPesos(iva)}.`;
