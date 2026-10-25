@@ -8,6 +8,13 @@ export const API_DE_PRE = 'https://vsd-stock-api-pre.onrender.com';
 /** La web de PRE, con datos ficticios: la demo que se enlaza publicamente (Diego, 22 de octubre). */
 export const DEMO_DE_PRE = 'https://vsd-stock-pre.pages.dev';
 
+/**
+ * A donde llevan «Iniciar sesion» y «Crear cuenta» (Diego, 25 de octubre): a la aplicacion de PRE, que es la unica que existe.
+ * Cuando exista PROD, la aplicacion cambia de direccion aqui y en ningun otro lugar de la pagina.
+ */
+export const APP_INGRESAR = `${DEMO_DE_PRE}/ingresar`;
+export const APP_REGISTRARSE = `${DEMO_DE_PRE}/registrarse`;
+
 /** Los dos repositorios son publicos (y no tienen licencia: por eso la pagina dice «codigo a la vista», no «open source»). */
 export const REPOSITORIO_BACKEND =
   'https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend';

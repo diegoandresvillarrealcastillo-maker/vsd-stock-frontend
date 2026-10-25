@@ -5,6 +5,7 @@ import {
   installIntersectionObserver,
 } from '../../../test/support/intersection-observer';
 import { contenido } from '../contenido';
+import { APP_INGRESAR, APP_REGISTRARSE } from '../destinos';
 import { Navegacion } from './Navegacion';
 
 // La navegacion flotante: los enlaces de la pagina, el de la seccion que se esta viendo marcado, el boton de tema y el menu del
@@ -29,7 +30,7 @@ afterEach(() => {
 });
 
 describe('the links of the navigation', () => {
-  it('are the ones of the content, in order, and the call to action goes to WhatsApp', () => {
+  it('are the ones of the content, in order, and the call to action creates an account in the app of PRE', () => {
     render(<Navegacion />);
     const nav = screen.getByRole('navigation', { name: contenido.navegacion.principal });
 
@@ -41,9 +42,22 @@ describe('the links of the navigation', () => {
     const cta = within(nav).getByRole('link', {
       name: new RegExp(contenido.navegacion.cta.texto),
     });
-    expect(cta.getAttribute('href')).toBe(contenido.navegacion.cta.href);
+    expect(cta.getAttribute('href')).toBe(APP_REGISTRARSE);
     expect(cta.getAttribute('target')).toBe('_blank');
     expect(cta.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('has the link to sign in to the app of PRE inside the menu, so a phone can reach it', () => {
+    render(<Navegacion />);
+    const nav = screen.getByRole('navigation', { name: contenido.navegacion.principal });
+    const menu = within(nav).getByRole('list');
+    const ingresar = within(menu).getByRole('link', {
+      name: new RegExp(contenido.navegacion.ingresar.texto),
+    });
+
+    expect(ingresar.getAttribute('href')).toBe(APP_INGRESAR);
+    expect(ingresar.getAttribute('target')).toBe('_blank');
+    expect(ingresar.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
   it('has the logo as a link to the top of the page, with a name that says where it goes', () => {
