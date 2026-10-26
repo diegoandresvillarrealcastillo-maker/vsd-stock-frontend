@@ -33,6 +33,10 @@ function seccion(titulo: string): string {
   return encontrada ?? '';
 }
 
+/** La fila numero `numero` del recorrido, tal cual esta escrita en la tabla. */
+const fila = (numero: number) =>
+  new RegExp(`^\\| ${String(numero)} +\\|.*$`, 'm').exec(seccion('Lo que se recorre'))?.[0] ?? '';
+
 const pantallas = 'src/presentation/pages';
 
 describe('docs/recorrido-del-ciclo-3.md', () => {
@@ -115,10 +119,6 @@ describe('docs/recorrido-del-ciclo-3.md', () => {
   });
 
   describe('when the connection comes back after «Continuar sin conexión» (row 19, #108)', () => {
-    const fila = (numero: number) =>
-      new RegExp(`^\\| ${String(numero)} +\\|.*$`, 'm').exec(seccion('Lo que se recorre'))?.[0] ??
-      '';
-
     it('says that there is no session, so nothing is sent by itself, and what the card offers', () => {
       const diecinueve = fila(19).replaceAll(/\s+/g, ' ');
 
@@ -149,6 +149,31 @@ describe('docs/recorrido-del-ciclo-3.md', () => {
     it('counts the password of row 19 among those that are measured, in the row and in the table', () => {
       expect(fila(21)).toContain('las filas 2, 4, 19 y esta');
       expect(seccion('Qué se mide')).toContain('(2, 4, 19, 21 y las que se sumen)');
+    });
+  });
+
+  describe('«Continuar sin conexión» only while the connection is not confirmed (ADR 0038, #109)', () => {
+    it('says in row 16, where there is no network, that it is offered, and until when', () => {
+      const dieciseis = fila(16).replaceAll(/\s+/g, ' ');
+
+      expect(dieciseis).toContain('Continuar sin conexión');
+      expect(dieciseis).toContain('mientras el estado no diga «En línea»');
+    });
+
+    it('says in row 21, where there is a connection, that it is not offered and what the way in is', () => {
+      const veintiuno = fila(21).replaceAll(/\s+/g, ' ');
+
+      expect(veintiuno).toContain('no ofrece «Continuar sin conexión»');
+      expect(veintiuno).toContain('ADR 0038');
+    });
+
+    it('records in the results of the run that it was offered with a connection, and what was done about it', () => {
+      const resultados = seccion('Qué se mide').split(/^### Resultado de la corrida/m)[1] ?? '';
+      const fila72 =
+        resultados.split('\n').find((linea) => linea.startsWith('| Sin conexión, 72 horas')) ?? '';
+
+      expect(fila72).toContain('#109');
+      expect(fila72).toContain('ADR 0038');
     });
   });
 

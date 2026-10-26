@@ -48,4 +48,30 @@ test.describe('seguir sin conexión y volver a entrar', () => {
     const [sale] = await serverSales(business);
     expect(sale?.folio).toBe('AA-000001');
   });
+
+  test('with a connection the sign-in page does not offer to continue without one, and offers it again when the network is cut', async ({
+    page,
+    context,
+  }) => {
+    const business = await openBusiness();
+    await signIn(page, business.credentials);
+    await page.reload();
+
+    // La sesion no sobrevive a recargar (ADR 0022): la pantalla de entrar recuerda a la persona.
+    await expect(page.getByRole('heading', { level: 1, name: 'Ingresar' })).toBeVisible();
+    await expect(page.getByText('Último en este equipo')).toBeVisible();
+    // Mientras comprueba la conexion el boton puede verse; en cuanto el servidor responde se va (ADR 0038).
+    const continuar = page.getByRole('button', { name: 'Continuar sin conexión' });
+    await expect(continuar).toBeHidden();
+    await expect(
+      page.getByText('Lo que tienes guardado en este equipo se conserva.'),
+    ).toBeVisible();
+    await expect(page.getByLabel('Correo')).toHaveValue(business.credentials.email);
+
+    // Se corta la red: ahora si es el camino.
+    await context.setOffline(true);
+    await expect(continuar).toBeVisible();
+    await context.setOffline(false);
+    await expect(continuar).toBeHidden();
+  });
 });
