@@ -33,6 +33,10 @@ function seccion(titulo: string): string {
   return encontrada ?? '';
 }
 
+/** La fila numero `numero` del recorrido, tal cual esta escrita en la tabla. */
+const fila = (numero: number) =>
+  new RegExp(`^\\| ${String(numero)} +\\|.*$`, 'm').exec(seccion('Lo que se recorre'))?.[0] ?? '';
+
 const pantallas = 'src/presentation/pages';
 
 describe('docs/recorrido-del-ciclo-3.md', () => {
@@ -84,6 +88,8 @@ describe('docs/recorrido-del-ciclo-3.md', () => {
     ['Enviando…', 'src/domain/model/sync-summary.ts'],
     ['Sin conexión', 'src/domain/model/sync-summary.ts'],
     ['Todo enviado', 'src/domain/model/sync-summary.ts'],
+    ['Falta entrar con tu contraseña', 'src/domain/model/sync-summary.ts'],
+    ['Entrar con contraseña', 'src/presentation/sync/SyncStatus.tsx'],
     ['Por enviar', `${pantallas}/SalesPage.tsx`],
     ['Mi turno', `${pantallas}/SalesPage.tsx`],
     ['No pudimos cargar las ventas', `${pantallas}/SalesPage.tsx`],
@@ -110,6 +116,65 @@ describe('docs/recorrido-del-ciclo-3.md', () => {
 
     expect(filas.length).toBeGreaterThanOrEqual(25);
     expect(filas).toEqual(filas.map((_, indice) => indice + 1));
+  });
+
+  describe('when the connection comes back after «Continuar sin conexión» (row 19, #108)', () => {
+    it('says that there is no session, so nothing is sent by itself, and what the card offers', () => {
+      const diecinueve = fila(19).replaceAll(/\s+/g, ' ');
+
+      expect(diecinueve).toContain('Falta entrar con tu contraseña');
+      expect(diecinueve).toContain('Entrar con contraseña');
+      // Lo que no puede pasar: que el boton borre lo guardado.
+      expect(diecinueve).toContain('no borra nada');
+      expect(diecinueve).toContain('Todo enviado');
+    });
+
+    it('puts the card before the password and the password before «Todo enviado»: nothing is sent without it', () => {
+      const diecinueve = fila(19);
+
+      const tarjeta = diecinueve.indexOf('Falta entrar con tu contraseña');
+      const contrasena = diecinueve.indexOf('escribir la contraseña');
+      const enviado = diecinueve.indexOf('«Todo enviado»');
+      expect(tarjeta).toBeGreaterThan(-1);
+      expect(contrasena).toBeGreaterThan(tarjeta);
+      expect(enviado).toBeGreaterThan(contrasena);
+    });
+
+    it('asks to repeat row 19 by the other way, with the session alive, because the run only went through the first', () => {
+      expect(documento).toContain('Fila 19, por el otro camino');
+      expect(documento).toContain('sin cerrar la aplicación');
+      expect(documento).toContain('sin que nadie escriba la contraseña');
+    });
+
+    it('counts the password of row 19 among those that are measured, in the row and in the table', () => {
+      expect(fila(21)).toContain('las filas 2, 4, 19 y esta');
+      expect(seccion('Qué se mide')).toContain('(2, 4, 19, 21 y las que se sumen)');
+    });
+  });
+
+  describe('«Continuar sin conexión» only while the connection is not confirmed (ADR 0038, #109)', () => {
+    it('says in row 16, where there is no network, that it is offered, and until when', () => {
+      const dieciseis = fila(16).replaceAll(/\s+/g, ' ');
+
+      expect(dieciseis).toContain('Continuar sin conexión');
+      expect(dieciseis).toContain('mientras el estado no diga «En línea»');
+    });
+
+    it('says in row 21, where there is a connection, that it is not offered and what the way in is', () => {
+      const veintiuno = fila(21).replaceAll(/\s+/g, ' ');
+
+      expect(veintiuno).toContain('no ofrece «Continuar sin conexión»');
+      expect(veintiuno).toContain('ADR 0038');
+    });
+
+    it('records in the results of the run that it was offered with a connection, and what was done about it', () => {
+      const resultados = seccion('Qué se mide').split(/^### Resultado de la corrida/m)[1] ?? '';
+      const fila72 =
+        resultados.split('\n').find((linea) => linea.startsWith('| Sin conexión, 72 horas')) ?? '';
+
+      expect(fila72).toContain('#109');
+      expect(fila72).toContain('ADR 0038');
+    });
   });
 
   it('names the routes of the counter, which are the ones of the router', () => {
@@ -139,11 +204,50 @@ describe('docs/recorrido-del-ciclo-3.md', () => {
     expect(medidas).toContain('BarcodeDetector');
   });
 
-  it('keeps a table of runs, with the columns to fill in, and starts without any', () => {
+  it('keeps a table of runs, with the columns to fill in', () => {
     const historial = seccion('Historial de corridas');
 
     expect(historial).toMatch(/\| Fecha +\| Teléfono +\| Quién +\| Resultado +\|/);
-    expect(historial).toMatch(/\| (—|pendiente)/);
+  });
+
+  it('records the run on a real Android, who did it and what did not match, and no longer says none was done', () => {
+    const historial = seccion('Historial de corridas');
+
+    expect(historial).toContain('25 de octubre de 2026');
+    expect(historial).toContain('Samuel');
+    // Lo que no coincidio, con el Issue donde se sigue: sin esto la corrida parece limpia.
+    for (const issue of ['#108', '#109', '#110', 'vsd-stock-backend#96']) {
+      expect(historial, issue).toContain(issue);
+    }
+    // El telefono no se anoto: se dice, no se inventa un modelo.
+    expect(historial).toContain('no informado');
+    expect(historial).not.toContain('todavía no se hizo en un teléfono');
+  });
+
+  it('answers every measure of the table with what the run found, or says it was not reported', () => {
+    const medidas = seccion('Qué se mide');
+    const [tabla = '', resultados] = medidas.split(
+      /^### Resultado de la corrida del 25 de octubre de 2026\n/m,
+    );
+    expect(resultados, 'falta la tabla de resultados de la corrida').toBeDefined();
+
+    const nombres = [...tabla.matchAll(/^\| ([^|\n]+?) +\|/gm)]
+      .map((fila) => fila[1] ?? '')
+      .filter((nombre) => nombre !== 'Medida' && !/^-+$/.test(nombre));
+    expect(nombres.length).toBeGreaterThanOrEqual(9);
+
+    for (const nombre of nombres) {
+      expect(resultados, `sin resultado para «${nombre}»`).toMatch(
+        new RegExp(`^\\| ${nombre.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')} +\\|`, 'm'),
+      );
+    }
+    // Lo que nadie midio se dice asi y no con una cifra puesta a ojo.
+    expect(resultados).toContain('No se anotó');
+    expect(resultados).toContain('Sin cifra');
+  });
+
+  it('says in the steps to repeat where the results of a run go', () => {
+    expect(seccion('Cómo se repite')).toContain('Resultado de la corrida');
   });
 
   it('says what it does not cover', () => {

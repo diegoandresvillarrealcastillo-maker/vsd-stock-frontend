@@ -61,19 +61,21 @@ cada cambio). Cuando todo está en orden ocupa **una línea**; cuando algo pide 
 mismo. El texto lo decide una función pura (`summarizeSync`, en `domain/model/sync-summary.ts`) con este orden, del que más
 importa al que menos:
 
-| Situación                              | Titular                     | Botón              |
-| -------------------------------------- | --------------------------- | ------------------ |
-| La sesión caducó                       | **Tu sesión caducó**        | Entrar de nuevo    |
-| El servidor no aceptó N operaciones    | **N requieren atención**    | Reintentar ahora\* |
-| Se está enviando                       | **Enviando…**               |                    |
-| Hay algo por enviar y no hay conexión  | **Sin conexión**            |                    |
-| Hay algo por enviar y aún se comprueba | **Comprobando conexión…**   |                    |
-| El último envío falló                  | **No se pudo enviar**       | Reintentar ahora   |
-| Hay algo por enviar y hay conexión     | **Por enviar**              |                    |
-| Nada espera y el servidor aceptó algo  | **Todo enviado** (y cuándo) |                    |
-| Nada espera y nunca se envió nada      | **Nada por enviar**         |                    |
+| Situación                              | Titular                            | Botón                 |
+| -------------------------------------- | ---------------------------------- | --------------------- |
+| La sesión caducó                       | **Tu sesión caducó**               | Entrar de nuevo       |
+| No hay sesión y el envío la pidió      | **Falta entrar con tu contraseña** | Entrar con contraseña |
+| El servidor no aceptó N operaciones    | **N requieren atención**           | Reintentar ahora\*    |
+| Se está enviando                       | **Enviando…**                      |                       |
+| Hay algo por enviar y no hay conexión  | **Sin conexión**                   |                       |
+| Hay algo por enviar y aún se comprueba | **Comprobando conexión…**          |                       |
+| El último envío falló                  | **No se pudo enviar**              | Reintentar ahora      |
+| Hay algo por enviar y hay conexión     | **Por enviar**                     |                       |
+| Nada espera y el servidor aceptó algo  | **Todo enviado** (y cuándo)        |                       |
+| Nada espera y nunca se envió nada      | **Nada por enviar**                |                       |
 
-\* Solo si lo que falló es el envío mismo.
+\* Solo si lo que falló es el envío mismo, y solo con la conexión confirmada: sin ella reintentar no envía nada, y un botón que no
+hace nada no se ofrece.
 
 Reglas que no se negocian:
 
@@ -81,6 +83,9 @@ Reglas que no se negocian:
   **cuántos registros esperan y que «están guardados solo en este equipo»**.
 - **«Entrar de nuevo» es «Cambiar de persona»:** cierra la sesión y **conserva la cola**; al volver a entrar, el motor retoma el
   envío. No borra nada.
+- **«Entrar con contraseña» no cierra nada.** Quien siguió con «Continuar sin conexión» (ADR 0022) no tiene sesión: no hay una que
+  caducara ni una que cerrar, y llamar a «cerrar sesión» no hace nada. El botón lleva a «Ingresar» con la base abierta y la cola
+  intacta; al entrar con la contraseña, el motor retoma el envío. Ningún botón de la tarjeta puede quedar sin efecto.
 - El color acompaña, nunca es lo único: cada tono tiene su icono y su texto.
 
 ## La copia de lectura: el catálogo y la existencia en este equipo

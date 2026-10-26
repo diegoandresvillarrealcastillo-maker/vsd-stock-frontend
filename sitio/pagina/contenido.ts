@@ -12,7 +12,14 @@
 // Lo que sostiene cada afirmacion esta en V2-DOCUMENTOS/PROPUESTA-LANDING-VSD-STOCK.md (tabla de afirmaciones) y en los ADR
 // 0013 a 0032 del backend. Las preguntas y los sellos enlazan a esos documentos.
 
-import { DEMO_DE_PRE, REPOSITORIO_BACKEND, REPOSITORIO_FRONTEND, WHATSAPP_URL } from './destinos';
+import {
+  APP_INGRESAR,
+  APP_REGISTRARSE,
+  DEMO_DE_PRE,
+  REPOSITORIO_BACKEND,
+  REPOSITORIO_FRONTEND,
+  WHATSAPP_URL,
+} from './destinos';
 
 export interface Enlace {
   readonly texto: string;
@@ -112,7 +119,8 @@ export const contenido = {
       { texto: 'Confianza', href: `#${anclas.confianza}` },
       { texto: 'Preguntas', href: `#${anclas.preguntas}` },
     ] as readonly Enlace[],
-    cta: { texto: 'Probarlo en mi tienda', href: WHATSAPP_URL } as Enlace,
+    ingresar: { texto: 'Iniciar sesión', href: APP_INGRESAR } as Enlace,
+    cta: { texto: 'Crear cuenta', href: APP_REGISTRARSE } as Enlace,
     abrirMenu: 'Abrir el menú',
     cerrarMenu: 'Cerrar el menú',
     // Un solo nombre para los dos estados: el servidor no sabe que tema eligio la persona, y el nombre no debe cambiar al cargar.
@@ -124,6 +132,7 @@ export const contenido = {
     etiqueta: 'Invitación a probar VSD Stock en tu tienda',
     texto: 'Buscamos tiendas para probar VSD Stock.',
     boton: 'Escríbenos',
+    href: WHATSAPP_URL,
     cerrar: 'Cerrar este aviso',
   },
 
@@ -133,10 +142,11 @@ export const contenido = {
     titulo: { antes: 'Vende aunque se caiga el', marca: 'internet', despues: '.' },
     subtitulo:
       'Registra tus ventas, controla cuántos productos te quedan y revisa cuánto dinero debe haber en caja al terminar el turno. Las ventas se guardan en el equipo y se envían a tu cuenta cuando vuelve la conexión.',
-    ctaPrincipal: { texto: 'Quiero probarlo en mi tienda', href: WHATSAPP_URL } as Enlace,
-    ctaSecundario: { texto: 'Probar con ventas de ejemplo', href: DEMO_DE_PRE } as Enlace,
-    // La factura se dice aquí, junto al primer botón (auditoría de QA): una tienda lo lee antes de escribirnos.
-    nota: 'Versión en pruebas, con acompañamiento. La prueba usa datos ficticios. VSD Stock no emite factura electrónica; esa obligación se gestiona por separado.',
+    ctaPrincipal: { texto: 'Crear mi cuenta', href: APP_REGISTRARSE } as Enlace,
+    ctaSecundario: { texto: 'Escríbenos por WhatsApp', href: WHATSAPP_URL } as Enlace,
+    // La factura se dice aquí, junto al primer botón (auditoría de QA): una tienda lo lee antes de crear su cuenta. Mientras no exista
+    // PROD, la cuenta se crea en PRE: se dice aquí, junto al botón, para que nadie cargue datos reales creyendo que es producción.
+    nota: 'Versión en pruebas, con acompañamiento. La cuenta se crea en el ambiente de pruebas: todavía no cargues los datos reales de tu tienda. La prueba con ventas de ejemplo usa datos ficticios. VSD Stock no emite factura electrónica; esa obligación se gestiona por separado.',
     sellos: [
       'Funciona sin conexión (en pruebas)',
       'Código publicado para revisión',
