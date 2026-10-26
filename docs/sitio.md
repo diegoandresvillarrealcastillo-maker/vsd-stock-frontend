@@ -77,7 +77,7 @@ razones juntas, mientras no se cumpla algo de esto:
   `PENDIENTES_DE_PUBLICAR`, en `sitio/pagina/pendientes.ts`; quien resuelve uno lo quita de la lista en un PR (y, si cambia lo que la página afirma, cambia
   `sitio/pagina/contenido.ts` en el mismo PR). El script decide con `puedePublicar` antes de compilar o subir nada.
 
-Es a propósito: la dirección pública no sale por descuido ni mientras falte, por ejemplo, actualizar la respuesta sobre teléfonos con el resultado de la prueba en el Android real, que es lo único que queda en la lista hoy.
+Es a propósito: la dirección pública no sale por descuido ni mientras a una persona le falte resolver algo. **Hoy la lista está vacía.** El último pendiente era actualizar la respuesta sobre teléfonos con el resultado de la prueba en el Android real; el 26 de octubre de 2026 Diego decidió que esa respuesta queda como está, y la página la dice tal cual.
 
 ## Comprobar lo publicado
 

@@ -90,6 +90,14 @@ describe('docs/sitio.md', () => {
     expect(guia).not.toMatch(/mientras falte, por ejemplo, haber le[ií]do el texto en voz alta/);
   });
 
+  it('says that the answer about phones stays as it is, by decision of Diego on 2026-10-26, and that nothing is pending now', () => {
+    expect(guia).toContain('26 de octubre de 2026');
+    expect(guia).toMatch(/respuesta sobre tel[ée]fonos/i);
+    expect(guia).toMatch(/queda como est[áa]/i);
+    expect(guia).toMatch(/la lista est[áa] vac[ií]a/i);
+    expect(guia).not.toMatch(/que es lo [úu]nico que queda en la lista hoy/);
+  });
+
   it('says where each button goes: sign-in and sign-up to the web of PRE, the contact to WhatsApp, and that the account is a test one until PROD exists', () => {
     expect(guia).toContain('## A dónde lleva cada botón');
     expect(guia).toContain(APP_INGRESAR);

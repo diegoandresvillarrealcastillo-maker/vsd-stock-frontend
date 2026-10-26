@@ -14,10 +14,7 @@ export interface Pendiente {
 export const PENDIENTES_DE_PUBLICAR: readonly Pendiente[] = [
   // El 25 de octubre de 2026 Diego sacó de aqui dos cosas: leer el texto en voz alta con una persona que atienda una tienda y preguntar
   // a quien lleve lo legal por el aviso de la primera respuesta de WhatsApp. No se hicieron; ya no frenan la publicacion (epica #99).
-  {
-    que: 'Actualizar la respuesta sobre teléfonos con el resultado de la prueba en el Android real (C3-16)',
-    quien: 'Samuel',
-  },
+  // El 26 de octubre de 2026 sacó la tercera: la respuesta sobre teléfonos queda como está y no espera otro resultado del Android real.
 ];
 
 /** Si la pagina puede publicarse en su direccion publica: solo cuando no queda nada pendiente. */

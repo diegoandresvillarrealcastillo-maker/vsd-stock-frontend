@@ -705,18 +705,16 @@ describe('the page speaks the language of a shopkeeper (the audit of QA)', () =>
 });
 
 describe('what has to be settled before the page is published', () => {
-  it('lists what is pending, and each pending thing says who has to settle it', () => {
-    expect(PENDIENTES_DE_PUBLICAR.length).toBeGreaterThan(0);
+  it('says, for each pending thing there is, what it is and who has to settle it', () => {
     for (const pendiente of PENDIENTES_DE_PUBLICAR) {
       expect(pendiente.que.trim(), 'sin descripcion').not.toBe('');
       expect(pendiente.quien.trim(), pendiente.que).not.toBe('');
     }
   });
 
-  it('waits only for the answer about phones, which needs the test on a real Android (Diego, 2026-10-25)', () => {
-    expect(PENDIENTES_DE_PUBLICAR).toHaveLength(1);
-    expect(PENDIENTES_DE_PUBLICAR[0]?.quien).toBe('Samuel');
-    expect(PENDIENTES_DE_PUBLICAR[0]?.que).toMatch(/Android real/);
+  it('has nothing left to settle: the answer about phones stays as it is (Diego, 2026-10-26), so the page can be published', () => {
+    expect(PENDIENTES_DE_PUBLICAR).toHaveLength(0);
+    expect(puedePublicar(PENDIENTES_DE_PUBLICAR)).toEqual({ puede: true, pendientes: [] });
   });
 
   it('no longer waits for the reading aloud with a shopkeeper, nor for the legal notice of the first WhatsApp reply', () => {
