@@ -12,18 +12,9 @@ export interface Pendiente {
  * mientras haya algo aqui: una vista previa puede mostrarse con pendientes, la direccion publica no.
  */
 export const PENDIENTES_DE_PUBLICAR: readonly Pendiente[] = [
-  {
-    que: 'Leer el texto en voz alta con una persona que atienda una tienda: nadie del equipo lo ha hecho todavía',
-    quien: 'Diego',
-  },
-  {
-    que: 'Preguntar a quien lleve lo legal si hace falta un aviso en la primera respuesta de WhatsApp (Ley 1581 de 2012; la cito de memoria, no la verifiqué)',
-    quien: 'Diego',
-  },
-  {
-    que: 'Actualizar la respuesta sobre teléfonos con el resultado de la prueba en el Android real (C3-16)',
-    quien: 'Samuel',
-  },
+  // El 25 de octubre de 2026 Diego sacó de aqui dos cosas: leer el texto en voz alta con una persona que atienda una tienda y preguntar
+  // a quien lleve lo legal por el aviso de la primera respuesta de WhatsApp. No se hicieron; ya no frenan la publicacion (epica #99).
+  // El 26 de octubre de 2026 sacó la tercera: la respuesta sobre teléfonos queda como está y no espera otro resultado del Android real.
 ];
 
 /** Si la pagina puede publicarse en su direccion publica: solo cuando no queda nada pendiente. */

@@ -77,7 +77,7 @@ razones juntas, mientras no se cumpla algo de esto:
   `PENDIENTES_DE_PUBLICAR`, en `sitio/pagina/pendientes.ts`; quien resuelve uno lo quita de la lista en un PR (y, si cambia lo que la página afirma, cambia
   `sitio/pagina/contenido.ts` en el mismo PR). El script decide con `puedePublicar` antes de compilar o subir nada.
 
-Es a propósito: la dirección pública no sale por descuido ni mientras falte, por ejemplo, haber leído el texto en voz alta con una persona que atienda una tienda.
+Es a propósito: la dirección pública no sale por descuido ni mientras a una persona le falte resolver algo. **Hoy la lista está vacía.** El último pendiente era actualizar la respuesta sobre teléfonos con el resultado de la prueba en el Android real; el 26 de octubre de 2026 Diego decidió que esa respuesta queda como está, y la página la dice tal cual.
 
 ## Comprobar lo publicado
 
@@ -143,7 +143,7 @@ equipo que lo construyó. Una auditoría de QA (2026-10-25) leyó la página com
 (facturas, tarjetas, precios, funciones que no existen). Si una palabra de la lista es de verdad necesaria en una frase, se discute antes de quitarla de la lista:
 la lista es la memoria de lo que un tendero no entendió.
 
-Esa auditoría **no fue una prueba con un tendero**: leer la página en voz alta con uno sigue siendo un pendiente de publicación (`sitio/pagina/pendientes.ts`).
+Esa auditoría **no fue una prueba con un tendero**, y la página no pasó por esa lectura: leerla en voz alta con una persona que atienda una tienda se pospuso el 25 de octubre de 2026, por decisión de Diego, y ya no frena la publicación (antes estaba en `sitio/pagina/pendientes.ts`). Tampoco se le preguntó a quien lleve lo legal si hace falta un aviso en la primera respuesta de WhatsApp. Las dos quedan para más adelante; no hay que decir en ningún lado que se hicieron.
 
 ## Si algo sale mal
 
@@ -157,7 +157,7 @@ Esa auditoría **no fue una prueba con un tendero**: leer la página en voz alta
 
 - **No prueba la página en un teléfono real ni en cada navegador.** Eso lo hacen `npm run e2e:sitio` y `npm run lighthouse:sitio` sobre la compilación local, y la prueba en
   el Android real que queda pendiente del recorrido del Ciclo 3.
-- **No prueba que lo que la página dice sea verdad ni que se haya leído en voz alta:** eso es la lista de pendientes.
+- **No prueba que lo que la página dice sea verdad ni que se haya leído en voz alta** (no se ha leído en voz alta con nadie): lo que sí frena la publicación es la lista de pendientes.
 - **No mide cuánto tarda en cargar desde Cloudflare** ni que comprima con Brotli: mira los encabezados, no la velocidad.
 - **Pide la raíz y un solo archivo con huella**, no recorre todos los archivos del sitio.
 - **El enlace de WhatsApp depende de que `wa.me` mantenga su redirección actual.** Si WhatsApp la cambia, la comprobación 8 falla y hay que mirar qué hace ahora; no significa que
