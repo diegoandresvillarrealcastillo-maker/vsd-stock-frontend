@@ -229,13 +229,20 @@ los cuadros, 7 ms o menos). Una venta real rara vez pasa de 15 líneas; 41 es un
 Lo que **no** dicen esas cifras: cómo responde un Android de gama baja de verdad (otra GPU, otra memoria, el navegador con
 muchas pestañas, la batería en ahorro). Es lo que mide C3-16 en un teléfono prestado.
 
+**En un Android real (C3-16, 25 de octubre de 2026).** Samuel probó la aplicación de PRE en su teléfono y no vio fallos de toque ni
+de fluidez, **a ojo**: no usó el apéndice de [`recorrido-del-ciclo-3.md`](recorrido-del-ciclo-3.md), así que no hay milisegundos ni
+cuadros por segundo. Los tiempos que contó son de pantalla a pantalla, no de toque: ver el formulario de ingreso y entrar al
+mostrador, menos de 1 s cada uno; cobrar, cobrar con vuelto y cobrar con tarjeta, 1,5 s cada uno; escribir la contraseña e ingresar
+desde la aplicación instalada, 2 s. El modelo del teléfono no se anotó, así que tampoco se sabe si es de gama baja.
+
 ## Lo que falta
 
 - **La respuesta al toque y los 60 fps en un teléfono de gama baja.** Es lo que fija el ADR 0008 y nada de lo
   anterior lo mide en un dispositivo lento. El equipo no tiene uno (ver arriba), así que el riesgo queda
   **aceptado y a la vista**. El punto de venta (C3-12) ya se midió con la CPU limitada a ¼ en el navegador (arriba) y
-  cumple con margen; falta repetirlo en un teléfono prestado (C3-16). Si alguien consigue uno antes: abrir la versión de
-  producción, activar «Mostrar toques» y comprobar que el botón responde al instante y la animación no se entrecorta.
+  cumple con margen. Un Android real lo probó a ojo el 25 de octubre de 2026 y no vio fallos (arriba), pero **sin cifras y sin
+  saber si era de gama baja**. Para tener las cifras: repetirlo con el apéndice de `recorrido-del-ciclo-3.md` (`__toques()` y
+  `__medir(5)`) y anotar el modelo.
 - **Un presupuesto en bytes** que rompa el build si el JavaScript crece: se define cuando haya más pantallas y
   se sepa qué es razonable. Hoy lo único que impone el CI es que compile y que Lighthouse no baje de 90 en
   rendimiento (solo avisa).

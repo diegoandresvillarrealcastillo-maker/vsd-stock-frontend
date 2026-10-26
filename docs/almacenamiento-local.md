@@ -32,7 +32,8 @@ nombres de las bases se pueden listar). Dentro:
 /v1/devices`) si todavía no lo está. Recordar a quién fue la última persona se hace con un identificador en `localStorage`
   (`vsd-stock-person`): solo un UUID.
 - **Sin conexión, el mostrador se reanuda con ese registro hasta 72 horas después** de la última confirmación del servidor
-  (`COUNTER_RESUME_WINDOW_MS`): la pantalla de entrar ofrece «Continuar sin conexión» y lleva a `/mostrador`. Pasado el plazo se
+  (`COUNTER_RESUME_WINDOW_MS`): la pantalla de entrar ofrece «Continuar sin conexión» y lleva a `/mostrador`, pero solo mientras la conexión no esté confirmada (sin red o
+  comprobando): cuando el servidor responde, el camino es la contraseña ([ADR 0038](https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend/blob/desarrollo/docs/adr/0038-continuar-sin-conexion-solo-se-ofrece-sin-conexion-confirmada.md)). Pasado el plazo se
   **bloquea**, pero la base se **conserva**: se desbloquea entrando con la contraseña y conexión.
   - Un reloj atrasado **no estira el plazo**: si la hora del equipo está más de 5 minutos por detrás de la última confirmación,
     el mostrador se bloquea (`clock-behind`).

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { NAVIGATION } from '../../domain/model/navigation';
 import { can, ROLES, type Role } from '../../domain/model/permissions';
@@ -7,6 +7,7 @@ import { item } from '../../../test/support/fake-selling';
 import { createTestLocal, rememberPerson, type TestLocal } from '../../../test/support/local';
 import { renderScreen } from '../../../test/support/screens';
 import { FakeSelling } from '../../../test/support/selling';
+import { FakeSyncEngine } from '../../../test/support/sync-engine';
 import { EMPTY_CART, addProduct } from '../../domain/model/sale-cart';
 import { buildReceipt } from '../../domain/model/sale-receipt';
 import { AppRoutes } from './AppRoutes';
@@ -16,6 +17,7 @@ function renderAt(
   signedInAs?: { role: Role; membership?: boolean },
   local: TestLocal = createTestLocal(),
   selling: FakeSelling = new FakeSelling(),
+  sync: FakeSyncEngine = new FakeSyncEngine(),
 ) {
   const auth = createTestAuth(signedInAs ? { stored: testSession('ana') } : {});
   if (signedInAs) {
@@ -25,7 +27,7 @@ function renderAt(
         : testMe('ana', signedInAs.role),
     );
   }
-  renderScreen(<AppRoutes />, { path, auth, local, selling });
+  renderScreen(<AppRoutes />, { path, auth, local, selling, sync });
   return auth;
 }
 
@@ -244,6 +246,39 @@ describe('AppRoutes', () => {
 
       expect(await counter()).toBeDefined();
       expect(screen.getByText(/Estás trabajando sin conexión/)).toBeDefined();
+    });
+
+    it('lets the person who resumed it without a connection reach the sign-in page from the card of the sync, and what was saved is still there', async () => {
+      const local = createTestLocal();
+      rememberPerson(local, {
+        authUserId: 'ana',
+        email: 'ana@example.com',
+        userId: 'u-ana',
+        businessId: 'b-1',
+        businessName: 'Tienda La Esquina',
+        role: 'cashier',
+        fullName: 'Ana Gómez',
+        verifiedAt: '2026-10-17T10:00:00.000Z',
+      });
+      local.stores.dataOf('ana').pending = 2;
+      await local.workspace.resume();
+
+      renderAt(
+        '/mostrador',
+        undefined,
+        local,
+        new FakeSelling(),
+        new FakeSyncEngine({ sessionExpired: true, pending: 2 }),
+      );
+      expect(await screen.findByText('Falta entrar con tu contraseña')).toBeDefined();
+      fireEvent.click(screen.getByRole('button', { name: 'Entrar con contraseña' }));
+
+      expect(await heading('Ingresar')).toBeDefined();
+      const last = await screen.findByRole('region', { name: 'Último en este equipo' });
+      expect(last.textContent).toContain('Ana Gómez');
+      expect(screen.getByLabelText<HTMLInputElement>('Correo').value).toBe('ana@example.com');
+      expect(local.stores.forgotten).toEqual([]);
+      expect(local.stores.dataOf('ana').pending).toBe(2);
     });
 
     it('sends a person who has no business yet to create it: there is no counter for them', async () => {

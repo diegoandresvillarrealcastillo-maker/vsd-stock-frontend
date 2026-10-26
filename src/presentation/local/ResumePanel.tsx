@@ -7,6 +7,7 @@ import { roleLabel } from '../../domain/model/people';
 import type { Resumption } from '../../domain/ports/in/local-workspace';
 import { Button } from '../components/Button';
 import { FormAlert } from '../components/FormAlert';
+import { useConnection } from '../connection/ConnectionProvider';
 import { useLocal } from './LocalWorkspaceProvider';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -21,6 +22,8 @@ const LOCKED_REASON: Record<Extract<CounterAccess, { state: 'locked' }>['reason'
     'No pudimos leer cuándo fue la última vez que el servidor confirmó quién eres. Conéctate y entra con tu contraseña.',
 };
 
+const KEPT = 'Lo que tienes guardado en este equipo se conserva.';
+
 /** «unas 5 horas» o «menos de una hora». */
 function timeLeft(remainingMs: number): string {
   const hours = Math.floor(remainingMs / HOUR_MS);
@@ -32,9 +35,14 @@ function timeLeft(remainingMs: number): string {
  * Lo que la pantalla de entrar ofrece a quien ya trabajo en este equipo (ADR 0022, puntos 10 y 11): su nombre, para entrar con la
  * persona ya elegida, y, si pasaron menos de 72 horas desde que el servidor la confirmo, seguir en el mostrador SIN conexion.
  * Pasado ese plazo el mostrador se bloquea, pero lo guardado se conserva hasta que vuelva a entrar con su contrasena.
+ *
+ * Seguir sin conexion solo se ofrece mientras la conexion NO este confirmada (ADR 0038): con el servidor respondiendo, el camino es la
+ * contrasena, y el otro dejaria a la persona en un mostrador sin sesion. Mientras solo se comprueba SI se ofrece: con la API dormida
+ * la persona no espera un minuto para poder vender con lo guardado.
  */
 export function ResumePanel({ last }: { last: Resumption | null }) {
   const { workspace } = useLocal();
+  const { state: connection } = useConnection();
   const navigate = useNavigate();
   const [problem, setProblem] = useState<string | null>(null);
   if (last === null || last.state === 'none') return null;
@@ -80,7 +88,13 @@ export function ResumePanel({ last }: { last: Resumption | null }) {
         <p className="text-sm text-fg-muted">{profile.businessName}</p>
       </div>
       {problem !== null && <FormAlert title="No pudimos abrir el mostrador">{problem}</FormAlert>}
-      {access.state === 'open' ? (
+      {access.state !== 'open' ? (
+        <p className="text-sm text-fg-muted">
+          {LOCKED_REASON[access.reason]} {KEPT}
+        </p>
+      ) : connection.status === 'online' ? (
+        <p className="text-sm text-fg-muted">Entra con tu contraseña. {KEPT}</p>
+      ) : (
         <>
           <p className="text-sm text-fg-muted">
             Si no tienes conexión, puedes seguir en el mostrador {timeLeft(access.remainingMs)} más
@@ -88,10 +102,6 @@ export function ResumePanel({ last }: { last: Resumption | null }) {
           </p>
           <Button onClick={() => void resume()}>Continuar sin conexión</Button>
         </>
-      ) : (
-        <p className="text-sm text-fg-muted">
-          {LOCKED_REASON[access.reason]} Lo que tienes guardado en este equipo se conserva.
-        </p>
       )}
     </section>
   );

@@ -15,7 +15,7 @@ export interface SyncFacts {
 /** `ok`: nada que hacer. `info`: avanza solo. `warn`: alguien tiene que mirar o esperar. */
 export type SyncTone = 'ok' | 'info' | 'warn';
 
-/** Lo que la persona puede hacer ahi mismo: reintentar ya o entrar de nuevo. */
+/** Lo que la persona puede hacer ahi mismo: reintentar ya o entrar (de nuevo, o por primera vez en este equipo con su contrasena). */
 export type SyncAction = 'retry' | 'sign-in' | null;
 
 export interface SyncSummary {
@@ -32,6 +32,11 @@ const records = (count: number): string =>
 const waiting = (pending: number): string | null =>
   pending > 0 ? `${records(pending)} por enviar.` : null;
 
+/** Lo que el resumen necesita saber de la cuenta: si hay una sesion. Sin ella (mostrador reanudado sin conexion) no hay nada que «caducar». */
+export interface SyncAccountFacts {
+  readonly signedIn?: boolean;
+}
+
 const join = (parts: readonly (string | null)[]): string | null => {
   const text = parts.filter((part) => part !== null).join(' ');
   return text === '' ? null : text;
@@ -42,9 +47,31 @@ const join = (parts: readonly (string | null)[]): string | null => {
  * verdad completa: no afirma «en linea» si solo comprobo, ni «todo enviado» si hay algo guardado solo aqui. Va en orden de
  * lo que mas importa: la sesion caducada, lo que el servidor no acepto, el envio en curso, la falta de conexion, el envio que
  * fallo, lo que espera y, al final, que todo esta en orden.
+ *
+ * Nunca ofrece un boton que no haga nada: reintentar solo se ofrece con la conexion confirmada, que es sin la cual el motor
+ * no envia. Y quien reanudo el mostrador sin conexion (`signedIn: false`) no tiene una sesion que haya caducado: lo que le falta
+ * es entrar con su contrasena, y asi se le dice.
  */
-export function summarizeSync(connection: ConnectionStatus, state: SyncFacts): SyncSummary {
+export function summarizeSync(
+  connection: ConnectionStatus,
+  state: SyncFacts,
+  { signedIn = true }: SyncAccountFacts = {},
+): SyncSummary {
   const { pending, attention } = state;
+
+  if (state.sessionExpired && !signedIn) {
+    return {
+      tone: 'warn',
+      headline: 'Falta entrar con tu contraseña',
+      detail: join([
+        waiting(pending),
+        pending > 0
+          ? `Entra con tu contraseña para ${pending === 1 ? 'enviarlo' : 'enviarlos'}. Los registros guardados no se pierden.`
+          : 'Entra con tu contraseña para seguir enviando.',
+      ]),
+      action: 'sign-in',
+    };
+  }
 
   if (state.sessionExpired) {
     return {
@@ -70,7 +97,7 @@ export function summarizeSync(connection: ConnectionStatus, state: SyncFacts): S
           : 'El servidor no las aceptó. Hay que revisarlas.',
         waiting(pending),
       ]),
-      action: state.phase === 'waiting' ? 'retry' : null,
+      action: state.phase === 'waiting' && connection === 'online' ? 'retry' : null,
     };
   }
 
@@ -110,7 +137,7 @@ export function summarizeSync(connection: ConnectionStatus, state: SyncFacts): S
           : // La hora en espanol ya termina en punto («3:30 p. m.»): no se le agrega otro.
             `Vamos a reintentar a las ${formatTime(state.nextTryAt)}`,
       ]),
-      action: 'retry',
+      action: connection === 'online' ? 'retry' : null,
     };
   }
 
