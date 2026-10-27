@@ -7,7 +7,7 @@ import { contarLaCaja } from './arqueo';
 // El arqueo de ejemplo de la landing (C4-L5), sin React: la persona escribe el efectivo que conto y la pagina le dice, con las
 // palabras del producto, si la caja cuadra. Lo lee `parseCash` y lo dice `describeCount`, las mismas funciones de la aplicacion.
 
-const ESPERADO = contenido.comoFunciona.arqueo.esperado;
+const ESPERADO = contenido.arqueo.esperado;
 
 function bien(texto: string) {
   const resultado = contarLaCaja(ESPERADO, texto);
@@ -26,10 +26,10 @@ describe('the cash count of the example', () => {
   });
 
   it('starts from the count the page shows: what is expected, less what is missing', () => {
-    const { contado, esperado } = contenido.comoFunciona.arqueo;
+    const { contado, esperado } = contenido.arqueo;
 
     expect(bien(String(contado)).nota.kind).toBe('short');
-    expect(contado - esperado).toBe(contenido.funciones.miniaturas.caja.diferencia);
+    expect(contado - esperado).toBe(-2_000);
   });
 
   it('says the drawer balances when the count is the expected one', () => {

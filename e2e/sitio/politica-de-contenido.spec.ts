@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { conLasReglasDelSitio, responderLaSonda } from '../support/sitio';
+import { conLasReglasDelSitio } from '../support/sitio';
 
 // La landing con la politica de contenido de verdad (la de `sitio/dist/_headers`, que `vite preview` no aplica). Si la politica
-// bloquea un script, una fuente, una imagen o la consulta del chip, el navegador lo anota en la consola y lanza un evento: aqui se
+// bloquea un script, una fuente o una imagen, el navegador lo anota en la consola y lanza un evento: aqui se
 // recoge todo eso mientras se abre la pagina y se usa cada cosa que se descarga aparte o habla con otro sitio.
 test('nothing is blocked and nothing logs an error while the page is opened and used', async ({
   page,
@@ -21,11 +21,9 @@ test('nothing is blocked and nothing logs an error while the page is opened and 
       );
     });
   });
-  await responderLaSonda(page, 'despierta');
   await conLasReglasDelSitio(page);
 
   await page.goto('/');
-  await expect(page.locator('[data-estado-de-pre="despierta"]')).toBeAttached();
   for (const pestana of ['IVA', 'Caja', 'Vender']) {
     await page.getByRole('tab', { name: pestana }).click();
     await expect(page.getByRole('tabpanel', { name: pestana })).toBeVisible();
@@ -40,7 +38,6 @@ test('nothing is blocked and nothing logs an error while the page is opened and 
 test('the policy is really on: the page asked for, and got, the headers of the site', async ({
   page,
 }) => {
-  await responderLaSonda(page, 'despierta');
   await conLasReglasDelSitio(page);
 
   const respuesta = await page.goto('/');

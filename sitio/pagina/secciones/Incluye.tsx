@@ -1,4 +1,4 @@
-import { contenedor, respiro, tarjeta } from '../clases';
+import { contenedor, respiro, tarjetaClara } from '../clases';
 import { IconoCheck, IconoEquis } from '../componentes/Iconos';
 import { EncabezadoSeccion, Seccion } from '../componentes/Seccion';
 import { contenido } from '../contenido';
@@ -13,7 +13,7 @@ interface ColumnaProps {
 
 function Columna({ titulo, items, marca, hace }: ColumnaProps) {
   return (
-    <div className={tarjeta}>
+    <div className={tarjetaClara}>
       <h3 className="font-display text-xl font-bold">{titulo}</h3>
       <ul className="mt-5 space-y-3">
         {items.map((item) => (
@@ -33,32 +33,28 @@ function Columna({ titulo, items, marca, hace }: ColumnaProps) {
   );
 }
 
-/** Lo que VSD Stock hace hoy y lo que no hace, lado a lado: lo segundo evita que alguien espere lo que no existe. */
-export function Limites() {
-  const { limites, anclas } = contenido;
+/** Lo que VSD Stock hace por ti y lo que sigue como lo haces hoy, lado a lado: lo segundo evita que alguien espere lo que no hace. */
+export function Incluye() {
+  const { incluye, anclas } = contenido;
   return (
-    <Seccion ancla={anclas.limites} className={respiro}>
+    <Seccion ancla={anclas.incluye} className={`${respiro} bg-surface-raised`}>
       <div className={contenedor}>
-        <EncabezadoSeccion
-          ancla={anclas.limites}
-          etiqueta={limites.etiqueta}
-          titulo={limites.titulo}
-        />
+        <EncabezadoSeccion ancla={anclas.incluye} titulo={incluye.titulo} />
         <div className="mt-12 grid gap-4 md:grid-cols-2">
           <Columna
-            titulo={limites.columnaHace}
-            items={limites.hace}
-            marca={limites.marcas.hace}
+            titulo={incluye.columnaHace}
+            items={incluye.hace}
+            marca={incluye.marcas.hace}
             hace
           />
           <Columna
-            titulo={limites.columnaNoHace}
-            items={limites.noHace}
-            marca={limites.marcas.noHace}
+            titulo={incluye.columnaNoHace}
+            items={incluye.noHace}
+            marca={incluye.marcas.noHace}
             hace={false}
           />
         </div>
-        <p className="mt-8 max-w-3xl text-fg-muted">{limites.pie}</p>
+        <p className="mt-8 max-w-3xl text-fg-muted">{incluye.pie}</p>
       </div>
     </Seccion>
   );

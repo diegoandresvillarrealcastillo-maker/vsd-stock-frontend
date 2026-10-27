@@ -45,7 +45,7 @@ export function reglasDelSitioCompilado(raiz: string = RAIZ): Record<string, str
 
 /**
  * Sirve la pagina con las reglas de `sitio/dist/_headers`. `vite preview` no las aplica y entonces la politica de contenido (que
- * solo deja hablar al propio sitio y a la API de PRE) nunca se veria actuar: un script bloqueado pasaria sin que nadie lo note.
+ * solo deja hablar al propio sitio) nunca se veria actuar: un script bloqueado pasaria sin que nadie lo note.
  */
 export async function conLasReglasDelSitio(
   page: Pick<Page, 'route'>,
@@ -54,17 +54,5 @@ export async function conLasReglasDelSitio(
   await page.route(`${URL_DEL_SITIO}/**`, async (ruta) => {
     const respuesta = await ruta.fetch();
     await ruta.fulfill({ response: respuesta, headers: { ...respuesta.headers(), ...reglas } });
-  });
-}
-
-/** Lo que contesta la API de PRE cuando la pagina le pregunta `GET /health` (el chip de la demo). */
-export type SondaDePre = 'despierta' | 'dormida' | 'verificando';
-
-/** Hace que la API de PRE conteste como se pide: al instante, con la conexion rechazada, o nunca (el chip se queda verificando). */
-export async function responderLaSonda(page: Pick<Page, 'route'>, como: SondaDePre): Promise<void> {
-  await page.route('**/health', async (ruta) => {
-    if (como === 'despierta') await ruta.fulfill({ status: 200, body: 'ok' });
-    else if (como === 'dormida') await ruta.abort('connectionrefused');
-    else await new Promise<void>(() => undefined);
   });
 }

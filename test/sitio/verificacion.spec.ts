@@ -19,7 +19,6 @@ import {
 // el chat, y que Cloudflare puso los encabezados que el sitio escribio (lo que `vite preview` no podia probar: ver docs/rendimiento-de-la-landing.md).
 // Aqui se prueba la decision con respuestas armadas a mano; pedirlas a la red es lo unico que queda fuera.
 const ORIGEN = 'https://vsd-stock-sitio.pages.dev';
-const API = 'https://vsd-stock-api-pre.onrender.com';
 const TITULO = 'VSD Stock';
 const ENCABEZADO = 'Vende aunque se caiga el internet.';
 const WHATSAPP =
@@ -34,7 +33,7 @@ const POLITICA = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
-  `connect-src 'self' ${API}`,
+  "connect-src 'self'",
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
@@ -53,7 +52,6 @@ const ESPERADO: Esperado = {
   encabezado: ENCABEZADO,
   whatsappUrl: WHATSAPP,
   whatsappNumero: '573245889281',
-  origenesDeConexion: [API],
 };
 
 const ENCABEZADOS_DE_LA_PAGINA: Readonly<Record<string, string>> = {
@@ -359,17 +357,17 @@ describe('the content policy', () => {
     expect(con(POLITICA.replace("default-src 'self'", 'default-src *'))).toEqual([POLITICA_PUESTA]);
   });
 
-  it('does not pass if the page can talk to an address that was not told: every origin of connection must be there', () => {
-    expect(con(POLITICA.replace(` ${API}`, ''))).toEqual([POLITICA_PUESTA]);
+  it('does not pass if the page can talk to an address that was not told: it only talks to itself', () => {
+    expect(
+      con(POLITICA.replace("connect-src 'self'", "connect-src 'self' https://api.ejemplo.test")),
+    ).toEqual([POLITICA_PUESTA]);
   });
 
   it('does not pass if the page can talk to any address', () => {
-    expect(
-      con(POLITICA.replace(`connect-src 'self' ${API}`, `connect-src 'self' ${API} *`)),
-    ).toEqual([POLITICA_PUESTA]);
-    expect(con(POLITICA.replace(`connect-src 'self' ${API}`, 'connect-src *'))).toEqual([
+    expect(con(POLITICA.replace("connect-src 'self'", "connect-src 'self' *"))).toEqual([
       POLITICA_PUESTA,
     ]);
+    expect(con(POLITICA.replace("connect-src 'self'", 'connect-src *'))).toEqual([POLITICA_PUESTA]);
   });
 
   it('does not pass if the page can be framed or can load plugins', () => {
@@ -396,7 +394,7 @@ describe('the content policy', () => {
   });
 
   it('does not pass without connect-src, because the page could then talk to any address', () => {
-    expect(con(POLITICA.replace(`connect-src 'self' ${API}; `, ''))).toEqual([POLITICA_PUESTA]);
+    expect(con(POLITICA.replace("connect-src 'self'; ", ''))).toEqual([POLITICA_PUESTA]);
   });
 
   it.each([
@@ -684,7 +682,7 @@ describe('the report', () => {
 
 describe('what the build writes and what this check asks for', () => {
   it('agree: the rules that scripts/build-sitio.ts writes into _headers pass every check of headers', () => {
-    const texto = siteHeaders({ hashes: inlineScriptHashes(HTML), connectOrigins: [API] });
+    const texto = siteHeaders({ hashes: inlineScriptHashes(HTML) });
     const reglas = new Map<string, Record<string, string>>();
     for (const seccion of texto.split(/\n\s*\n/)) {
       const [ruta, ...cabeceras] = seccion

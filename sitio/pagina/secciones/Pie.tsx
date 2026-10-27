@@ -1,4 +1,4 @@
-import { contenedor, etiqueta } from '../clases';
+import { contenedor } from '../clases';
 import { EnlaceExterno } from '../componentes/EnlaceExterno';
 import { contenido } from '../contenido';
 
@@ -10,8 +10,7 @@ export function Pie() {
   const { pie, marca } = contenido;
   return (
     <footer className="banda bg-band text-on-band">
-      {/* El margen de abajo en telefono deja ver el ultimo renglon aunque la barra de contacto este abierta. */}
-      <div className={`${contenedor} py-14 max-md:pb-28`}>
+      <div className={`${contenedor} py-14`}>
         <div className="grid gap-10 md:grid-cols-[1.3fr_repeat(3,1fr)]">
           <div>
             <img
@@ -25,7 +24,7 @@ export function Pie() {
           </div>
           {pie.columnas.map((columna) => (
             <div key={columna.titulo}>
-              <h2 className={`${etiqueta} text-accent`}>{columna.titulo}</h2>
+              <h2 className="font-display text-base font-bold">{columna.titulo}</h2>
               <ul className="mt-3">
                 {columna.enlaces.map((enlace) => (
                   <li key={`${enlace.href}${enlace.texto}`}>

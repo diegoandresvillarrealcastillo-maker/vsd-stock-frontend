@@ -18,8 +18,8 @@ export const botonSecundario = `${boton} border border-border text-fg hover:bg-s
 /** El boton principal sobre la banda naranja del final: azul oscuro. */
 export const botonSobreNaranja = `${boton} bg-band text-on-band shadow-sm hover:opacity-90`;
 
-/** La etiqueta pequeña, en mono, que va sobre el titulo de cada seccion. */
-export const etiqueta = 'font-mono text-xs font-medium uppercase tracking-[0.18em]';
+/** El boton de al lado sobre la banda naranja: solo el contorno, del mismo azul oscuro de las letras de la banda. */
+export const botonContornoSobreNaranja = `${boton} border-2 border-on-accent text-on-accent hover:bg-on-accent/10`;
 
 /**
  * La tarjeta sobre una seccion de fondo claro: borde fino, fondo levantado. Pinta tambien su texto (`text-fg`): sobre la banda azul

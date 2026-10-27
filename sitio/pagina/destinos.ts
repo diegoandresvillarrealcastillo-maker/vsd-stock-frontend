@@ -1,30 +1,23 @@
-// A donde apunta la landing. Es una hoja sin imports a proposito: el script de compilacion (scripts/build-sitio.ts) la lee en
-// Node para escribir la politica de contenido, y desde aqui la leen tambien el contenido, el chip de la demo y los enlaces,
-// para que la politica y la pagina no puedan decir cosas distintas.
+// A donde apunta la landing. Es una hoja sin imports a proposito: los scripts (scripts/build-sitio.ts, scripts/verificar-sitio.ts)
+// la leen en Node, y desde aqui la leen tambien el contenido y los enlaces, para que lo que se verifica y lo que se muestra no puedan
+// decir cosas distintas.
 
-/** La API de PRE (Render, plan gratuito, se duerme a los 15 minutos): el chip de la demo le hace una sola consulta `GET /health`. */
-export const API_DE_PRE = 'https://vsd-stock-api-pre.onrender.com';
-
-/** La web de PRE, con datos ficticios: la demo que se enlaza publicamente (Diego, 22 de octubre). */
-export const DEMO_DE_PRE = 'https://vsd-stock-pre.pages.dev';
+/** La aplicacion de PRE: la unica que existe hoy. A ella llevan «Iniciar sesion» y «Solicitar mi acceso». */
+export const APP_DE_PRE = 'https://vsd-stock-pre.pages.dev';
 
 /**
- * A donde llevan «Iniciar sesion» y «Crear cuenta» (Diego, 25 de octubre): a la aplicacion de PRE, que es la unica que existe.
- * Cuando exista PROD, la aplicacion cambia de direccion aqui y en ningun otro lugar de la pagina.
+ * A donde llevan «Iniciar sesion» y «Solicitar mi acceso» (Diego, 25 de octubre): a la aplicacion. Cuando exista PROD, la aplicacion
+ * cambia de direccion aqui y en ningun otro lugar de la pagina.
  */
-export const APP_INGRESAR = `${DEMO_DE_PRE}/ingresar`;
-export const APP_REGISTRARSE = `${DEMO_DE_PRE}/registrarse`;
-
-/** Los dos repositorios son publicos (y no tienen licencia: por eso la pagina dice «codigo a la vista», no «open source»). */
-export const REPOSITORIO_BACKEND =
-  'https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-backend';
-export const REPOSITORIO_FRONTEND =
-  'https://github.com/diegoandresvillarrealcastillo-maker/vsd-stock-frontend';
+export const APP_INGRESAR = `${APP_DE_PRE}/ingresar`;
+export const APP_REGISTRARSE = `${APP_DE_PRE}/registrarse`;
 
 /**
- * El unico contacto: un chat de WhatsApp con el mensaje ya escrito (Diego, 22 de octubre). La pagina no tiene formularios, ni
- * cookies, ni analitica (ADR 0033). El numero es publico: recibira mensajes no deseados.
+ * El unico contacto: un chat de WhatsApp con el mensaje ya escrito (Diego, 22 de octubre; el mensaje cambio el 27 de octubre, cuando
+ * la pagina dejo de buscar tiendas para probar y paso a ofrecer un asesor). La pagina no tiene formularios, ni cookies, ni analitica
+ * (ADR 0033). El numero es publico: recibira mensajes no deseados.
  */
 export const WHATSAPP_NUMERO = '573245889281';
-export const WHATSAPP_MENSAJE = 'Hola, quiero probar VSD Stock en mi tienda.';
+export const WHATSAPP_MENSAJE =
+  'Hola, quiero hablar con un asesor sobre VSD Stock para mi negocio.';
 export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(WHATSAPP_MENSAJE)}`;

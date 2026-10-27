@@ -12,7 +12,7 @@ const leer = (nombre: string): string =>
   readFileSync(join(SECCIONES, nombre), 'utf8').replaceAll('\r\n', '\n');
 
 const iva = leer('CalculadoraIva.spec.tsx');
-const demo = leer('Demo.spec.tsx');
+const demo = leer('Pruebalo.spec.tsx');
 
 /** El valor numerico de una constante del archivo, por ejemplo `const LIMITE_MS = 30_000;`. */
 function constante(fuente: string, nombre: string): number {

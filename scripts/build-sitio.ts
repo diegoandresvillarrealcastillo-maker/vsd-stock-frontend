@@ -49,28 +49,17 @@ export function inlineScriptHashes(html: string): string[] {
 
 /**
  * Las reglas de Cloudflare Pages de la landing (`_headers`). La politica de contenido deja pasar scripts propios y las huellas
- * de los que estan en linea, nunca `unsafe-inline` ni `unsafe-eval`, y solo deja que la pagina le hable a su propio sitio y a los
- * origenes que se le dicen (la API de PRE, para el chip de la demo).
+ * de los que estan en linea, nunca `unsafe-inline` ni `unsafe-eval`, y solo deja que la pagina le hable a su propio sitio: es una pagina
+ * para leer y no le pide nada a ningun servidor (el chip que despertaba la API de PRE se quito en LND-2).
  */
-export function siteHeaders({
-  hashes,
-  connectOrigins,
-}: {
-  readonly hashes: readonly string[];
-  readonly connectOrigins: readonly string[];
-}): string {
-  for (const origin of connectOrigins) {
-    if (!origin.startsWith('https://')) {
-      throw new Error(`La pagina solo le habla a servidores con https, y se pidio ${origin}.`);
-    }
-  }
+export function siteHeaders({ hashes }: { readonly hashes: readonly string[] }): string {
   const policy = [
     "default-src 'self'",
     ["script-src 'self'", ...hashes].join(' '),
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    ["connect-src 'self'", ...connectOrigins].join(' '),
+    "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'none'",
@@ -103,13 +92,12 @@ export function siteHeaders({
 async function main(): Promise<void> {
   const dist = 'sitio/dist';
   const load = async (path: string): Promise<unknown> => import(pathToFileURL(resolve(path)).href);
-  const { API_DE_PRE } = (await load('sitio/pagina/destinos.ts')) as { API_DE_PRE: string };
   const { render } = (await load('sitio/dist-ssr/entry-server.js')) as { render: () => string };
 
   const page = injectApp(readFileSync(join(dist, 'index.html'), 'utf8'), render());
   writeFileSync(join(dist, 'index.html'), page);
   const hashes = inlineScriptHashes(page);
-  writeFileSync(join(dist, '_headers'), siteHeaders({ hashes, connectOrigins: [API_DE_PRE] }));
+  writeFileSync(join(dist, '_headers'), siteHeaders({ hashes }));
   console.log(
     `Landing lista en ${dist}/: pagina prerenderizada (${String(page.length)} caracteres) y ${String(hashes.length)} script(s) en linea con huella.`,
   );

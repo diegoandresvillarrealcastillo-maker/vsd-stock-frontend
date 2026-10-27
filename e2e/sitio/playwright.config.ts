@@ -7,8 +7,8 @@ const raiz = resolve(import.meta.dirname, '..', '..');
 
 /**
  * Las pruebas en navegador de la landing (C4-L7): la pagina ya compilada (`npm run build:sitio`) en Chromium, con las reglas de
- * `_headers` puestas. No necesitan la API, la base ni el servicio de identidad: la landing no los usa, y lo unico que le pregunta a
- * PRE (`GET /health`, el chip de la demo) lo contesta cada prueba. Se corren con `npm run e2e:sitio`.
+ * `_headers` puestas. No necesitan la API, la base ni el servicio de identidad: la landing no le pide nada a ningun servidor. Se corren
+ * con `npm run e2e:sitio`.
  *
  * Solo Chromium, el navegador del telefono Android del negocio de referencia (igual que lo unico que bloquea en `playwright.config.ts`).
  * Detalle en `docs/rendimiento-de-la-landing.md`.

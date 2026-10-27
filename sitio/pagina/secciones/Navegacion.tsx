@@ -76,7 +76,7 @@ export function Navegacion() {
 
           <EnlaceExterno
             href={navegacion.cta.href}
-            className="hidden min-h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent transition-colors duration-(--duration-base) hover:bg-accent-hover sm:inline-flex"
+            className="inline-flex min-h-10 items-center rounded-lg bg-accent px-3 text-sm font-semibold text-on-accent transition-colors duration-(--duration-base) hover:bg-accent-hover sm:px-4"
           >
             {navegacion.cta.texto}
           </EnlaceExterno>

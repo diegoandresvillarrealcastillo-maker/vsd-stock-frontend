@@ -1,22 +1,21 @@
 import { contenido } from './contenido';
-import { Anuncio } from './secciones/Anuncio';
-import { BarraContacto } from './secciones/BarraContacto';
-import { ComoFunciona } from './secciones/ComoFunciona';
-import { Confianza } from './secciones/Confianza';
+import { AntesYDespues } from './secciones/AntesYDespues';
+import { Beneficios } from './secciones/Beneficios';
+import { ComoEmpezar } from './secciones/ComoEmpezar';
 import { CtaFinal } from './secciones/CtaFinal';
-import { Demo } from './secciones/Demo';
 import { Funciones } from './secciones/Funciones';
 import { Hero } from './secciones/Hero';
-import { Limites } from './secciones/Limites';
-import { LoQueViene } from './secciones/LoQueViene';
+import { Incluye } from './secciones/Incluye';
 import { Navegacion } from './secciones/Navegacion';
+import { ParaQuien } from './secciones/ParaQuien';
 import { Pie } from './secciones/Pie';
 import { Preguntas } from './secciones/Preguntas';
-import { Problema } from './secciones/Problema';
+import { Pruebalo } from './secciones/Pruebalo';
 
 /**
- * La pagina: las secciones en el orden de la propuesta. Es la misma que el servidor prerenderiza y que el navegador monta encima,
- * asi que nada de lo que pinta puede depender de donde esta la persona o de lo que eligio antes (eso llega despues de montar).
+ * La pagina: las secciones en el orden de la propuesta comercial (LND-2). Es la misma que el servidor prerenderiza y que el navegador
+ * monta encima, asi que nada de lo que pinta puede depender de donde esta la persona o de lo que eligio antes (eso llega despues de
+ * montar).
  */
 export function Sitio() {
   return (
@@ -27,22 +26,20 @@ export function Sitio() {
       >
         {contenido.navegacion.saltar}
       </a>
-      <Anuncio />
       <Navegacion />
       <main id="contenido" tabIndex={-1} className="outline-none">
         <Hero />
-        <Problema />
-        <ComoFunciona />
+        <Beneficios />
+        <AntesYDespues />
         <Funciones />
-        <Demo />
-        <Limites />
-        <Confianza />
-        <LoQueViene />
+        <Pruebalo />
+        <ComoEmpezar />
+        <ParaQuien />
+        <Incluye />
         <Preguntas />
         <CtaFinal />
       </main>
       <Pie />
-      <BarraContacto />
     </>
   );
 }

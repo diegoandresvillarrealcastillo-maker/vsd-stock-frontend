@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { expectAccessible, expectTheme } from '../support/axe';
-import { conLasReglasDelSitio, responderLaSonda, type SondaDePre } from '../support/sitio';
+import { conLasReglasDelSitio } from '../support/sitio';
 
 // La landing entera con axe en el navegador real (C4-L7): contraste de color, nombres de los controles, orden de los encabezados y
 // regiones, que jsdom no ve. En tema claro y en tema oscuro (lo da el navegador con `prefers-color-scheme`, como en un telefono),
@@ -16,7 +16,6 @@ for (const theme of ['light', 'dark'] as const) {
       test.use({ colorScheme: theme, viewport: { width: ancho, height: alto } });
 
       test.beforeEach(async ({ page }) => {
-        await responderLaSonda(page, 'despierta');
         await conLasReglasDelSitio(page);
         await page.goto('/');
         await expectTheme(page, theme);
@@ -54,20 +53,4 @@ for (const theme of ['light', 'dark'] as const) {
       }
     });
   }
-
-  // El chip de la demo cambia de color con lo que contesta la API de PRE: cada estado tiene que verse bien.
-  test.describe(`landing demo chip accessibility, ${theme} theme, phone`, () => {
-    test.use({ colorScheme: theme });
-
-    for (const estado of ['verificando', 'despierta', 'dormida'] as const satisfies SondaDePre[]) {
-      test(`while the demo is «${estado}»`, async ({ page }) => {
-        await responderLaSonda(page, estado);
-        await conLasReglasDelSitio(page);
-        await page.goto('/');
-        await expectTheme(page, theme);
-        await expect(page.locator(`[data-estado-de-pre="${estado}"]`)).toBeAttached();
-        await expectAccessible(page, `El chip de la demo, «${estado}»`);
-      });
-    }
-  });
 }

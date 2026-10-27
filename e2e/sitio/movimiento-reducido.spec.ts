@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { conLasReglasDelSitio, responderLaSonda } from '../support/sitio';
+import { conLasReglasDelSitio } from '../support/sitio';
 
 // «Movimiento reducido apaga todo lo que se mueve» (C4-L7). Se comprueba en el navegador, que es el unico que sabe lo que de verdad
 // se aplica: cada elemento de la pagina, con sus ::before y ::after, tiene que quedar sin una transicion ni una animacion que dure
@@ -47,7 +47,6 @@ async function frenarLaCalculadora(page: Page): Promise<void> {
 }
 
 async function abrir(page: Page): Promise<void> {
-  await responderLaSonda(page, 'despierta');
   await conLasReglasDelSitio(page);
   await page.goto('/');
 }

@@ -28,16 +28,13 @@ describe('lo que la landing descarga solo cuando se pide', () => {
     'no importa %s de la forma normal en ningun archivo: solo con import() desde la banda de la demo',
     (modulo) => {
       expect(importanDeFormaNormal(modulo)).toEqual([]);
-      const banda = readFileSync(join(RAIZ, 'secciones/Demo.tsx'), 'utf8');
+      const banda = readFileSync(join(RAIZ, 'secciones/Pruebalo.tsx'), 'utf8');
       expect(banda).toMatch(new RegExp(`import\\(\\s*['"]\\./${modulo}['"]\\s*\\)`));
     },
   );
 
-  it('el diagrama si va en el paquete de la entrada: esta arriba, en la primera pantalla', () => {
-    expect(importanDeFormaNormal('DiagramaVenta').sort()).toEqual([
-      join(RAIZ, 'secciones/Demo.tsx'),
-      join(RAIZ, 'secciones/Hero.tsx'),
-    ]);
+  it('el diagrama si va en el paquete de la entrada: es la primera pestana de la banda y se ve sin pedir nada', () => {
+    expect(importanDeFormaNormal('DiagramaVenta')).toEqual([join(RAIZ, 'secciones/Pruebalo.tsx')]);
   });
 
   it('la prueba sabe distinguir: ve las importaciones normales que de verdad existen', () => {

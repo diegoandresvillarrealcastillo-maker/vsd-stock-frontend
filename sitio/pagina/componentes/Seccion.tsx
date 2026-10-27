@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { etiqueta as claseEtiqueta } from '../clases';
 
 /** El id del titulo de una seccion: la seccion lo nombra con `aria-labelledby` y un lector de pantalla salta de titulo en titulo. */
 export const idTitulo = (ancla: string): string => `titulo-${ancla}`;
@@ -25,25 +24,17 @@ export function Seccion({ ancla, className, children }: SeccionProps) {
 
 interface EncabezadoProps {
   readonly ancla: string;
-  readonly etiqueta: string;
   readonly titulo: string;
-  /** Sobre una banda oscura la etiqueta usa el naranja de la marca, que ahi si se lee. */
-  readonly sobreBanda?: boolean;
 }
 
-/** La etiqueta y el titulo (h2) con que abre cada seccion. */
-export function EncabezadoSeccion({ ancla, etiqueta, titulo, sobreBanda }: EncabezadoProps) {
+/** El titulo (h2) con que abre cada seccion. Sin etiqueta encima: el titulo ya dice de que trata. */
+export function EncabezadoSeccion({ ancla, titulo }: EncabezadoProps) {
   return (
-    <div className="max-w-3xl">
-      <p className={`${claseEtiqueta} ${sobreBanda === true ? 'text-accent' : 'text-accent-text'}`}>
-        {etiqueta}
-      </p>
-      <h2
-        id={idTitulo(ancla)}
-        className="mt-3 font-display text-3xl font-extrabold tracking-tight text-balance sm:text-4xl"
-      >
-        {titulo}
-      </h2>
-    </div>
+    <h2
+      id={idTitulo(ancla)}
+      className="max-w-3xl font-display text-3xl font-extrabold tracking-tight text-balance sm:text-4xl"
+    >
+      {titulo}
+    </h2>
   );
 }

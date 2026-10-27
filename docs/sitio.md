@@ -93,8 +93,8 @@ un navegador. Para una vista previa se le pasa la dirección que imprimió Cloud
 2. **El HTML trae el texto, sin ejecutar JavaScript:** el título y el encabezado principal de la compilación están en el documento, no los pinta un script.
 3. **Los archivos con huella se guardan un año:** un archivo de `/assets/` responde con `max-age` de al menos 31536000 e `immutable`.
 4. **La página se revisa en cada visita:** `/` no se guarda (`no-cache` o `max-age=0`), para que quien visite vea la versión nueva tras publicar.
-5. **La política de contenido está puesta:** scripts propios o con huella (nunca en línea sin ella, nunca `unsafe-eval`), conexiones solo al propio sitio y a la API de PRE, y nada
-   de marcos ni plugins.
+5. **La política de contenido está puesta:** scripts propios o con huella (nunca en línea sin ella, nunca `unsafe-eval`), conexiones solo al propio sitio (la página no le
+   pregunta nada a ningún servidor desde LND-2), y nada de marcos ni plugins.
 6. **Los encabezados de seguridad están puestos:** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy` y `Permissions-Policy`.
 7. **El enlace de WhatsApp es el de la página:** el que está en el HTML es el del contenido, con el número y el mensaje.
 8. **El enlace de WhatsApp abre el chat:** `wa.me` redirige a `api.whatsapp.com` con el número del contacto.
@@ -112,25 +112,67 @@ El subdominio es el nombre del proyecto: `vsd-stock-sitio` es `vsd-stock-sitio.p
   viejo lo borra una persona en el panel cuando ya no haga falta.
 - **Un dominio propio** (cuando exista): se agrega en el panel del proyecto, en _Custom domains_, y no cambia nada de lo de arriba; se verifica con esa dirección.
 
-Si la dirección cambia, avisa a quien tenga el enlace: el de WhatsApp, el de las redes y el de la demo de PRE se escriben en `sitio/pagina/destinos.ts`.
+Si la dirección cambia, avisa a quien tenga el enlace: el de WhatsApp y los de la aplicación de PRE se escriben en `sitio/pagina/destinos.ts`.
 
 ## A dónde lleva cada botón
 
 Todos los destinos se escriben en un solo archivo, `sitio/pagina/destinos.ts`, y nada más en la página los repite. Desde el 25 de octubre de 2026 (decisión de
-Diego: la landing se ve y, cuando alguien quiere registrarse o iniciar sesión, se le manda a la aplicación de PRE), los botones llevan a cuatro lugares:
+Diego: la landing se ve y, cuando alguien quiere registrarse o iniciar sesión, se le manda a la aplicación de PRE) y con los nombres de LND-2 (27 de octubre de 2026), los
+botones llevan a tres lugares:
 
-| Botón                                                                                      | Lleva a                                                |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
-| **Iniciar sesión** (arriba, también dentro del menú del teléfono)                          | `https://vsd-stock-pre.pages.dev/ingresar`             |
-| **Crear cuenta** (arriba) y **Crear mi cuenta** (el primero de la portada)                 | `https://vsd-stock-pre.pages.dev/registrarse`          |
-| **Escríbenos por WhatsApp**, el aviso de arriba, la barra del teléfono, el cierre y el pie | el chat de WhatsApp con el mensaje ya escrito          |
-| **Probar con ventas de ejemplo** (la prueba y el cierre)                                   | `https://vsd-stock-pre.pages.dev`, con datos ficticios |
+| Botón                                                                          | Lleva a                                       |
+| ------------------------------------------------------------------------------ | --------------------------------------------- |
+| **Iniciar sesión** (arriba, también dentro del menú del teléfono, y en el pie) | `https://vsd-stock-pre.pages.dev/ingresar`    |
+| **Solicitar mi acceso** (arriba, en la portada, en el cierre y en el pie)      | `https://vsd-stock-pre.pages.dev/registrarse` |
+| **Hablar con un asesor** (la portada, el cierre y el pie)                      | el chat de WhatsApp con el mensaje ya escrito |
 
-- **Mientras no exista PROD, la cuenta se crea en el ambiente de pruebas.** La portada lo dice junto al botón («todavía no cargues los datos reales de tu tienda»)
-  y una prueba lo exige. Cuando exista PROD, la dirección de la aplicación se cambia en `destinos.ts` (`APP_INGRESAR`, `APP_REGISTRARSE`) y ese aviso se revisa.
-- **La página sigue sin recoger nada.** «Iniciar sesión» y «Crear cuenta» son enlaces a otra dirección: no hay formularios, correo, cookies ni analítica aquí
-  (ADR 0033, punto 5). Una prueba (`test/sitio/afirmaciones.spec.ts`) exige que esas frases solo existan en esos tres botones y que lleven a la aplicación de PRE.
-- **WhatsApp sigue siendo el contacto de las tiendas piloto:** el segundo botón de la portada, el aviso de arriba, la barra del teléfono y el cierre.
+- **Mientras no exista PROD, la cuenta se crea en el ambiente de pruebas.** Antes la portada lo decía junto al botón; desde LND-2 la página no menciona pruebas ni ambientes
+  (Diego: la imagen es la de un producto terminado), así que ese aviso salió del texto y queda aquí. Cuando exista PROD, la dirección de la aplicación se cambia en `destinos.ts`
+  (`APP_DE_PRE`, de donde salen `APP_INGRESAR` y `APP_REGISTRARSE`). **Por eso el rediseño no se promueve a preproducción antes de la etapa 3** (ver más abajo).
+- **La página sigue sin recoger nada.** «Iniciar sesión» y «Solicitar mi acceso» son enlaces a otra dirección: no hay formularios, correo, cookies ni analítica aquí
+  (ADR 0033, punto 5). Una prueba (`test/sitio/afirmaciones.spec.ts`) exige que esas frases solo existan en esos botones y que lleven a la aplicación de PRE.
+- **WhatsApp es el contacto con el asesor:** el número y el mensaje («Hola, quiero hablar con un asesor sobre VSD Stock para mi negocio.») están en `destinos.ts`.
+- **El precio no está en la página:** no existe todavía y la pregunta «¿Cuánto cuesta?» responde «Cotiza con un asesor». Una prueba impide que aparezcan cifras, planes o descuentos.
+
+## El rediseño comercial (LND-2)
+
+**27 de octubre de 2026**, etapa 1 de 3 del rediseño que pidió Diego (la página, el ingreso y el registro, y los roles). Esta etapa es solo la página: pasó de enseñar «una
+prueba» a presentar un producto terminado, escrita para el dueño de un negocio y no para quien lo construyó.
+
+La página tiene diez secciones, en este orden y con estas anclas:
+
+1. `#inicio`: título, subtítulo, los dos botones, tres puntos y dos capturas de la aplicación (el teléfono de la venta y el computador de las existencias).
+2. `#beneficios`: cuatro beneficios del día a día.
+3. `#antes-y-despues`: lo que vive un negocio sin VSD Stock y con él, en dos listas lado a lado.
+4. `#funciones`: cuatro funciones grandes, cada una con la pantalla de la aplicación, y tres tarjetas chicas (sin conexión, IVA y roles).
+5. `#pruebalo`: la banda azul con las tres demostraciones ([`banda-de-la-demo.md`](banda-de-la-demo.md)).
+6. `#como-empezar`: los tres pasos (pedir el acceso, hablar con un asesor, empezar a vender).
+7. `#para-quien`: los tres tipos de negocio.
+8. `#que-incluye`: lo que hace y lo que sigue como se hace hoy (la factura electrónica, las tarjetas, la contabilidad).
+9. `#preguntas`: ocho preguntas, entre ellas la del precio.
+10. `#contacto`: el cierre, con los dos botones.
+
+**Lo que ya no está:** el aviso de arriba («en pruebas»), la barra de contacto fija del teléfono, la sección «Confianza», «Lo que viene», el enlace a la web con datos
+de ejemplo y el chip que decía si esa web estaba despierta. Tampoco hay clientes, testimonios ni cifras de pruebas: no los hay, y `test/sitio/afirmaciones.spec.ts` impide
+que se inventen y que la página suene a prueba (el bloque «the page does not look like a test»).
+
+**Las capturas** son de la aplicación real con datos de ejemplo («Minimercado La Esquina»), no dibujos: están en `sitio/public/capturas/` y `sitio/pagina/capturas.ts` dice
+dónde está cada una y cuánto mide, para que el navegador le reserve el espacio y la página no salte al cargar. Lo que dice cada una para quien no la ve está en
+`contenido.ts` (`contenido.capturas`). `test/sitio/capturas.spec.ts` comprueba que cada archivo existe, que mide lo que dice `capturas.ts`, que pesa menos de 40 KB y que no
+sobra ninguno. Para volver a tomarlas (si cambia la aplicación) se levanta la pila de [`pruebas-en-navegador.md`](pruebas-en-navegador.md), se abre una tienda con ese nombre y
+sus productos, se fotografía cada pantalla con Playwright (390 × 844 en el teléfono, 1.280 × 800 en el computador), se convierten a WebP con pérdida y se escriben las
+medidas nuevas en `capturas.ts`. La captura del resumen del mes es la pantalla real y por eso muestra las filas «Exento» y «Excluido» que tiene el reporte.
+
+**Cómo verla en local:**
+
+```bash
+npm run dev:sitio       # la página con recarga en caliente; Vite imprime la dirección (normalmente http://localhost:5173)
+npm run build:sitio && npm run preview:sitio   # lo compilado, como se publica
+```
+
+**Lo que describe lo que todavía no existe.** «Solicitar mi acceso» y «Cómo empezar» cuentan el camino de la etapa 3 (el cliente pide el acceso, un asesor valida la
+asesoría y el pago y activa la cuenta). Hoy el botón lleva a `/registrarse`, que crea la cuenta de inmediato en el ambiente de pruebas. Mientras no exista el estado
+«Pendiente de validación» (la etapa 3, que necesita cambios en el backend y un ADR), la página no se promueve a preproducción ni se publica en la dirección pública.
 
 ## Cómo se escribe el texto
 
@@ -167,7 +209,7 @@ Esa auditoría **no fue una prueba con un tendero**, y la página no pasó por e
 ## Otros documentos de la landing
 
 - El diagrama «Cómo viaja una venta» (la máquina de las ventas, qué dice el teléfono): [`docs/diagrama-de-la-venta.md`](diagrama-de-la-venta.md).
-- La banda de la demo y el chip del estado de PRE: [`docs/banda-de-la-demo.md`](banda-de-la-demo.md).
+- La banda «Pruébalo» (las pestañas Vender, IVA y Caja): [`docs/banda-de-la-demo.md`](banda-de-la-demo.md).
 - Rendimiento, accesibilidad y movimiento reducido (qué se midió y el presupuesto de peso): [`docs/rendimiento-de-la-landing.md`](rendimiento-de-la-landing.md).
 - Las mascotas y lo que sus historias prometen: [`docs/mascotas.md`](mascotas.md).
 - La web de PRE (la aplicación, en otro proyecto de Cloudflare Pages): [`docs/despliegue-de-la-web.md`](despliegue-de-la-web.md).

@@ -104,11 +104,49 @@ describe('docs/sitio.md', () => {
     expect(guia).toContain(APP_REGISTRARSE);
     expect(guia).toContain('25 de octubre de 2026');
     expect(guia).toMatch(/Iniciar sesi[óo]n/);
-    expect(guia).toMatch(/Crear cuenta/);
+    expect(guia).toMatch(/Solicitar mi acceso/);
+    expect(guia).toMatch(/Hablar con un asesor/);
     expect(guia).toMatch(/WhatsApp/);
     expect(guia).toMatch(/cuando exista PROD/i);
     expect(guia).toMatch(/ambiente de pruebas/i);
     expect(guia).toContain('sitio/pagina/destinos.ts');
+  });
+
+  it('describes the commercial redesign (LND-2, 27 de octubre de 2026): the sections, the screenshots with example data and how to see it, and what was taken out', () => {
+    expect(guia).toContain('## El rediseño comercial (LND-2)');
+    expect(guia).toContain('27 de octubre de 2026');
+    // Las diez secciones en el orden de la pagina, con sus anclas.
+    for (const ancla of [
+      'inicio',
+      'beneficios',
+      'antes-y-despues',
+      'funciones',
+      'pruebalo',
+      'como-empezar',
+      'para-quien',
+      'que-incluye',
+      'preguntas',
+      'contacto',
+    ]) {
+      expect(guia, ancla).toContain(`\`#${ancla}\``);
+    }
+    // Las capturas: dónde viven, quién las describe, cómo se vuelven a tomar.
+    expect(guia).toContain('sitio/public/capturas/');
+    expect(guia).toContain('sitio/pagina/capturas.ts');
+    expect(guia).toMatch(/Minimercado La Esquina/);
+    expect(guia).toMatch(/volver a tomar/i);
+    // Cómo se ve en local, y lo que ya no está.
+    expect(guia).toContain('npm run dev:sitio');
+    for (const quitado of ['aviso de arriba', 'barra de contacto', 'chip']) {
+      expect(guia, quitado).toContain(quitado);
+    }
+    expect(guia).toMatch(/cotiza con un asesor/i);
+  });
+
+  it('says that «Solicitar mi acceso» and «Cómo empezar» describe the flow of the stage 3, which does not exist yet, so the page cannot be promoted to PRE before it', () => {
+    expect(guia).toMatch(/Pendiente de validaci[óo]n/);
+    expect(guia).toMatch(/etapa 3/i);
+    expect(guia).toMatch(/no se promueve a preproducci[óo]n/i);
   });
 
   it.each([...NOMBRES_DE_COMPROBACIONES])(
