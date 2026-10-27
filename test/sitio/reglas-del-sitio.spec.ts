@@ -8,7 +8,6 @@ import {
   conLasReglasDelSitio,
   reglasDeTodo,
   reglasDelSitioCompilado,
-  responderLaSonda,
   URL_DEL_SITIO,
 } from '../../e2e/support/sitio';
 
@@ -131,46 +130,5 @@ describe('serving the page with the rules of the site', () => {
       response: respuesta,
       headers: { 'content-type': 'text/html', a: 'de la regla', 'x-nueva': 'si' },
     });
-  });
-});
-
-describe('answering for the PRE API', () => {
-  async function pedir(como: Parameters<typeof responderLaSonda>[1]) {
-    const { pagina, patron, atender } = paginaDeMentira();
-    const fulfill = vi.fn(() => Promise.resolve());
-    const abort = vi.fn(() => Promise.resolve());
-    await responderLaSonda(pagina, como);
-    let termino = false;
-    const espera = atender({ fulfill, abort }).then(() => {
-      termino = true;
-    });
-    await Promise.race([espera, new Promise((listo) => setTimeout(listo, 20))]);
-    return { patron: patron(), fulfill, abort, termino };
-  }
-
-  it('listens to /health, wherever the API is', async () => {
-    expect((await pedir('despierta')).patron).toBe('**/health');
-  });
-
-  it('answers at once when it is awake', async () => {
-    const { fulfill, abort } = await pedir('despierta');
-
-    expect(fulfill).toHaveBeenCalledWith({ status: 200, body: 'ok' });
-    expect(abort).not.toHaveBeenCalled();
-  });
-
-  it('refuses the connection when it is asleep', async () => {
-    const { fulfill, abort } = await pedir('dormida');
-
-    expect(abort).toHaveBeenCalledWith('connectionrefused');
-    expect(fulfill).not.toHaveBeenCalled();
-  });
-
-  it('never answers while it is being verified: the chip has to be left waiting', async () => {
-    const { fulfill, abort, termino } = await pedir('verificando');
-
-    expect(fulfill).not.toHaveBeenCalled();
-    expect(abort).not.toHaveBeenCalled();
-    expect(termino).toBe(false);
   });
 });

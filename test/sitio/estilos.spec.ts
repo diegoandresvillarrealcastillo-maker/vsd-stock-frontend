@@ -69,15 +69,26 @@ describe('the rules of the landing that only the browser can show', () => {
     expect(css).toMatch(/translateY\(var\(--recorrido\)\)/);
   });
 
-  it('gives the phone of the diagram a frame that is seen in both themes: the navy of the band is lost against the dark page', () => {
+  it('gives the phone of the diagram and the frames of the screenshots a colour that is seen in both themes: the navy of the band is lost against the dark page', () => {
     expect(css).toMatch(/--color-bisel:\s*var\(--color-band\)/);
     expect(css).toMatch(
       /:root\[data-theme='dark'\]\s*\{[^}]*--color-bisel:\s*var\(--color-border\)/,
     );
   });
 
-  it('keeps the highlighter of the title without the yellow of the browser', () => {
-    expect(css).toMatch(/\.marca\s*\{[^}]*color:\s*inherit/);
+  it('draws the frame of a screenshot with CSS, in the colour that is seen in both themes, and leaves its width to whoever uses it', () => {
+    expect(css).toMatch(/\[data-marco\]\s*\{[^}]*background:\s*var\(--color-bisel\)/);
+    expect(css).toMatch(/\[data-marco='telefono'\]\s*\{/);
+    expect(css).toMatch(/\[data-marco='computador'\]\s*\{/);
+    // La imagen llena el marco y su alto sale de sus medidas: asi no se estira ni se corta, y la pagina no salta al cargar.
+    expect(css).toMatch(/\[data-marco\] img\s*\{[^}]*width:\s*100%;[^}]*height:\s*auto/);
+    expect(css).not.toMatch(/\[data-marco[^{]*\{[^}]*\bwidth:\s*[\d.]+(?:rem|em|px)/);
+  });
+
+  it('keeps nothing of the old hero: no grid of lines, no glow and no highlighter on a word of the title', () => {
+    for (const clase of ['cuadricula', 'resplandor', 'marca']) {
+      expect(css, clase).not.toMatch(new RegExp(`\\.${clase}\\s*\\{`));
+    }
   });
 });
 

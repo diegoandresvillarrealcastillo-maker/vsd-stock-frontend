@@ -1,8 +1,6 @@
 import { Money } from '../../../src/domain/model/money';
-import { formatPesos, formatSignedQuantity } from '../../../src/domain/model/quantity';
-import { describeDifference } from '../../../src/domain/model/shift';
+import { formatPesos } from '../../../src/domain/model/quantity';
 import { splitTaxIncluded } from '../../../src/domain/model/tax';
-import { IconoAlerta } from '../componentes/Iconos';
 import { contenido, type Tarjeta } from '../contenido';
 
 const { miniaturas } = contenido.funciones;
@@ -44,39 +42,6 @@ export function MiniaturaFuncion({ tarjeta }: { readonly tarjeta: Tarjeta }) {
         </dl>
       );
     }
-    case 'caja': {
-      const nota = describeDifference(miniaturas.caja.diferencia);
-      return (
-        <div>
-          <p className="font-mono text-xs text-fg-muted">{miniaturas.caja.etiqueta}</p>
-          <p className="mt-1 font-display text-xl font-bold">{nota.title}</p>
-        </div>
-      );
-    }
-    case 'inventario':
-      return (
-        <div>
-          <p className="font-mono text-xs text-fg-muted">{miniaturas.inventario.etiqueta}</p>
-          <ul className="mt-1 space-y-1 font-mono text-sm">
-            {miniaturas.inventario.movimientos.map((movimiento) => (
-              <li key={movimiento.tipo} className="flex justify-between gap-6">
-                <span>{movimiento.tipo}</span>
-                <span className="font-semibold">{formatSignedQuantity(movimiento.milesimas)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      );
-    case 'estante':
-      return (
-        <div className="space-y-2">
-          <p className={chip}>
-            <IconoAlerta className="size-4 text-accent-text" />
-            {miniaturas.estante.sistema}
-          </p>
-          <p className="text-sm font-medium">{miniaturas.estante.accion}</p>
-        </div>
-      );
     case 'roles':
       return (
         <ul className="flex flex-wrap gap-2">

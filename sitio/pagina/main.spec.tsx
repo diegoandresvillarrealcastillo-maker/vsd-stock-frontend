@@ -1,18 +1,7 @@
 import { act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installIntersectionObserver } from '../../test/support/intersection-observer';
-import type { SondaDePre } from './demos/estadoDePre';
 import { render } from './entry-server';
-
-// El chip de la demo de PRE le pregunta a una API de verdad al montarse; aqui la sonda nunca llega a saber nada, para que la
-// prueba no salga a internet. La consulta se prueba en `demos/estadoDePre.spec.ts`.
-vi.mock('./demos/estadoDePre', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./demos/estadoDePre')>()),
-  sondaDeLaPagina: (): SondaDePre => ({
-    leer: () => 'verificando',
-    suscribir: () => () => undefined,
-  }),
-}));
 
 // `main.tsx` decide al arrancar si React se monta encima de una pagina prerenderizada o si la crea desde cero. Se prueba el archivo
 // de verdad, con el `#root` que recibe cada modo, y se mira lo que vera quien abra la consola del navegador.

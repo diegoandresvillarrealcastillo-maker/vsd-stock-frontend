@@ -3,7 +3,6 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { API_DE_PRE } from '../../sitio/pagina/destinos';
 import { injectApp, inlineScriptHashes, siteHeaders } from '../../scripts/build-sitio';
 
 // La landing (ADR 0033 del backend) se compila aparte de la aplicacion: otra entrada de Vite, otra salida y sus propios comandos.
@@ -190,7 +189,7 @@ describe('the hash of every inline script', () => {
 
 describe('the headers of the site', () => {
   const hash = "'sha256-abc='";
-  const text = siteHeaders({ hashes: [hash], connectOrigins: [API_DE_PRE] });
+  const text = siteHeaders({ hashes: [hash] });
   const csp = /Content-Security-Policy: (.*)/.exec(text)?.[1] ?? '';
   const directive = (name: string): string[] =>
     csp
@@ -217,9 +216,9 @@ describe('the headers of the site', () => {
     expect(directive('img-src')).toEqual(["'self'", 'data:']);
   });
 
-  it('lets the page ask the API of PRE, and nobody else', () => {
-    expect(directive('connect-src')).toEqual(["'self'", API_DE_PRE]);
-    expect([...csp.matchAll(/https?:\/\/[^\s;]+/g)].map((match) => match[0])).toEqual([API_DE_PRE]);
+  it('lets the page ask nobody but itself: it is a page to read, so it makes no request to any server (LND-2 took out the API ping)', () => {
+    expect(directive('connect-src')).toEqual(["'self'"]);
+    expect([...csp.matchAll(/https?:\/\/[^\s;]+/g)].map((match) => match[0])).toEqual([]);
   });
 
   it('allows inline styles, which React and the animations write, and says why only there', () => {
@@ -250,15 +249,8 @@ describe('the headers of the site', () => {
   it('stays within what Cloudflare Pages reads: 2000 characters per line', () => {
     const many = siteHeaders({
       hashes: Array.from({ length: 5 }, (_, i) => `'sha256-${String(i).repeat(43)}='`),
-      connectOrigins: [API_DE_PRE],
     });
 
     for (const line of many.split('\n')) expect(line.length).toBeLessThanOrEqual(2000);
-  });
-
-  it('refuses an origin that is not https: the page never talks to a server in the clear', () => {
-    expect(() => siteHeaders({ hashes: [], connectOrigins: ['http://localhost:3000'] })).toThrow(
-      'https',
-    );
   });
 });

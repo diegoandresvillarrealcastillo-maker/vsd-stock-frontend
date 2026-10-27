@@ -15,7 +15,7 @@
   /* Las lineas finas de la cuadricula y los separadores: el mismo tono del fondo de los esqueletos en cada tema. */
   --color-rule: var(--color-skeleton);
 
-  /* El marco del telefono del diagrama: el azul de la banda, que sobre el fondo claro se ve y sobre el oscuro se pierde (abajo). */
+  /* El marco del telefono del diagrama y de las capturas: el azul de la banda, que sobre el fondo claro se ve y sobre el oscuro se pierde (abajo). */
   --color-bisel: var(--color-band);
 }
 
@@ -46,35 +46,6 @@ html {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-/* El fondo de cuadricula del hero: lineas finas que se desvanecen hacia los bordes, como una hoja de contabilidad. */
-.cuadricula {
-  background-image:
-    linear-gradient(to right, var(--color-rule) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--color-rule) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 35%, #000 25%, transparent 75%);
-}
-
-/* Un resplandor naranja, muy tenue, detras del dibujo del hero. */
-.resplandor {
-  background: radial-gradient(
-    ellipse 50% 45% at 80% 25%,
-    color-mix(in srgb, var(--color-accent) 16%, transparent),
-    transparent 70%
-  );
-}
-
-/* La palabra que lleva el peso del titulo: subrayada como con un marcador, sin el amarillo que trae <mark>. */
-.marca {
-  background: linear-gradient(
-    transparent 62%,
-    color-mix(in srgb, var(--color-accent) 40%, transparent) 62%
-  );
-  color: inherit;
-  padding: 0 0.08em;
-  box-decoration-break: clone;
 }
 
 /* El boton de tema muestra el icono de lo que haria: el sol en el tema oscuro, la luna en el claro. Es CSS y no JavaScript
@@ -158,4 +129,57 @@ html {
   .viaje {
     display: none;
   }
+}
+
+/* El marco de una captura de la aplicacion (`MarcoDeCaptura`): el telefono del cajero y el computador del dueño, dibujados con CSS
+ * para no pesar nada en la red. El color del marco es --color-bisel (el azul de la banda en el tema claro, un borde visible en el
+ * oscuro); el ancho lo pone quien usa el marco, la proporcion la dan las medidas del archivo. */
+[data-marco] {
+  position: relative;
+  background: var(--color-bisel);
+  box-shadow: 0 28px 48px -24px color-mix(in srgb, var(--color-band) 55%, transparent);
+}
+
+[data-marco] img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--color-surface);
+}
+
+[data-marco='telefono'] {
+  border-radius: 2rem;
+  padding: 0.4rem;
+}
+
+[data-marco='telefono'] img {
+  border-radius: 1.6rem;
+}
+
+[data-marco='computador'] {
+  border-radius: 0.9rem;
+  padding: 0 0.4rem 0.4rem;
+}
+
+[data-marco='computador'] img {
+  border-radius: 0.4rem;
+}
+
+/* La barra de arriba del computador: tres puntos, como la ventana de un navegador. */
+[data-barra] {
+  display: flex;
+  align-items: center;
+  height: 1.5rem;
+  padding-left: 0.6rem;
+}
+
+[data-barra]::before {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-on-band) 45%, transparent);
+  box-shadow:
+    0.7rem 0 0 color-mix(in srgb, var(--color-on-band) 45%, transparent),
+    1.4rem 0 0 color-mix(in srgb, var(--color-on-band) 45%, transparent);
 }

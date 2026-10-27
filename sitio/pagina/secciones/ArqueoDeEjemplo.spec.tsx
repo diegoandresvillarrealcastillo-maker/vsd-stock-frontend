@@ -9,7 +9,7 @@ import { ArqueoDeEjemplo } from './ArqueoDeEjemplo';
 // que se dice lo escribe el dominio (`demos/arqueo.spec.ts`); aqui se vigila que el dibujo lo muestre bien: el titular y la linea
 // de «Esperabas… y contaste…», el tono que acompana, que el campo solo acepte numeros y que no se lea en voz alta tecla a tecla.
 
-const { arqueo } = contenido.comoFunciona;
+const { arqueo } = contenido;
 
 beforeEach(() => {
   vi.useFakeTimers();

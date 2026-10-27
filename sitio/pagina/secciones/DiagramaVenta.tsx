@@ -9,7 +9,6 @@ import {
 } from '../diagrama/maquina';
 import { TRAMOS_MS, VIAJE_MS } from '../diagrama/ritmo';
 import { useVentaEnVivo, type Viaje } from '../diagrama/useVentaEnVivo';
-import { etiqueta } from '../clases';
 
 const { diagrama } = contenido;
 
@@ -162,7 +161,7 @@ function Telefono({ estado }: { readonly estado: EstadoDeLaVenta }) {
       </div>
       {venta !== null && (
         <div className="mt-3 px-1">
-          <p className={`${etiqueta} text-fg-muted`}>{diagrama.ultimaVenta}</p>
+          <p className="text-xs font-medium text-fg-muted">{diagrama.ultimaVenta}</p>
           <p className="mt-1 font-mono text-sm font-medium text-fg">{venta.folio.toString()}</p>
           <p className="mt-1 text-sm text-fg-muted">
             {venta.enviada ? diagrama.enviada : diagrama.guardada}
@@ -190,9 +189,7 @@ export function DiagramaVenta({ id = 'diagrama' }: { readonly id?: string }) {
       className="rounded-2xl border border-rule bg-surface-raised p-4 text-fg shadow-md sm:p-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <figcaption className="font-mono text-xs font-medium uppercase tracking-[0.14em] text-fg-muted">
-          {diagrama.titulo}
-        </figcaption>
+        <figcaption className="text-sm font-medium text-fg-muted">{diagrama.titulo}</figcaption>
         <Interruptor cortado={!conectado} alternar={alternar} />
       </div>
       <div className="mt-4">

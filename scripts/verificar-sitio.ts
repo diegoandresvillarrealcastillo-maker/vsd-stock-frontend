@@ -47,8 +47,6 @@ export interface Esperado {
   readonly encabezado: string;
   readonly whatsappUrl: string;
   readonly whatsappNumero: string;
-  /** Los origenes https a los que la pagina puede hablar ademas de ella misma (la API de PRE, para el chip de la demo). */
-  readonly origenesDeConexion: readonly string[];
 }
 
 export interface Comprobacion {
@@ -209,7 +207,7 @@ function directivas(valor: string): Map<string, string[]> {
 /** Lo unico que `script-src` puede aceptar: lo propio y los scripts en linea con huella. Cualquier otra fuente (un dominio, `https:`, `*`) deja correr codigo ajeno. */
 const SCRIPT_PERMITIDO = /^('self'|'sha(256|384|512)-[A-Za-z0-9+/=_-]+')$/i;
 
-function politica(captura: Captura, esperado: Esperado): Resultado {
+function politica(captura: Captura): Resultado {
   if (captura.pagina === null) return no('No se pudo pedir la página.');
   const valor = cabecera(captura.pagina.headers, 'content-security-policy');
   if (valor === undefined) {
@@ -234,12 +232,8 @@ function politica(captura: Captura, esperado: Esperado): Resultado {
   const conexiones = mapa.get('connect-src');
   if (conexiones === undefined) faltas.push('falta connect-src');
   else {
-    const permitidos = new Set(["'self'", ...esperado.origenesDeConexion]);
-    for (const v of conexiones)
-      if (!permitidos.has(v)) faltas.push(`connect-src deja hablar con ${v}`);
-    for (const origen of esperado.origenesDeConexion) {
-      if (!conexiones.includes(origen)) faltas.push(`connect-src no incluye ${origen}`);
-    }
+    for (const v of conexiones) if (v !== "'self'") faltas.push(`connect-src deja hablar con ${v}`);
+    if (!conexiones.includes("'self'")) faltas.push("connect-src no incluye 'self'");
   }
   for (const nombre of ['object-src', 'frame-ancestors', 'base-uri', 'form-action']) {
     if (JSON.stringify(mapa.get(nombre)) !== JSON.stringify(["'none'"]))
@@ -247,9 +241,7 @@ function politica(captura: Captura, esperado: Esperado): Resultado {
   }
 
   return faltas.length === 0
-    ? si(
-        'Content-Security-Policy: scripts propios con huella, conexiones solo a la propia página y a la API de PRE.',
-      )
+    ? si('Content-Security-Policy: scripts propios con huella, conexiones solo a la propia página.')
     : no(`Content-Security-Policy: ${faltas.join('; ')}.`);
 }
 
@@ -368,7 +360,7 @@ export function evaluarSitio(captura: Captura, esperado: Esperado): Comprobacion
     trae(captura, esperado),
     huella(captura),
     revision(captura),
-    politica(captura, esperado),
+    politica(captura),
     seguridad(captura),
     enlace(captura, esperado),
     abreElChat(captura, esperado),
@@ -440,7 +432,6 @@ async function main(): Promise<void> {
     process.exit(2);
   }
   const destinos = (await import(pathToFileURL(resolve('sitio/pagina/destinos.ts')).href)) as {
-    API_DE_PRE: string;
     WHATSAPP_URL: string;
     WHATSAPP_NUMERO: string;
   };
@@ -448,7 +439,6 @@ async function main(): Promise<void> {
     ...esperadoDelHtml(compilado),
     whatsappUrl: destinos.WHATSAPP_URL,
     whatsappNumero: destinos.WHATSAPP_NUMERO,
-    origenesDeConexion: [destinos.API_DE_PRE],
   };
 
   console.log(`Verificando ${origen.origin} ...\n`);

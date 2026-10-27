@@ -8,19 +8,15 @@ const GRUPO = 'preguntas';
 
 /**
  * Las preguntas frecuentes, como `<details>`: abren y cierran sin JavaScript (se leen aunque el codigo no haya cargado) y los
- * lectores de pantalla ya saben usarlas. Las preguntas no son titulos: una lista de siete titulos seria ruido para quien los recorre.
+ * lectores de pantalla ya saben usarlas. Las preguntas no son titulos: una lista de ocho titulos seria ruido para quien los recorre.
  */
 export function Preguntas() {
   const { preguntas, anclas } = contenido;
   return (
-    <Seccion ancla={anclas.preguntas} className={`${respiro} bg-surface-raised`}>
+    <Seccion ancla={anclas.preguntas} className={respiro}>
       <div className={contenedor}>
-        <EncabezadoSeccion
-          ancla={anclas.preguntas}
-          etiqueta={preguntas.etiqueta}
-          titulo={preguntas.titulo}
-        />
-        <div className="mt-12 max-w-3xl divide-y divide-rule rounded-2xl border border-rule bg-surface">
+        <EncabezadoSeccion ancla={anclas.preguntas} titulo={preguntas.titulo} />
+        <div className="mt-12 max-w-3xl divide-y divide-rule rounded-2xl border border-rule bg-surface-raised">
           {preguntas.items.map((item) => (
             <details key={item.pregunta} name={GRUPO} className="group px-6">
               <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-4 py-4 font-display text-lg font-bold [&::-webkit-details-marker]:hidden">

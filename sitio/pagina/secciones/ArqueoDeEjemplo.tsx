@@ -5,7 +5,7 @@ import { IconoAlerta, IconoCheck } from '../componentes/Iconos';
 import { contenido } from '../contenido';
 import { contarLaCaja } from '../demos/arqueo';
 
-const { arqueo } = contenido.comoFunciona;
+const { arqueo } = contenido;
 
 /**
  * El arqueo de ejemplo de la landing (C4-L5): la persona escribe el efectivo que conto y ve lo que le diria el producto al cerrar el

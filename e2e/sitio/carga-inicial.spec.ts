@@ -1,9 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { API_DE_PRE } from '../../sitio/pagina/destinos';
 import { excesos, pesoEnLaRed, type Presupuesto, type Respuesta } from '../support/peso';
-import { conLasReglasDelSitio, responderLaSonda, URL_DEL_SITIO } from '../support/sitio';
+import { conLasReglasDelSitio, URL_DEL_SITIO } from '../support/sitio';
 
 // La carga inicial de la landing (C4-L7): lo que baja un telefono entre abrir la pagina y que la red se quede quieta, sin tocar nada.
 // Se mide en el navegador real, que es quien sabe que fuentes e imagenes se piden de verdad (las fuentes llevan `unicode-range` y las
@@ -35,7 +34,6 @@ async function cargar(page: Page): Promise<Respuesta[]> {
       ),
     );
   });
-  await responderLaSonda(page, 'despierta');
   await conLasReglasDelSitio(page);
   await page.goto('/');
   await page.waitForLoadState('networkidle');
@@ -53,7 +51,7 @@ test('the first load stays inside the weight budget', async ({ page }) => {
   expect(excesos(peso, presupuesto)).toEqual([]);
 });
 
-test('asks nobody for anything but its own site and the health of the PRE API', async ({
+test('asks nobody for anything but its own site: it makes no request to the API or to any other server', async ({
   page,
 }) => {
   const respuestas = await cargar(page);
@@ -61,7 +59,7 @@ test('asks nobody for anything but its own site and the health of the PRE API', 
   const deOtros = respuestas
     .filter((respuesta) => !respuesta.url.startsWith(URL_DEL_SITIO))
     .map((respuesta) => respuesta.url);
-  expect(deOtros).toEqual([`${API_DE_PRE}/health`]);
+  expect(deOtros).toEqual([]);
 });
 
 test('does not download the demonstrations of IVA and Caja until they are chosen', async ({
@@ -89,6 +87,7 @@ test('does not download the pictures that are far below until they are about to 
   const respuestas = delSitio(await cargar(page));
   const imagenes = respuestas.filter((respuesta) => respuesta.tipo.startsWith('image/'));
 
-  // El logo, la mascota de la entrada y, a lo sumo, el icono de la pestana: las otras mascotas bajan cuando se ven.
-  expect(imagenes.length).toBeLessThanOrEqual(3);
+  // El logo, las dos capturas de la entrada, la mascota de la banda de la demo y, a lo sumo, el icono de la pestana: las otras
+  // capturas y las otras mascotas bajan cuando se acercan.
+  expect(imagenes.length).toBeLessThanOrEqual(5);
 });

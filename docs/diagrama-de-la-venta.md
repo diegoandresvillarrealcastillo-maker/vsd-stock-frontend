@@ -49,7 +49,7 @@ Lo que el dibujo hace solo lo decide `siguientePaso`, que también dice qué ven
 - **Un solo reloj** (`ritmo.ts`): el CSS recibe `--recorrido`, `--duracion` y `--retraso` desde el componente. Cambiar un ritmo es cambiar un número.
 - **El teléfono va sobre el diagrama, no dentro:** el texto del teléfono es HTML y mantiene su tamaño en cualquier pantalla; el texto del SVG se achica con él (a 375 px las etiquetas del dibujo quedan en 9 o 10 px, por eso lo importante, «N registros por enviar» y los folios, también está en el teléfono).
 - **El folio de ejemplo** (`diagrama.folio`) es el de la primera venta que viaja; el libro abre con las dos anteriores. Antes de L4 era un folio fijo en el dibujo.
-- **El dibujo sale dos veces** desde C4-L6: en la entrada y en la pestaña Vender de la banda de la demo ([`banda-de-la-demo.md`](banda-de-la-demo.md)). `DiagramaVenta` recibe un `id` (por omisión `diagrama`) con el que empiezan los de su título, su descripción y sus puntas de flecha, así que cada copia apunta a las suyas y ningún `id` se repite. Cada copia se pausa fuera de pantalla por su cuenta.
+- **El dibujo sale una vez** desde LND-2 (27 de octubre de 2026), en la pestaña Vender de la banda «Pruébalo» ([`banda-de-la-demo.md`](banda-de-la-demo.md)). Entre C4-L6 y LND-2 salía dos veces, también en la entrada; la entrada ahora enseña dos capturas de la aplicación. `DiagramaVenta` sigue recibiendo un `id` (por omisión `diagrama`) con el que empiezan los de su título, su descripción y sus puntas de flecha, para poder repetirlo sin repetir ningún `id`. Se pausa fuera de pantalla por su cuenta.
 
 ## Cómo verlo y qué lo vigila
 
