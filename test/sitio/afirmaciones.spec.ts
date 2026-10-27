@@ -61,6 +61,12 @@ function enlaces(valor: unknown): string[] {
   return [];
 }
 
+/** Si el enlace lleva a GitHub, mirando el sitio al que va y no un pedazo de texto cualquiera de la direccion. */
+function esDeGithub(href: string): boolean {
+  const sitio = new URL(href, 'https://pagina.invalid').hostname;
+  return sitio === 'github.com' || sitio.endsWith('.github.com');
+}
+
 const todas = entradas(contenido);
 /** Lo que la pagina AFIRMA: todo menos las preguntas, que nombran lo que se pregunta y se contestan en su respuesta. */
 const afirmaciones = todas.filter((e) => !e.ruta.endsWith('.pregunta'));
@@ -88,6 +94,15 @@ describe('the walk over the content', () => {
       '#a',
       'https://b',
     ]);
+  });
+
+  it('tells a link to GitHub by its host, not by a piece of text somewhere in the address', () => {
+    expect(esDeGithub('https://github.com/diego/repo')).toBe(true);
+    expect(esDeGithub('https://www.github.com/diego/repo')).toBe(true);
+    expect(esDeGithub('https://wa.me/573000000000?text=github.com')).toBe(false);
+    expect(esDeGithub('https://notgithub.com')).toBe(false);
+    expect(esDeGithub('#github.com')).toBe(false);
+    expect(esDeGithub('/capturas/github.com.webp')).toBe(false);
   });
 
   it('reads enough of the content for the rules to mean something', () => {
@@ -234,7 +249,7 @@ describe('open source: the repositories are public but they have no license', ()
   });
 
   it('has no link to the repositories: the page speaks to a shopkeeper, not to a developer (Diego, 27 de octubre)', () => {
-    expect(enlaces(contenido).filter((href) => href.includes('github.com'))).toEqual([]);
+    expect(enlaces(contenido).filter(esDeGithub)).toEqual([]);
     expect(
       rutas(
         todas.filter((e) => /\bc[oó]digo (publicado|de la)\b|repositorio|GitHub/i.test(e.texto)),
